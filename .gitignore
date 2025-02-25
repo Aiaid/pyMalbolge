@@ -1,0 +1,5 @@
+
+.vscode/*
+*.pyc
+dist/*
+testpip.md

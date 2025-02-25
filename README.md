@@ -1,13 +1,16 @@
 # pyMalbolge
 
+This is fork from https://github.com/Avantgarde95/pyMalbolge
+
 Simple Malbolge(https://en.wikipedia.org/wiki/Malbolge) interpreter in python
 
-- Why I made this : I was just bored.
+Fix:
+Integer division syntax
 
-- Reference interpreter (by Ben Olmstead) is also included. (```ref/mbi.c```) 
+Add:
+Eval function for inline evalation
 
-- Example codes are not mine!
 
-Requirements
-
-- Python 3.X
+TODO:
+Support Malbolge20 and Malbolge Unshackled.
+Add Debug mode

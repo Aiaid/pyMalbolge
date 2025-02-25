@@ -19,7 +19,7 @@ POW9, POW10 = 3**9, 3**10
 # --------------------------------------------------
 
 def rotate(n):
-    return POW9*(n%3) + n/3
+    return POW9*(n%3) + n//3
 
 def crazy(a, b):
     result = 0
@@ -83,6 +83,46 @@ def interpret(mem):
         #     pass
         elif v == 81:                     # end
             return
+        else:
+            pass
+
+        if mem[c] >= 33 and mem[c] <= 126:
+            mem[c] = ENCRYPT[mem[c] - 33]
+
+        c = 0 if c == POW10-1 else c+1
+        d = 0 if d == POW10-1 else d+1
+
+def eval(code,input=()):
+    mem = [0] * POW10
+    initialize(code, mem)
+    output=""
+    j=0 # index of output
+    a, c, d = 0, 0, 0
+
+    while 1:
+        if mem[c] < 33 or mem[c] > 126:
+            return output
+
+        v = (mem[c]+c) % 94
+
+        if v == 4:                        # jmp [d]
+            c = mem[d]
+        elif v == 5:                      # out a
+            output+=(chr(int(a % 256)))
+        elif v == 23:                     # in a
+            if(j>=len(input)):return output
+            a = ord(input[j])
+            j+=1
+        elif v == 39:                     # rotr[d]; mov a, [d]
+            a = mem[d] = rotate(mem[d])
+        elif v == 40:                     # mov d, [d]
+            d = mem[d]
+        elif v == 62:                     # crz [d], a; mov a, [d]
+            a = mem[d] = crazy(a, mem[d])
+        # elif v == 68:                   # nop
+        #     pass
+        elif v == 81:                     # end
+            return output
         else:
             pass
 
