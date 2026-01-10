@@ -22,11 +22,20 @@ pip install malbolge[tui]
 # Run a Malbolge program
 python3 -m malbolge hello.mal
 
+# Run with input (for programs that read stdin, like cat.mal)
+python3 -m malbolge cat.mal -i "Hello World"
+
 # Start CLI debugger
 python3 -m malbolge.debug_cli hello.mal
 
+# Start CLI debugger with input
+python3 -m malbolge.debug_cli cat.mal -i "Hello World"
+
 # Start TUI debugger (requires textual)
 python3 -m malbolge.debug_tui hello.mal
+
+# Start TUI debugger with input
+python3 -m malbolge.debug_tui cat.mal -i "Hello World"
 ```
 
 ### Python API
