@@ -18,6 +18,8 @@ pip install malbolge[tui]
 
 ### Command Line
 
+![TUI Debugger Screenshot](screenshots/cli.png)
+
 ```bash
 # Run a Malbolge program
 python3 -m malbolge hello.mal
