@@ -39,6 +39,74 @@ OPCODE_NAMES = {
     81: "end"    # end
 }
 
+# Detailed opcode help for teaching mode
+OPCODE_HELP = {
+    4: {
+        'name': 'jmp',
+        'syntax': 'jmp [d]',
+        'description': 'Jump to the address stored in memory at address D.',
+        'pseudocode': 'c = mem[d]',
+        'affects': ['C (code pointer)'],
+        'note': 'Sets C to mem[D], causing execution to jump to that address.'
+    },
+    5: {
+        'name': 'out',
+        'syntax': 'out a',
+        'description': 'Output the character with ASCII value A mod 256.',
+        'pseudocode': 'print(chr(a % 256))',
+        'affects': ['Output stream'],
+        'note': 'Only the lowest 8 bits of A are used for output.'
+    },
+    23: {
+        'name': 'in',
+        'syntax': 'in a',
+        'description': 'Read one character from input into A.',
+        'pseudocode': 'a = ord(read_char())',
+        'affects': ['A (accumulator)'],
+        'note': 'Program terminates if input is exhausted.'
+    },
+    39: {
+        'name': 'rotr',
+        'syntax': 'rotr [d]; mov a, [d]',
+        'description': 'Rotate mem[D] right by one ternary digit, store in both mem[D] and A.',
+        'pseudocode': 'mem[d] = rotate(mem[d])\na = mem[d]',
+        'affects': ['A (accumulator)', 'mem[D]'],
+        'note': 'Rotation: LSB wraps to MSB. Formula: 3^9 * (n%3) + n//3'
+    },
+    40: {
+        'name': 'mov',
+        'syntax': 'mov d, [d]',
+        'description': 'Load the value at address D into D itself.',
+        'pseudocode': 'd = mem[d]',
+        'affects': ['D (data pointer)'],
+        'note': 'D becomes the value stored at its current address.'
+    },
+    62: {
+        'name': 'crz',
+        'syntax': 'crz [d], a; mov a, [d]',
+        'description': 'Perform crazy operation on A and mem[D], store in both.',
+        'pseudocode': 'mem[d] = crazy(a, mem[d])\na = mem[d]',
+        'affects': ['A (accumulator)', 'mem[D]'],
+        'note': 'Crazy: ternary digit-by-digit lookup table operation.'
+    },
+    68: {
+        'name': 'nop',
+        'syntax': 'nop',
+        'description': 'No operation. Does nothing except advance pointers.',
+        'pseudocode': '# do nothing',
+        'affects': [],
+        'note': 'C and D still increment after nop.'
+    },
+    81: {
+        'name': 'end',
+        'syntax': 'end',
+        'description': 'Terminate program execution.',
+        'pseudocode': 'exit()',
+        'affects': ['Program state'],
+        'note': 'Program stops immediately.'
+    }
+}
+
 
 class StopReason(Enum):
     """Reason why execution stopped."""
@@ -689,6 +757,259 @@ class MalbolgeDebugger:
             }
         ]
         return regions
+
+    # ==================== Teaching Mode Helpers ====================
+
+    @staticmethod
+    def to_ternary(n: int) -> List[int]:
+        """Convert integer to 10-digit ternary representation (LSB first)."""
+        digits = []
+        for _ in range(10):
+            digits.append(n % 3)
+            n //= 3
+        return digits
+
+    @staticmethod
+    def from_ternary(digits: List[int]) -> int:
+        """Convert 10-digit ternary (LSB first) to integer."""
+        result = 0
+        for i, d in enumerate(digits):
+            result += d * (3 ** i)
+        return result
+
+    def get_opcode_help(self, opcode: int) -> Optional[Dict]:
+        """Get detailed help information for an opcode."""
+        return OPCODE_HELP.get(opcode)
+
+    def explain_crazy_operation(self, a: int, b: int) -> Dict:
+        """
+        Explain the crazy operation step by step.
+
+        Returns dict with:
+        - a_ternary: List[int] - a in ternary (10 digits, LSB first)
+        - b_ternary: List[int] - b in ternary
+        - result_ternary: List[int] - result in ternary
+        - result: int - final result
+        - steps: List[Dict] - step-by-step calculation for each digit
+        """
+        a_tern = self.to_ternary(a)
+        b_tern = self.to_ternary(b)
+        result_tern = []
+        steps = []
+
+        for i in range(10):
+            a_digit = a_tern[i]
+            b_digit = b_tern[i]
+            res_digit = TABLE_CRAZY[b_digit][a_digit]
+            result_tern.append(res_digit)
+            steps.append({
+                'position': i,
+                'a_digit': a_digit,
+                'b_digit': b_digit,
+                'result_digit': res_digit
+            })
+
+        result = self.from_ternary(result_tern)
+        return {
+            'a': a,
+            'b': b,
+            'a_ternary': a_tern,
+            'b_ternary': b_tern,
+            'result_ternary': result_tern,
+            'result': result,
+            'steps': steps,
+            'table': TABLE_CRAZY
+        }
+
+    def explain_rotate_operation(self, n: int) -> Dict:
+        """
+        Explain the rotate operation step by step.
+
+        Returns dict with:
+        - original: int - original value
+        - original_ternary: List[int] - original in ternary (LSB first)
+        - rotated_ternary: List[int] - rotated in ternary
+        - result: int - rotated value
+        - lsb: int - the LSB that wrapped to MSB
+        - formula: str - formula explanation
+        """
+        original_tern = self.to_ternary(n)
+        lsb = n % 3
+        rotated = POW9 * lsb + n // 3
+
+        # Handle overflow (should not happen for valid values)
+        if rotated >= POW10:
+            rotated = rotated % POW10
+
+        rotated_tern = self.to_ternary(rotated)
+
+        return {
+            'original': n,
+            'original_ternary': original_tern,
+            'rotated_ternary': rotated_tern,
+            'result': rotated,
+            'lsb': lsb,
+            'formula': f"3^9 * ({n} % 3) + {n} // 3 = {POW9} * {lsb} + {n // 3} = {rotated}"
+        }
+
+    def preview_next_instruction(self) -> Dict:
+        """
+        Preview what will happen when the next instruction executes.
+
+        Returns dict with:
+        - opcode: int - calculated opcode
+        - opcode_name: str - opcode name
+        - opcode_calculation: Dict - how opcode was calculated
+        - register_changes: Dict - predicted register changes {reg: (old, new)}
+        - memory_changes: Dict - predicted memory changes {addr: (old, new)}
+        - calculation_details: Optional[Dict] - detailed calculation for crz/rotr
+        - will_encrypt: bool - whether instruction will be encrypted
+        - encrypted_value: Optional[int] - new encrypted value
+        - will_terminate: bool - whether this will terminate the program
+        """
+        if self._terminated:
+            return {
+                'opcode': -1,
+                'opcode_name': 'N/A',
+                'opcode_calculation': {},
+                'register_changes': {},
+                'memory_changes': {},
+                'calculation_details': None,
+                'will_encrypt': False,
+                'encrypted_value': None,
+                'will_terminate': True
+            }
+
+        raw = self._mem[self._c]
+        if raw < 33 or raw > 126:
+            return {
+                'opcode': -1,
+                'opcode_name': 'invalid',
+                'opcode_calculation': {
+                    'mem_c': raw,
+                    'c': self._c,
+                    'note': 'Invalid instruction (out of printable ASCII range)'
+                },
+                'register_changes': {},
+                'memory_changes': {},
+                'calculation_details': None,
+                'will_encrypt': False,
+                'encrypted_value': None,
+                'will_terminate': True
+            }
+
+        opcode = (raw + self._c) % 94
+        opcode_name = OPCODE_NAMES.get(opcode, "invalid")
+
+        opcode_calc = {
+            'mem_c': raw,
+            'mem_c_char': chr(raw),
+            'c': self._c,
+            'sum': raw + self._c,
+            'opcode': opcode,
+            'formula': f"({raw} + {self._c}) % 94 = {opcode}"
+        }
+
+        # Predict changes based on opcode
+        reg_changes = {}
+        mem_changes = {}
+        calc_details = None
+        will_terminate = False
+
+        # C and D always increment (unless terminated)
+        new_c = 0 if self._c == POW10 - 1 else self._c + 1
+        new_d = 0 if self._d == POW10 - 1 else self._d + 1
+
+        if opcode == 4:  # jmp [d]
+            new_c = self._mem[self._d]
+            # After jmp, c still increments
+            new_c = 0 if new_c == POW10 - 1 else new_c + 1
+            reg_changes['c'] = (self._c, new_c - 1 if new_c > 0 else POW10 - 1)  # Show jump target
+            reg_changes['d'] = (self._d, new_d)
+
+        elif opcode == 5:  # out a
+            reg_changes['c'] = (self._c, new_c)
+            reg_changes['d'] = (self._d, new_d)
+            # A doesn't change, but we show output effect
+            calc_details = {
+                'type': 'output',
+                'char': chr(self._a % 256),
+                'ascii': self._a % 256
+            }
+
+        elif opcode == 23:  # in a
+            if self._input_pos < len(self._input):
+                new_a = ord(self._input[self._input_pos])
+                reg_changes['a'] = (self._a, new_a)
+                calc_details = {
+                    'type': 'input',
+                    'char': self._input[self._input_pos],
+                    'ascii': new_a
+                }
+            else:
+                will_terminate = True
+                calc_details = {
+                    'type': 'input_exhausted',
+                    'note': 'No more input available'
+                }
+            reg_changes['c'] = (self._c, new_c)
+            reg_changes['d'] = (self._d, new_d)
+
+        elif opcode == 39:  # rotr [d]; mov a, [d]
+            rotated = self._rotate(self._mem[self._d])
+            reg_changes['a'] = (self._a, rotated)
+            reg_changes['c'] = (self._c, new_c)
+            reg_changes['d'] = (self._d, new_d)
+            mem_changes[self._d] = (self._mem[self._d], rotated)
+            calc_details = self.explain_rotate_operation(self._mem[self._d])
+
+        elif opcode == 40:  # mov d, [d]
+            new_d_val = self._mem[self._d]
+            # D changes to mem[D], then increments
+            reg_changes['c'] = (self._c, new_c)
+            reg_changes['d'] = (self._d, new_d_val)
+            # Note: after mov, d still increments
+            final_d = 0 if new_d_val == POW10 - 1 else new_d_val + 1
+            reg_changes['d'] = (self._d, final_d)
+            calc_details = {
+                'type': 'mov',
+                'mem_d': self._mem[self._d],
+                'note': f'd = mem[{self._d}] = {self._mem[self._d]}'
+            }
+
+        elif opcode == 62:  # crz [d], a; mov a, [d]
+            crazy_result = self._crazy(self._a, self._mem[self._d])
+            reg_changes['a'] = (self._a, crazy_result)
+            reg_changes['c'] = (self._c, new_c)
+            reg_changes['d'] = (self._d, new_d)
+            mem_changes[self._d] = (self._mem[self._d], crazy_result)
+            calc_details = self.explain_crazy_operation(self._a, self._mem[self._d])
+
+        elif opcode == 68:  # nop
+            reg_changes['c'] = (self._c, new_c)
+            reg_changes['d'] = (self._d, new_d)
+
+        elif opcode == 81:  # end
+            will_terminate = True
+
+        # Calculate encryption
+        will_encrypt = 33 <= self._mem[self._c] <= 126
+        encrypted_value = None
+        if will_encrypt:
+            encrypted_value = ENCRYPT[self._mem[self._c] - 33]
+
+        return {
+            'opcode': opcode,
+            'opcode_name': opcode_name,
+            'opcode_calculation': opcode_calc,
+            'register_changes': reg_changes,
+            'memory_changes': mem_changes,
+            'calculation_details': calc_details,
+            'will_encrypt': will_encrypt,
+            'encrypted_value': encrypted_value,
+            'encrypt_address': self._c,
+            'will_terminate': will_terminate
+        }
 
 
 def debug(code: str, input_data: str = "") -> MalbolgeDebugger:
