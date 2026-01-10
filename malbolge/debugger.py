@@ -610,12 +610,14 @@ class MalbolgeDebugger:
             State at stop point
         """
         steps = 0
+        first_step = True  # Skip breakpoint check on first iteration
+
         while not self._terminated:
             if max_steps > 0 and steps >= max_steps:
                 break
 
-            # Check breakpoints before executing
-            if self._c in self._breakpoints:
+            # Check breakpoints before executing (skip on first step to continue past current bp)
+            if not first_step and self._c in self._breakpoints:
                 bp = self._breakpoints[self._c]
                 state = self.get_state()
                 if bp.should_break(state):
@@ -652,6 +654,7 @@ class MalbolgeDebugger:
 
             self.step()
             steps += 1
+            first_step = False
 
         return self.get_state()
 
