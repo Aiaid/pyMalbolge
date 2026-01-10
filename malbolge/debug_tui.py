@@ -5,14 +5,14 @@ Usage:
     python -m malbolge.debug_tui <file.mal> [-i input]
 
 Keybindings:
-    s / ↓   - Step one instruction
-    b / ↑   - Step back
+    ↓       - Step one instruction
+    ↑       - Step back
     r       - Run until breakpoint
-    B       - Toggle breakpoint at current address
+    b       - Toggle breakpoint at current address
     ← / →   - Scroll memory view left/right
     0       - Reset memory scroll to D pointer
+    h / ?   - Show help
     q       - Quit
-    ?       - Show help
 """
 
 try:
@@ -21,6 +21,7 @@ try:
     from textual.widgets import Header, Footer, Static, DataTable, Label, RichLog
     from textual.binding import Binding
     from textual.reactive import reactive
+    from textual.screen import ModalScreen
     from textual import events
     HAS_TEXTUAL = True
 except ImportError:
@@ -39,9 +40,8 @@ if HAS_TEXTUAL:
 
     def escape_markup(text: str) -> str:
         """Escape Rich markup special characters."""
-        # Use Rich's escape method for proper markup escaping
-        from rich.markup import escape
-        return escape(text)
+        # Escape square brackets which are used for markup tags
+        return text.replace('[', '\\[').replace(']', '\\]')
 
     class RegisterPanel(Static):
         """Panel showing register values."""
@@ -75,7 +75,11 @@ History: {self.debugger.history_size}"""
 
         def update_display(self):
             state = self.debugger.get_state()
-            disasm = self.debugger.disassemble(max(0, state.c - 8), 17)
+            # Show 11 instructions with current instruction in the middle (position 5)
+            num_instructions = 11
+            middle = num_instructions // 2  # 5
+            start_addr = max(0, state.c - middle)
+            disasm = self.debugger.disassemble(start_addr, num_instructions)
 
             lines = ["[bold]Disassembly[/bold]", "━" * 30]
 
@@ -99,7 +103,7 @@ History: {self.debugger.history_size}"""
     class MemoryPanel(Static):
         """Panel showing memory around data pointer with multi-column display."""
 
-        ROWS_PER_COL = 16  # Rows per column
+        ROWS_PER_COL = 8  # Rows per column
         COLS = 3  # Number of columns
 
         def __init__(self, debugger: MalbolgeDebugger, **kwargs):
@@ -274,8 +278,10 @@ History: {self.debugger.history_size}"""
                 lines.append(f"[bold cyan]({mem_c}+{c})%94={opcode}[/bold cyan] [dim]'{mem_c_char}'[/dim]")
 
             if help_info:
-                lines.append(f"[bold green]{help_info['name']}[/bold green] {help_info['syntax']}")
-                lines.append(f"[dim]{help_info['description']}[/dim]")
+                syntax = help_info['syntax'].replace('[', '\\[')
+                desc = help_info['description'].replace('[', '\\[')
+                lines.append(f"[bold green]{help_info['name']}[/bold green] {syntax}")
+                lines.append(f"[dim]{desc}[/dim]")
             lines.append("─" * 32)
 
             # === Part 2: Execution Preview ===
@@ -295,16 +301,19 @@ History: {self.debugger.history_size}"""
             if mem_changes:
                 lines.append("[yellow]Memory:[/yellow]")
                 for addr, (old, new) in mem_changes.items():
-                    lines.append(f"  [{addr}]: {old} -> [green]{new}[/green]")
+                    lines.append(f"  \\[{addr}]: {old} -> [green]{new}[/green]")
 
-            # Encryption info
+            # Encryption info with detailed calculation
             if preview.get('will_encrypt'):
                 enc_addr = preview.get('encrypt_address', 0)
                 enc_val = preview.get('encrypted_value', 0)
                 old_val = self.debugger._mem[enc_addr]
-                old_char = escape_markup(chr(old_val) if 32 <= old_val <= 126 else '.')
-                new_char = escape_markup(chr(enc_val) if 32 <= enc_val <= 126 else '.')
-                lines.append(f"[yellow]Encrypt:[/yellow] '{old_char}'->'{new_char}'")
+                old_char = (chr(old_val) if 32 <= old_val <= 126 else '.').replace('[', '\\[')
+                new_char = (chr(enc_val) if 32 <= enc_val <= 126 else '.').replace('[', '\\[')
+                enc_index = old_val - 33
+                lines.append(f"[yellow]Encrypt mem\\[{enc_addr}]:[/yellow]")
+                lines.append(f"  ENCRYPT\\[{old_val}-33] = ENCRYPT\\[{enc_index}]")
+                lines.append(f"  '{old_char}'({old_val}) -> '{new_char}'({enc_val})")
 
             # === Part 3: Detailed Calculations ===
             calc_details = preview.get('calculation_details')
@@ -355,7 +364,8 @@ History: {self.debugger.history_size}"""
                     lines.append("[red]Input exhausted![/red]")
 
                 elif calc_type == 'mov':
-                    lines.append(f"[yellow]Move:[/yellow] {calc_details.get('note', '')}")
+                    note = calc_details.get('note', '').replace('[', '\\[')
+                    lines.append(f"[yellow]Move:[/yellow] {note}")
 
             self.update("\n".join(lines))
 
@@ -387,6 +397,95 @@ History: {self.debugger.history_size}"""
 
             content = f"Status: {status_style} | Next: [cyan]{state.opcode_name}[/cyan]{msg_part}"
             self.update(content)
+
+
+    class HelpScreen(ModalScreen):
+        """Modal help screen with Malbolge reference."""
+
+        BINDINGS = [
+            Binding("escape", "close_help", "Close", priority=True),
+            Binding("q", "close_help", "Close", priority=True),
+            Binding("h", "close_help", "Close", priority=True),
+        ]
+
+        DEFAULT_CSS = """
+        HelpScreen {
+            align: center middle;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        HelpScreen > ScrollableContainer {
+            width: 70;
+            height: 80%;
+            background: $surface;
+            border: thick $primary;
+            padding: 1 2;
+        }
+        """
+
+        def compose(self) -> ComposeResult:
+            help_text = """\
+[bold cyan]══ pyMalbolge Debugger Help ══[/bold cyan]
+
+[bold yellow]─ Keybindings ─[/bold yellow]
+ [cyan]↓[/cyan]     Step one instruction
+ [cyan]↑[/cyan]     Step back (undo)
+ [cyan]r[/cyan]     Run until breakpoint/end
+ [cyan]b[/cyan]     Toggle breakpoint at C
+ [cyan]←[/cyan]/[cyan]→[/cyan]   Scroll memory view
+ [cyan]0[/cyan]     Reset memory to D
+ [cyan]h[/cyan]/[cyan]?[/cyan]   Show this help
+ [cyan]q[/cyan]     Quit debugger
+
+[bold yellow]─ Malbolge Architecture ─[/bold yellow]
+ Memory: 59049 (3^10) cells
+ Values: 0 to 59048
+
+ Registers:
+  [cyan]A[/cyan]  Accumulator
+  [cyan]C[/cyan]  Code pointer
+  [cyan]D[/cyan]  Data pointer
+
+[bold yellow]─ Opcode Table ─[/bold yellow]
+ Opcode = (mem\\[C\\] + C) % 94
+
+ [cyan] 4[/cyan] jmp   C = mem\\[D\\]
+ [cyan] 5[/cyan] out   print(A % 256)
+ [cyan]23[/cyan] in    A = getchar()
+ [cyan]39[/cyan] rotr  rotate mem\\[D\\], A=mem\\[D\\]
+ [cyan]40[/cyan] mov   D = mem\\[D\\]
+ [cyan]62[/cyan] crz   crazy(A,mem\\[D\\])
+ [cyan]68[/cyan] nop   (nothing)
+ [cyan]81[/cyan] end   halt
+
+ After: C++, D++, encrypt mem\\[C\\]
+
+[bold yellow]─ Crazy Table ─[/bold yellow]
+ Per-trit (10 trits):
+      b: 0  1  2
+   a┌───────────
+   0│  1  0  0
+   1│  1  0  2
+   2│  2  2  1
+
+[bold yellow]─ Rotate ─[/bold yellow]
+ rot(n) = 3^9*(n%3) + n//3
+ LSB wraps to MSB
+
+[bold yellow]─ Encrypt ─[/bold yellow]
+ mem\\[C\\] = ENCRYPT\\[mem\\[C\\]-33\\]
+
+ [dim]5z\\]&gqtyfr$(we4{{WP)H-Zn,
+ \\[%\\\\3dL+Q;>U!pJS72FhOA1CB
+ 6v^=I_0/8|jsb9m<.TVac`uY*
+ MK'X~xDl}}REokN:#?G"i@[/dim]
+
+[bold green]── ESC/q/h to close ──[/bold green]
+"""
+            yield ScrollableContainer(Static(help_text))
+
+        def action_close_help(self) -> None:
+            self.dismiss()
 
 
     class DebuggerApp(App):
@@ -461,12 +560,10 @@ History: {self.debugger.history_size}"""
         """
 
         BINDINGS = [
-            Binding("s", "step", "Step"),
-            Binding("down", "step", "Step", show=False),
-            Binding("b", "step_back", "Back"),
-            Binding("up", "step_back", "Back", show=False),
+            Binding("down", "step", "Step", priority=True),
+            Binding("up", "step_back", "Back", priority=True),
             Binding("r", "run", "Run"),
-            Binding("shift+b", "toggle_breakpoint", "Breakpoint"),
+            Binding("b", "toggle_breakpoint", "Breakpoint"),
             Binding("left", "memory_scroll_left", "Mem←", show=False),
             Binding("right", "memory_scroll_right", "Mem→", show=False),
             Binding("0", "memory_reset_scroll", "MemReset", show=False),
@@ -485,11 +582,12 @@ History: {self.debugger.history_size}"""
             # Header
             yield Static(
                 "[bold]pyMalbolge Debugger[/bold]  "
-                "[cyan]s/↓[/cyan]:Step  "
-                "[cyan]b/↑[/cyan]:Back  "
+                "[cyan]↓[/cyan]:Step  "
+                "[cyan]↑[/cyan]:Back  "
                 "[cyan]r[/cyan]:Run  "
-                "[cyan]B[/cyan]:Bp  "
+                "[cyan]b[/cyan]:Bp  "
                 "[cyan]←/→[/cyan]:Mem  "
+                "[cyan]h[/cyan]:Help  "
                 "[cyan]q[/cyan]:Quit",
                 id="header"
             )
@@ -601,10 +699,8 @@ History: {self.debugger.history_size}"""
             self._set_status("Memory view reset to D pointer")
 
         def action_show_help(self) -> None:
-            """Show help message."""
-            self._set_status(
-                "Keys: s/↓=step, b/↑=back, r=run, B=breakpoint, ←/→=mem scroll, 0=reset, q=quit"
-            )
+            """Show help screen."""
+            self.push_screen(HelpScreen())
 
         def action_clear_message(self) -> None:
             """Clear status message."""
