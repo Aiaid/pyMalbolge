@@ -1,38 +1,122 @@
 # pyMalbolge
 
-This is fork from https://github.com/Avantgarde95/pyMalbolge
+This is a fork from https://github.com/Avantgarde95/pyMalbolge
 
-Simple Malbolge(https://en.wikipedia.org/wiki/Malbolge) interpreter in python
+Simple [Malbolge](https://en.wikipedia.org/wiki/Malbolge) interpreter in Python with built-in debugger.
 
-## Howto
-Install
+## Installation
 
-`pip install malbolge`
+```bash
+# Basic installation
+pip install malbolge
 
-Command Line Tool
-
-`python3 -m malbolge hello.mb`
-
-Eval
-
+# With TUI debugger support
+pip install malbolge[tui]
 ```
+
+## Usage
+
+### Command Line
+
+```bash
+# Run a Malbolge program
+python3 -m malbolge hello.mal
+
+# Start CLI debugger
+python3 -m malbolge.debug_cli hello.mal
+
+# Start TUI debugger (requires textual)
+python3 -m malbolge.debug_tui hello.mal
+```
+
+### Python API
+
+```python
 from malbolge import eval
 
+# Hello World
 eval('''(=<`#9]~6ZY32Vx/4Rs+0No-&Jk)"Fh}|Bcy?`=*z]Kw%oG4UUS0/@-ejc(:'8dc''')
-# Hello World!
-eval('''(=BA#9"=<;:3y7x54-21q/p-,+*)"!h%B0/.~P<<:(8&66#"!~}|{zyxwvugJ%''',"abc123")
-# abc123
+# Output: Hello World!
+
+# Cat program with input
+eval('''(=BA#9"=<;:3y7x54-21q/p-,+*)"!h%B0/.~P<<:(8&66#"!~}|{zyxwvugJ%''', "abc123")
+# Output: abc123
 ```
 
+### Debugger API
 
-## Fix:
-Integer division syntax
+```python
+from malbolge import MalbolgeDebugger
 
-## Add:
-Eval function for inline evaluation
+# Create debugger instance
+dbg = MalbolgeDebugger(source_code, input_data)
 
+# Set breakpoints
+dbg.add_breakpoint(10)
 
-## TODO:
+# Step execution
+state = dbg.step()      # Execute one instruction
+state = dbg.step_back() # Undo last instruction
+state = dbg.run()       # Run until breakpoint
+
+# Inspect state
+print(dbg.registers)    # {'a': 0, 'c': 5, 'd': 45}
+print(dbg.output)       # Program output so far
+print(dbg.disassemble(0, 10))  # Disassemble instructions
+```
+
+## Debugger
+
+### CLI Debugger
+
+Interactive command-line debugger similar to GDB.
+
+```
+(maldbg) break 10       # Set breakpoint at address 10
+(maldbg) run            # Run until breakpoint
+(maldbg) step 5         # Step 5 instructions
+(maldbg) back 2         # Step back 2 instructions
+(maldbg) examine 0 20   # Examine memory at address 0
+(maldbg) disassemble    # Show disassembly
+(maldbg) registers      # Show register values
+(maldbg) output         # Show program output
+(maldbg) help           # Show all commands
+```
+
+### TUI Debugger
+
+Visual terminal-based debugger with split-screen interface.
+
+![TUI Debugger Screenshot](screenshots/tui.png)
+
+**Keybindings:**
+- `s` / `↓` - Step one instruction
+- `b` / `↑` - Step back
+- `r` - Run until breakpoint
+- `B` - Toggle breakpoint at current address
+- `←` / `→` - Scroll memory view left/right
+- `0` - Reset memory scroll to D pointer
+- `q` - Quit
+
+## Changes from Original
+
+### Fixed
+- Integer division syntax (Python 3 compatibility)
+
+### Added
+- `eval()` function for inline evaluation
+- Full-featured debugger with:
+  - Breakpoints and watchpoints
+  - Step-by-step execution
+  - Step back (execution history)
+  - Memory inspection
+  - Disassembly view
+  - CLI and TUI interfaces
+
+## TODO
 - Support Malbolge20 and Malbolge Unshackled
-- Add debug mode
-- A simple Malbolge compiler/generator(not sure if possible)
+- A simple Malbolge compiler/generator
+
+## License
+
+MIT

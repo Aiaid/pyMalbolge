@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "malbolge"
-version = "0.0.1"
+version = "0.1.0"
 authors = [
   { name="Anend", email="anend@live.com" },
 ]
-description = "Simple Malbolge(https://en.wikipedia.org/wiki/Malbolge) interpreter in python"
+description = "Simple Malbolge(https://en.wikipedia.org/wiki/Malbolge) interpreter in python with debugger"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -17,6 +17,17 @@ classifiers = [
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
+
+dependencies = []
+
+[project.optional-dependencies]
+tui = ["textual>=0.40.0"]
+dev = ["pytest", "textual>=0.40.0"]
+
+[project.scripts]
+malbolge = "malbolge.malbolge:main"
+malbolge-debug = "malbolge.debug_cli:main"
+malbolge-tui = "malbolge.debug_tui:main"
 
 [project.urls]
 Homepage = "https://github.com/Aiaid/pyMalbolge"
