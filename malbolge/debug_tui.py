@@ -39,7 +39,9 @@ if HAS_TEXTUAL:
 
     def escape_markup(text: str) -> str:
         """Escape Rich markup special characters."""
-        return text.replace("[", "\\[").replace("]", "\\]")
+        # Use Rich's escape method for proper markup escaping
+        from rich.markup import escape
+        return escape(text)
 
     class RegisterPanel(Static):
         """Panel showing register values."""
@@ -131,7 +133,6 @@ History: {self.debugger.history_size}"""
             # Clamp to valid memory range (0 to 3^10 - 1 = 59048)
             start_addr = max(0, min(59049 - total_cells, start_addr))
 
-            ctx = self.debugger.get_memory_context(start_addr + half_cells, half_cells)
             # Get full range of memory
             all_values = []
             all_chars = []
@@ -198,17 +199,165 @@ History: {self.debugger.history_size}"""
             if not output:
                 display = "[dim](no output)[/dim]"
             else:
-                # Show last 200 chars with proper escaping
-                display = output[-200:]
-                if len(output) > 200:
+                # Show last 100 chars with proper escaping
+                display = output[-100:]
+                if len(output) > 100:
                     display = "..." + display
-                # Escape for Rich
                 display = escape_markup(display)
 
-            content = f"""[bold]Output[/bold] ({len(output)} chars)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{display}"""
+            content = f"[bold]Out[/bold]({len(output)}): {display}"
             self.update(content)
+
+
+    class InputPanel(Static):
+        """Panel showing program input status."""
+
+        def __init__(self, debugger: MalbolgeDebugger, input_data: str, **kwargs):
+            super().__init__(**kwargs)
+            self.debugger = debugger
+            self.input_data = input_data
+
+        def update_display(self):
+            if not self.input_data:
+                self.update("[bold]In[/bold]: [dim](none)[/dim]")
+                return
+
+            consumed = self.debugger._input_pos
+            total = len(self.input_data)
+            remaining = self.input_data[consumed:consumed+20]
+            remaining = escape_markup(remaining)
+            if len(self.input_data) - consumed > 20:
+                remaining += "..."
+
+            self.update(f"[bold]In[/bold]({consumed}/{total}): [green]{remaining}[/green]")
+
+
+    class TeachingPanel(Static):
+        """Combined panel showing instruction help and execution preview (scrollable)."""
+
+        def __init__(self, debugger: MalbolgeDebugger, **kwargs):
+            super().__init__(**kwargs)
+            self.debugger = debugger
+
+        def _format_ternary(self, digits: list, highlight_pos: int = -1) -> str:
+            """Format ternary digits for display (MSB first)."""
+            result = []
+            for i in range(9, -1, -1):
+                d = digits[i]
+                if i == highlight_pos:
+                    result.append(f"[bold yellow]{d}[/bold yellow]")
+                else:
+                    result.append(str(d))
+            return " ".join(result)
+
+        def update_display(self):
+            state = self.debugger.get_state()
+            preview = self.debugger.preview_next_instruction()
+
+            lines = []
+
+            if state.stop_reason == StopReason.TERMINATED:
+                lines.append("[bold]Teaching[/bold]")
+                lines.append("[dim]Program terminated[/dim]")
+                self.update("\n".join(lines))
+                return
+
+            # === Part 1: Instruction Help ===
+            opcode_calc = preview.get('opcode_calculation', {})
+            opcode = preview.get('opcode', -1)
+            help_info = self.debugger.get_opcode_help(opcode)
+
+            if opcode_calc:
+                mem_c = opcode_calc.get('mem_c', 0)
+                mem_c_char = escape_markup(opcode_calc.get('mem_c_char', '?'))
+                c = opcode_calc.get('c', 0)
+                lines.append(f"[bold cyan]({mem_c}+{c})%94={opcode}[/bold cyan] [dim]'{mem_c_char}'[/dim]")
+
+            if help_info:
+                lines.append(f"[bold green]{help_info['name']}[/bold green] {help_info['syntax']}")
+                lines.append(f"[dim]{help_info['description']}[/dim]")
+            lines.append("─" * 32)
+
+            # === Part 2: Execution Preview ===
+            if preview.get('will_terminate'):
+                lines.append("[bold red]Will terminate[/bold red]")
+
+            # Register changes
+            reg_changes = preview.get('register_changes', {})
+            if reg_changes:
+                lines.append("[yellow]Registers:[/yellow]")
+                for reg, (old, new) in reg_changes.items():
+                    if old != new:
+                        lines.append(f"  {reg.upper()}: {old} -> [green]{new}[/green]")
+
+            # Memory changes
+            mem_changes = preview.get('memory_changes', {})
+            if mem_changes:
+                lines.append("[yellow]Memory:[/yellow]")
+                for addr, (old, new) in mem_changes.items():
+                    lines.append(f"  [{addr}]: {old} -> [green]{new}[/green]")
+
+            # Encryption info
+            if preview.get('will_encrypt'):
+                enc_addr = preview.get('encrypt_address', 0)
+                enc_val = preview.get('encrypted_value', 0)
+                old_val = self.debugger._mem[enc_addr]
+                old_char = escape_markup(chr(old_val) if 32 <= old_val <= 126 else '.')
+                new_char = escape_markup(chr(enc_val) if 32 <= enc_val <= 126 else '.')
+                lines.append(f"[yellow]Encrypt:[/yellow] '{old_char}'->'{new_char}'")
+
+            # === Part 3: Detailed Calculations ===
+            calc_details = preview.get('calculation_details')
+            if calc_details:
+                calc_type = calc_details.get('type', '')
+
+                if 'a_ternary' in calc_details:  # Crazy operation
+                    lines.append("─" * 32)
+                    lines.append("[yellow]Crazy Operation:[/yellow]")
+                    lines.append("[dim]TABLE: a\\b│0 1 2[/dim]")
+                    lines.append("[dim]    0│1 0 0  1│1 0 2  2│2 2 1[/dim]")
+
+                    a_val = calc_details['a']
+                    b_val = calc_details['b']
+                    result = calc_details['result']
+                    lines.append(f"a={a_val} b={b_val}")
+
+                    a_tern = calc_details['a_ternary']
+                    b_tern = calc_details['b_ternary']
+                    r_tern = calc_details['result_ternary']
+                    lines.append(f"[dim]a:[/dim]{self._format_ternary(a_tern)}")
+                    lines.append(f"[dim]b:[/dim]{self._format_ternary(b_tern)}")
+                    lines.append(f"[dim]r:[/dim]{self._format_ternary(r_tern)}")
+                    lines.append(f"[bold]= {result}[/bold]")
+
+                elif 'original_ternary' in calc_details:  # Rotate
+                    lines.append("─" * 32)
+                    lines.append("[yellow]Rotation:[/yellow]")
+                    original = calc_details['original']
+                    result = calc_details['result']
+                    lsb = calc_details['lsb']
+
+                    orig_tern = calc_details['original_ternary']
+                    rot_tern = calc_details['rotated_ternary']
+                    lines.append(f"[dim]Before:[/dim]{self._format_ternary(orig_tern, 0)}")
+                    lines.append(f"[dim]After: [/dim]{self._format_ternary(rot_tern, 9)}")
+                    lines.append(f"LSB({lsb})->MSB [bold]= {result}[/bold]")
+
+                elif calc_type == 'output':
+                    char = escape_markup(calc_details.get('char', '?'))
+                    lines.append(f"[yellow]Output:[/yellow] '{char}' ({calc_details.get('ascii', 0)})")
+
+                elif calc_type == 'input':
+                    char = escape_markup(calc_details.get('char', '?'))
+                    lines.append(f"[yellow]Input:[/yellow] '{char}' ({calc_details.get('ascii', 0)})")
+
+                elif calc_type == 'input_exhausted':
+                    lines.append("[red]Input exhausted![/red]")
+
+                elif calc_type == 'mov':
+                    lines.append(f"[yellow]Move:[/yellow] {calc_details.get('note', '')}")
+
+            self.update("\n".join(lines))
 
 
     class StatusBar(Static):
@@ -246,9 +395,9 @@ History: {self.debugger.history_size}"""
         CSS = """
         Screen {
             layout: grid;
-            grid-size: 2 3;
+            grid-size: 2 4;
             grid-columns: 1fr 1fr;
-            grid-rows: auto 1fr auto;
+            grid-rows: auto 1fr 1fr auto;
         }
 
         #header {
@@ -272,25 +421,40 @@ History: {self.debugger.history_size}"""
             height: 100%;
         }
 
-        #reg-panel {
+        #left-bottom {
+            height: 100%;
             border: solid $accent;
             padding: 1;
         }
 
+        #reg-panel {
+            height: auto;
+        }
+
+        #io-panel {
+            height: auto;
+        }
+
         #output-panel {
-            border: solid $warning;
+            height: auto;
+        }
+
+        #input-panel {
+            height: auto;
+        }
+
+        #teaching-scroll {
+            border: solid $success;
+            height: 100%;
+        }
+
+        #teaching-panel {
             padding: 1;
         }
 
         #status-bar {
             column-span: 2;
             height: 3;
-            background: $surface;
-            padding: 1;
-        }
-
-        #help-panel {
-            column-span: 2;
             background: $surface;
             padding: 1;
         }
@@ -312,30 +476,39 @@ History: {self.debugger.history_size}"""
             Binding("escape", "clear_message", "Clear"),
         ]
 
-        def __init__(self, debugger: MalbolgeDebugger):
+        def __init__(self, debugger: MalbolgeDebugger, input_data: str = ""):
             super().__init__()
             self.debugger = debugger
-            self._panels = []
+            self.input_data = input_data
 
         def compose(self) -> ComposeResult:
-            # Header with keybindings
+            # Header
             yield Static(
                 "[bold]pyMalbolge Debugger[/bold]  "
-                "[cyan]s/\u2193[/cyan]:Step  "
-                "[cyan]b/\u2191[/cyan]:Back  "
+                "[cyan]s/↓[/cyan]:Step  "
+                "[cyan]b/↑[/cyan]:Back  "
                 "[cyan]r[/cyan]:Run  "
                 "[cyan]B[/cyan]:Bp  "
-                "[cyan]\u2190/\u2192[/cyan]:Mem  "
-                "[cyan]0[/cyan]:Reset  "
+                "[cyan]←/→[/cyan]:Mem  "
                 "[cyan]q[/cyan]:Quit",
                 id="header"
             )
 
-            # Main panels
+            # Row 2: Disassembly | Memory
             yield DisassemblyPanel(self.debugger, id="disasm-panel")
             yield MemoryPanel(self.debugger, id="memory-panel")
-            yield RegisterPanel(self.debugger, id="reg-panel")
-            yield OutputPanel(self.debugger, id="output-panel")
+
+            # Row 3: Left (Reg+IO) | Teaching (scrollable)
+            yield Vertical(
+                RegisterPanel(self.debugger, id="reg-panel"),
+                OutputPanel(self.debugger, id="output-panel"),
+                InputPanel(self.debugger, self.input_data, id="input-panel"),
+                id="left-bottom"
+            )
+            yield ScrollableContainer(
+                TeachingPanel(self.debugger, id="teaching-panel"),
+                id="teaching-scroll"
+            )
 
             # Status bar
             yield StatusBar(self.debugger, id="status-bar")
@@ -350,6 +523,8 @@ History: {self.debugger.history_size}"""
             self.query_one("#memory-panel", MemoryPanel).update_display()
             self.query_one("#reg-panel", RegisterPanel).update_display()
             self.query_one("#output-panel", OutputPanel).update_display()
+            self.query_one("#input-panel", InputPanel).update_display()
+            self.query_one("#teaching-panel", TeachingPanel).update_display()
             self.query_one("#status-bar", StatusBar).update_display()
 
         def _set_status(self, msg: str) -> None:
@@ -440,14 +615,14 @@ History: {self.debugger.history_size}"""
             self.exit()
 
 
-def run_tui(debugger: MalbolgeDebugger) -> None:
+def run_tui(debugger: MalbolgeDebugger, input_data: str = "") -> None:
     """Run the TUI debugger."""
     if not HAS_TEXTUAL:
         print("TUI mode requires the 'textual' library.")
         print("Install with: pip install textual")
         return
 
-    app = DebuggerApp(debugger)
+    app = DebuggerApp(debugger, input_data)
     app.run()
 
 
@@ -497,7 +672,7 @@ Examples:
         print(f"Error loading source: {e}")
         sys.exit(1)
 
-    run_tui(debugger)
+    run_tui(debugger, args.input)
 
 
 if __name__ == '__main__':
