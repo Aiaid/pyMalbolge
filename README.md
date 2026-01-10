@@ -99,12 +99,13 @@ Visual terminal-based debugger with split-screen interface.
 ![TUI Debugger Screenshot](screenshots/tui.png)
 
 **Keybindings:**
-- `s` / `↓` - Step one instruction
-- `b` / `↑` - Step back
+- `↓` - Step one instruction
+- `↑` - Step back
 - `r` - Run until breakpoint
-- `B` - Toggle breakpoint at current address
+- `b` - Toggle breakpoint at current address
 - `←` / `→` - Scroll memory view left/right
 - `0` - Reset memory scroll to D pointer
+- `h` / `?` - Show help
 - `q` - Quit
 
 ## Changes from Original
