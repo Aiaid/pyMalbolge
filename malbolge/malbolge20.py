@@ -35,8 +35,10 @@ CONFIG = MalbolgeConfig.malbolge20()
 POW19 = CONFIG.rotate_multiplier  # 3^19 = 1,162,261,467
 POW20 = CONFIG.memory_size        # 3^20 = 3,486,784,401
 
-# Value of A after reading EOF: all 20 trits set to 2
-EOF_A = POW20 - 1
+# Value of A after reading EOF. The Nagoya reference interpreter sets
+# A = 59049 (= 3^10), NOT the all-2s value 3^20-1
+# (ref/nagoya-malbolge20-interpreter/malbolge20.c: `if (x == EOF) a = 59049`).
+EOF_A = 59049
 
 
 def rotate20(n: int) -> int:
@@ -124,7 +126,8 @@ def eval(code: str, input_data: str = "", eof: str = 'stop') -> str:
         code: Malbolge20 source code
         input_data: Input string for the program
         eof: 'stop' returns collected output when input runs out;
-             'sentinel' sets A to EOF_A (3^20-1) and lets the program decide
+             'sentinel' sets A to EOF_A (59049, per the Nagoya reference
+             interpreter) and lets the program decide
 
     Returns:
         Program output as string
