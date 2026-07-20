@@ -1,0 +1,14 @@
+# SWITCH with all three CASE bodies present.
+VAR X = 3486784399
+DEF MAIN
+  SWITCH X
+  CASE0
+    OUTPUT
+  CASE1
+    INPUT
+    OUTPUT
+  CASE2
+    OUTPUT
+    OUTPUT
+  END
+END

@@ -1,0 +1,13 @@
+# REPEAT INF with BREAK, and nested REPEAT with BREAK 2.
+DEF MAIN
+  REPEAT INF
+    OUTPUT
+    BREAK
+  END
+  REPEAT 5
+    REPEAT 5
+      OUTPUT
+      BREAK 2
+    END
+  END
+END

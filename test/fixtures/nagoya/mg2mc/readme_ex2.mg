@@ -1,0 +1,5 @@
+VAR X = 300
+DEF MAIN
+  ROT X
+  OPR X
+END
