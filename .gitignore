@@ -4,3 +4,8 @@
 dist/*
 testpip.md
 temp.md
+
+# Reference tools (built locally, not tracked)
+ref/LMAO/
+ref/LMAO-out/
+ref/mbi

@@ -16,6 +16,9 @@ OPS_VALID = (4, 5, 23, 39, 40, 62, 68, 81)
 
 POW9, POW10 = 3**9, 3**10
 
+# Value of A after reading EOF: all 10 trits set to 2 (see mbi.c reference)
+EOF_A = POW10 - 1
+
 # --------------------------------------------------
 
 def rotate(n):
@@ -54,9 +57,9 @@ def initialize(source, mem):
         i += 1
 
 def interpret(mem):
-    write = sys.stdout.write
-    flush = sys.stdout.flush
-    read = sys.stdin.read
+    write = sys.stdout.buffer.write
+    flush = sys.stdout.buffer.flush
+    read = sys.stdin.buffer.read
 
     a, c, d = 0, 0, 0
 
@@ -69,10 +72,11 @@ def interpret(mem):
         if v == 4:                        # jmp [d]
             c = mem[d]
         elif v == 5:                      # out a
-            write(chr(int(a % 256)))
+            write(bytes([int(a % 256)]))
             flush()
         elif v == 23:                     # in a
-            a = ord(read(1))
+            ch = read(1)
+            a = ch[0] if ch else EOF_A
         elif v == 39:                     # rotr[d]; mov a, [d]
             a = mem[d] = rotate(mem[d])
         elif v == 40:                     # mov d, [d]
@@ -92,7 +96,18 @@ def interpret(mem):
         c = 0 if c == POW10-1 else c+1
         d = 0 if d == POW10-1 else d+1
 
-def eval(code,input=()):
+def eval(code, input=(), eof='stop'):
+    """
+    Evaluate Malbolge code with the given input, return the output string.
+
+    eof controls what happens when input is exhausted and the program reads:
+      'stop'     -- return the output collected so far (convenient default,
+                    but programs never see EOF and can't do their own halting)
+      'sentinel' -- set A to EOF_A (59048) like the reference interpreter,
+                    letting the program decide; non-halting programs will loop
+    """
+    if eof not in ('stop', 'sentinel'):
+        raise ValueError(f"eof must be 'stop' or 'sentinel', got {eof!r}")
     mem = [0] * POW10
     initialize(code, mem)
     output=""
@@ -110,9 +125,13 @@ def eval(code,input=()):
         elif v == 5:                      # out a
             output+=(chr(int(a % 256)))
         elif v == 23:                     # in a
-            if(j>=len(input)):return output
-            a = ord(input[j])
-            j+=1
+            if j >= len(input):
+                if eof == 'stop':
+                    return output
+                a = EOF_A
+            else:
+                a = ord(input[j])
+                j += 1
         elif v == 39:                     # rotr[d]; mov a, [d]
             a = mem[d] = rotate(mem[d])
         elif v == 40:                     # mov d, [d]

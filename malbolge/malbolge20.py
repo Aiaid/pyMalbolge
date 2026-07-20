@@ -35,6 +35,9 @@ CONFIG = MalbolgeConfig.malbolge20()
 POW19 = CONFIG.rotate_multiplier  # 3^19 = 1,162,261,467
 POW20 = CONFIG.memory_size        # 3^20 = 3,486,784,401
 
+# Value of A after reading EOF: all 20 trits set to 2
+EOF_A = POW20 - 1
+
 
 def rotate20(n: int) -> int:
     """Rotate 20-trit ternary number right."""
@@ -75,9 +78,9 @@ def interpret(mem: Union[SparseMemory, list]) -> None:
     Args:
         mem: Initialized memory
     """
-    write = sys.stdout.write
-    flush = sys.stdout.flush
-    read = sys.stdin.read
+    write = sys.stdout.buffer.write
+    flush = sys.stdout.buffer.flush
+    read = sys.stdin.buffer.read
 
     a, c, d = 0, 0, 0
     mem_size = POW20
@@ -91,13 +94,11 @@ def interpret(mem: Union[SparseMemory, list]) -> None:
         if v == 4:      # jmp [d]
             c = mem[d]
         elif v == 5:    # out a
-            write(chr(int(a % 256)))
+            write(bytes([int(a % 256)]))
             flush()
         elif v == 23:   # in a
-            char = read(1)
-            if not char:
-                return
-            a = ord(char)
+            ch = read(1)
+            a = ch[0] if ch else EOF_A
         elif v == 39:   # rotr[d]; mov a, [d]
             a = mem[d] = rotate20(mem[d])
         elif v == 40:   # mov d, [d]
@@ -115,17 +116,21 @@ def interpret(mem: Union[SparseMemory, list]) -> None:
         d = 0 if d == mem_size - 1 else d + 1
 
 
-def eval(code: str, input_data: str = "") -> str:
+def eval(code: str, input_data: str = "", eof: str = 'stop') -> str:
     """
     Evaluate Malbolge20 code and return output as string.
 
     Args:
         code: Malbolge20 source code
         input_data: Input string for the program
+        eof: 'stop' returns collected output when input runs out;
+             'sentinel' sets A to EOF_A (3^20-1) and lets the program decide
 
     Returns:
         Program output as string
     """
+    if eof not in ('stop', 'sentinel'):
+        raise ValueError(f"eof must be 'stop' or 'sentinel', got {eof!r}")
     mem = create_memory(CONFIG)
     cells = parse_source(code, CONFIG)
     mem.initialize_source(cells)
@@ -147,9 +152,12 @@ def eval(code: str, input_data: str = "") -> str:
             output += chr(int(a % 256))
         elif v == 23:   # in a
             if input_pos >= len(input_data):
-                return output
-            a = ord(input_data[input_pos])
-            input_pos += 1
+                if eof == 'stop':
+                    return output
+                a = EOF_A
+            else:
+                a = ord(input_data[input_pos])
+                input_pos += 1
         elif v == 39:   # rotr[d]; mov a, [d]
             a = mem[d] = rotate20(mem[d])
         elif v == 40:   # mov d, [d]
