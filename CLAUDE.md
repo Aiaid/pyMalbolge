@@ -6,26 +6,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 pyMalbolge is a Python interpreter for the Malbolge esoteric programming language. It's a fork of https://github.com/Avantgarde95/pyMalbolge with fixes and additional features.
 
+Supports multiple variants:
+- **Original Malbolge**: 10 trits, 59,049 memory cells
+- **Malbolge20**: 20 trits, ~3.48 billion memory cells (sparse memory)
+
 ## Commands
 
 ### Run interpreter on a file
 ```bash
+# Original Malbolge
 python3 -m malbolge examples/hello.mal
+
+# Malbolge20
+python3 -m malbolge --variant=malbolge20 program.mal
 ```
 
 ### Use eval function programmatically
 ```python
+# Original Malbolge
 from malbolge import eval
 result = eval('''(=<`#9]~6ZY32Vx/4Rs+0No-&Jk)"Fh}|Bcy?`=*z]Kw%oG4UUS0/@-ejc(:'8dc''')
+
+# Malbolge20
+from malbolge import eval20
+result = eval20(code)
+
 # With input:
 result = eval('''(=BA#9"=<;:3y7x54-21q/p-,+*)"!h%B0/.~P<<:(8&66#"!~}|{zyxwvugJ%''', "input_string")
+```
+
+### Debug mode
+```bash
+# CLI debugger
+python3 -m malbolge debug examples/hello.mal
+
+# TUI debugger (requires textual)
+python3 -m malbolge debug --tui examples/hello.mal
+
+# With variant
+python3 -m malbolge debug --variant=malbolge20 program.mal
 ```
 
 ### Run tests
 ```bash
 python3 -m pytest test/
-# Or single test:
-python3 -m pytest test/test_malbolge.py::TestEval::test_hello
+# Or with unittest:
+python3 -m unittest discover -v test/
 ```
 
 ### Build package
@@ -35,19 +61,70 @@ python3 -m build
 
 ## Architecture
 
-The entire interpreter is in `malbolge.py` (single file). Key components:
+### Core modules
 
-- **Memory model**: Uses ternary (base-3) arithmetic with 3^10 memory cells
-- **`crazy(a, b)`**: Implements the "crazy operation" - Malbolge's unique ternary operation
-- **`rotate(n)`**: Rotates a ternary number right
-- **`initialize(source, mem)`**: Loads source code into memory, validates characters, fills rest with crazy operation results
-- **`interpret(mem)`**: Main execution loop with 8 valid opcodes (jmp, out, in, rotr, mov, crz, nop, end)
-- **`eval(code, input)`**: Returns output as string instead of printing (added feature)
+| Module | Description |
+|--------|-------------|
+| `malbolge/core.py` | Shared components: `MalbolgeConfig`, `SparseMemory`, `DenseMemory`, `crazy()`, `rotate()` |
+| `malbolge/malbolge.py` | Original Malbolge interpreter (10 trits) |
+| `malbolge/malbolge20.py` | Malbolge20 interpreter (20 trits, sparse memory) |
+| `malbolge/debugger.py` | Debugger with breakpoints, watchpoints, step-back |
+| `malbolge/debug_cli.py` | CLI debugger interface |
+| `malbolge/debug_tui.py` | TUI debugger (textual-based) |
 
-The `ENCRYPT` table handles instruction encryption after execution (self-modifying code characteristic of Malbolge).
+### Key components
 
-## TODO (from README)
+- **`MalbolgeConfig`**: Configuration for variants (trit_width, memory_size, etc.)
+- **`SparseMemory`**: Lazy-loading memory for large address spaces (Malbolge20)
+- **`DenseMemory`**: Full array memory for original Malbolge
+- **`crazy(a, b, trit_width)`**: Ternary digit-by-digit lookup operation
+- **`rotate(n, config)`**: Right-rotate ternary number
+- **`ENCRYPT`**: Self-modifying code table (94 printable ASCII permutation)
 
-- Support Malbolge20 and Malbolge Unshackled
-- Add debug mode
-- A simple Malbolge compiler/generator
+### Important notes
+
+- **Malbolge20 is NOT backward compatible** with original Malbolge programs. The 20-trit `crazy()` operation produces different results than 10-trit.
+- Malbolge20 programs must be specifically written for the 20-trit environment.
+
+## TODO
+
+### Completed
+- [x] Support Malbolge20
+- [x] Add debug mode (CLI + TUI)
+
+### Pending: Malbolge Unshackled
+
+Malbolge Unshackled is a Turing-complete variant with unbounded memory. Implementation requires:
+
+1. **3-adic integer representation**
+   ```python
+   class TriadicInt:
+       def __init__(self, trits: list, leading_trit: int):
+           self.trits = trits  # Finite part
+           self.leading = leading_trit  # 0, 1, or 2, repeats infinitely left
+   ```
+
+2. **Variable rotation width**
+   - Initial width: at least 10 trits
+   - Grows when D register width exceeds half of rotation width
+   - Growth rule is implementation-defined
+
+3. **Unicode I/O** (not mod 256)
+   - Output: A register value is Unicode codepoint (when leading trit is 0)
+   - Input: Read Unicode char, store codepoint
+   - EOF: Represented as `...22` (leading trit 2)
+
+4. **Unbounded memory initialization**
+   - Extend the 6-cell period pattern to all addresses using mod 6 remainders
+
+### Pending: Compiler/Generator
+
+- Simple Malbolge code generator from higher-level constructs
+- Reference: LMFAO assembler for Malbolge Unshackled
+
+## References
+
+- [Malbolge - Esolang](https://esolangs.org/wiki/Malbolge)
+- [Malbolge Unshackled - Esolang](https://esolangs.org/wiki/Malbolge_Unshackled)
+- [lutter.cc/unshackled](https://lutter.cc/unshackled/) - Reference implementation
+- [TryItOnline/malbolge-unshackled](https://github.com/TryItOnline/malbolge-unshackled) - C implementation

@@ -26,8 +26,10 @@ from typing import Optional
 
 try:
     from .debugger import MalbolgeDebugger, MalbolgeState, StopReason, Breakpoint
+    from .core import MalbolgeConfig, MalbolgeVariant
 except ImportError:
     from debugger import MalbolgeDebugger, MalbolgeState, StopReason, Breakpoint
+    from core import MalbolgeConfig, MalbolgeVariant
 
 
 class DebugCLI(cmd.Cmd):
@@ -42,11 +44,12 @@ Type 'help' or '?' for available commands. Type 'help <cmd>' for details.
     prompt = "(maldbg) "
 
     def __init__(self, source: str = None, input_data: str = "",
-                 source_file: str = None):
+                 source_file: str = None, config: MalbolgeConfig = None):
         super().__init__()
         self.debugger: Optional[MalbolgeDebugger] = None
         self.source_file = source_file
         self._last_cmd = ""
+        self._config = config or MalbolgeConfig.original()
 
         if source:
             self._load_source(source, input_data)
@@ -54,8 +57,9 @@ Type 'help' or '?' for available commands. Type 'help <cmd>' for details.
     def _load_source(self, source: str, input_data: str = "") -> bool:
         """Load source code into debugger."""
         try:
-            self.debugger = MalbolgeDebugger(source, input_data)
-            print(f"Loaded {self.debugger.source_length} instructions")
+            self.debugger = MalbolgeDebugger(source, input_data, config=self._config)
+            variant_name = self._config.variant.value
+            print(f"Loaded {self.debugger.source_length} instructions ({variant_name})")
             return True
         except ValueError as e:
             print(f"Error: {e}")
@@ -694,20 +698,30 @@ Examples:
     parser.add_argument('file', nargs='?', help='Malbolge source file')
     parser.add_argument('-i', '--input', default='', help='Program input')
     parser.add_argument('-c', '--command', help='Execute commands and exit')
+    parser.add_argument('--variant', '-v',
+                        choices=['malbolge', 'malbolge20'],
+                        default='malbolge',
+                        help='Malbolge variant (default: malbolge)')
 
     args = parser.parse_args()
+
+    # Select configuration based on variant
+    if args.variant == 'malbolge20':
+        config = MalbolgeConfig.malbolge20()
+    else:
+        config = MalbolgeConfig.original()
 
     cli = None
     if args.file:
         try:
             with open(args.file, 'r') as f:
                 source = f.read()
-            cli = DebugCLI(source, args.input, args.file)
+            cli = DebugCLI(source, args.input, args.file, config)
         except IOError as e:
             print(f"Error reading file: {e}")
             sys.exit(1)
     else:
-        cli = DebugCLI()
+        cli = DebugCLI(config=config)
 
     if args.command:
         # Execute commands from -c argument

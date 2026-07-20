@@ -32,8 +32,10 @@ from typing import Optional
 
 try:
     from .debugger import MalbolgeDebugger, MalbolgeState, StopReason
+    from .core import MalbolgeConfig, MalbolgeVariant
 except ImportError:
     from debugger import MalbolgeDebugger, MalbolgeState, StopReason
+    from core import MalbolgeConfig, MalbolgeVariant
 
 
 if HAS_TEXTUAL:
@@ -752,8 +754,18 @@ Examples:
     )
     parser.add_argument('file', help='Malbolge source file')
     parser.add_argument('-i', '--input', default='', help='Program input')
+    parser.add_argument('--variant', '-v',
+                        choices=['malbolge', 'malbolge20'],
+                        default='malbolge',
+                        help='Malbolge variant (default: malbolge)')
 
     args = parser.parse_args()
+
+    # Select configuration based on variant
+    if args.variant == 'malbolge20':
+        config = MalbolgeConfig.malbolge20()
+    else:
+        config = MalbolgeConfig.original()
 
     try:
         with open(args.file, 'r') as f:
@@ -763,7 +775,7 @@ Examples:
         sys.exit(1)
 
     try:
-        debugger = MalbolgeDebugger(source, args.input)
+        debugger = MalbolgeDebugger(source, args.input, config=config)
     except ValueError as e:
         print(f"Error loading source: {e}")
         sys.exit(1)

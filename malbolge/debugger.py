@@ -5,26 +5,32 @@ This module provides:
 - MalbolgeDebugger: Main debugger class with step/run/breakpoint support
 - MalbolgeState: Immutable snapshot of execution state
 - Breakpoint/Watchpoint: Debugging primitives
+
+Supports multiple Malbolge variants:
+- Original Malbolge (10 trits)
+- Malbolge20 (20 trits)
 """
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Dict, Callable, Optional, Tuple
+from typing import List, Dict, Callable, Optional, Tuple, Union
 import copy
 
-
-# Constants from malbolge.py
-TABLE_CRAZY = (
-    (1, 0, 0),
-    (1, 0, 2),
-    (2, 2, 1)
+from .core import (
+    MalbolgeConfig,
+    MalbolgeVariant,
+    TABLE_CRAZY,
+    ENCRYPT,
+    OPS_VALID,
+    rotate as core_rotate,
+    crazy as core_crazy,
+    create_memory,
+    parse_source,
+    SparseMemory,
+    DenseMemory,
 )
 
-ENCRYPT = list(map(ord,
-    '5z]&gqtyfr$(we4{WP)H-Zn,[%\\3dL+Q;>U!pJS72FhOA1CB'
-    '6v^=I_0/8|jsb9m<.TVac`uY*MK\'X~xDl}REokN:#?G"i@'))
-
-OPS_VALID = (4, 5, 23, 39, 40, 62, 68, 81)
+# Legacy constants for backward compatibility
 POW9, POW10 = 3**9, 3**10  # 19683, 59049
 
 # Opcode name mapping
@@ -218,21 +224,30 @@ class MalbolgeDebugger:
         dbg.add_breakpoint(10)
         state = dbg.run()  # Run until breakpoint
         print(dbg.output)
+
+    For Malbolge20:
+        config = MalbolgeConfig.malbolge20()
+        dbg = MalbolgeDebugger(source_code, input_data, config=config)
     """
 
-    def __init__(self, source: str, input_data: str = ""):
+    def __init__(self, source: str, input_data: str = "",
+                 config: Optional[MalbolgeConfig] = None):
         """
         Initialize debugger with Malbolge source code.
 
         Args:
             source: Malbolge source code
             input_data: Program input string
+            config: Malbolge variant configuration (default: original Malbolge)
 
         Raises:
             ValueError: If source contains invalid characters
         """
+        # Configuration
+        self._config = config or MalbolgeConfig.original()
+
         # Memory and registers
-        self._mem: List[int] = [0] * POW10
+        self._mem: Union[List[int], SparseMemory, DenseMemory] = create_memory(self._config)
         self._a: int = 0
         self._c: int = 0
         self._d: int = 0
@@ -264,44 +279,23 @@ class MalbolgeDebugger:
         self._initialize(source)
 
         # Store initial memory state for reset
-        self._initial_mem: List[int] = self._mem.copy()
+        self._initial_mem = self._mem.copy()
 
     # ==================== Core Operations ====================
 
-    @staticmethod
-    def _rotate(n: int) -> int:
+    def _rotate(self, n: int) -> int:
         """Rotate ternary number right."""
-        return POW9 * (n % 3) + n // 3
+        return core_rotate(n, self._config)
 
-    @staticmethod
-    def _crazy(a: int, b: int) -> int:
+    def _crazy(self, a: int, b: int) -> int:
         """Malbolge's 'crazy' operation."""
-        result = 0
-        d = 1
-        for _ in range(10):
-            result += TABLE_CRAZY[int((b / d) % 3)][int((a / d) % 3)] * d
-            d *= 3
-        return result
+        return core_crazy(a, b, self._config.trit_width)
 
     def _initialize(self, source: str) -> None:
         """Load source code into memory."""
-        i = 0
-        for char in source:
-            if char in (' ', '\n', '\r', '\t'):
-                continue
-            if (ord(char) + i) % 94 not in OPS_VALID:
-                raise ValueError(f"Invalid character '{char}' at position {i}")
-            if i >= POW10:
-                raise ValueError("Source file is too long")
-            self._mem[i] = ord(char)
-            i += 1
-
-        self._source_length = i
-
-        # Fill remaining memory with crazy operation
-        while i < POW10:
-            self._mem[i] = self._crazy(self._mem[i-1], self._mem[i-2])
-            i += 1
+        cells = parse_source(source, self._config)
+        self._source_length = len(cells)
+        self._mem.initialize_source(cells)
 
     # ==================== Breakpoint Management ====================
 
@@ -309,8 +303,8 @@ class MalbolgeDebugger:
                        condition: Optional[Callable[[MalbolgeState], bool]] = None,
                        temporary: bool = False) -> Breakpoint:
         """Add a breakpoint at the specified address."""
-        if not 0 <= address < POW10:
-            raise ValueError(f"Address {address} out of range (0-{POW10-1})")
+        if not 0 <= address < self._config.memory_size:
+            raise ValueError(f"Address {address} out of range (0-{self._config.memory_size-1})")
         bp = Breakpoint(address=address, condition=condition, temporary=temporary)
         self._breakpoints[address] = bp
         return bp
@@ -340,7 +334,7 @@ class MalbolgeDebugger:
 
     def add_watchpoint(self, address: int) -> Watchpoint:
         """Add memory watchpoint at address."""
-        if not 0 <= address < POW10:
+        if not 0 <= address < self._config.memory_size:
             raise ValueError(f"Address {address} out of range")
         wp = Watchpoint(address=address, last_value=self._mem[address])
         self._watchpoints[address] = wp
@@ -358,7 +352,7 @@ class MalbolgeDebugger:
 
     def get_state(self) -> MalbolgeState:
         """Get current execution state snapshot."""
-        raw = self._mem[self._c] if 0 <= self._c < POW10 else 0
+        raw = self._mem[self._c] if 0 <= self._c < self._config.memory_size else 0
         if 33 <= raw <= 126:
             opcode = (raw + self._c) % 94
         else:
@@ -379,20 +373,20 @@ class MalbolgeDebugger:
 
     def read_memory(self, start: int, length: int = 1) -> List[int]:
         """Read memory region."""
-        start = max(0, min(start, POW10 - 1))
-        end = min(start + length, POW10)
+        start = max(0, min(start, self._config.memory_size - 1))
+        end = min(start + length, self._config.memory_size)
         return self._mem[start:end]
 
     def read_memory_value(self, address: int) -> int:
         """Read single memory value."""
-        if 0 <= address < POW10:
+        if 0 <= address < self._config.memory_size:
             return self._mem[address]
         return 0
 
     def get_memory_context(self, address: int, context: int = 5) -> Dict:
         """Get memory values around an address with context."""
         start = max(0, address - context)
-        end = min(POW10, address + context + 1)
+        end = min(self._config.memory_size, address + context + 1)
         values = self._mem[start:end]
         return {
             "start": start,
@@ -401,6 +395,11 @@ class MalbolgeDebugger:
             "values": values,
             "as_chars": [chr(v) if 33 <= v <= 126 else '.' for v in values]
         }
+
+    @property
+    def config(self) -> MalbolgeConfig:
+        """Get the Malbolge variant configuration."""
+        return self._config
 
     @property
     def registers(self) -> Dict[str, int]:
@@ -550,8 +549,8 @@ class MalbolgeDebugger:
 
         # Update pointers (with wraparound)
         # Note: c increments even after jmp, matching original behavior
-        self._c = 0 if self._c == POW10 - 1 else self._c + 1
-        self._d = 0 if self._d == POW10 - 1 else self._d + 1
+        self._c = 0 if self._c == self._config.memory_size - 1 else self._c + 1
+        self._d = 0 if self._d == self._config.memory_size - 1 else self._d + 1
 
         self._step_count += 1
 
@@ -712,7 +711,7 @@ class MalbolgeDebugger:
             start = max(0, self._c - count // 2)
 
         result = []
-        for i in range(start, min(start + count, POW10)):
+        for i in range(start, min(start + count, self._config.memory_size)):
             val = self._mem[i]
             if 33 <= val <= 126:
                 opcode = (val + i) % 94
@@ -749,13 +748,13 @@ class MalbolgeDebugger:
             {
                 "name": "code_ptr",
                 "start": max(0, self._c - 10),
-                "end": min(POW10, self._c + 10),
+                "end": min(self._config.memory_size, self._c + 10),
                 "description": "Around code pointer (C)"
             },
             {
                 "name": "data_ptr",
                 "start": max(0, self._d - 10),
-                "end": min(POW10, self._d + 10),
+                "end": min(self._config.memory_size, self._d + 10),
                 "description": "Around data pointer (D)"
             }
         ]
@@ -763,18 +762,16 @@ class MalbolgeDebugger:
 
     # ==================== Teaching Mode Helpers ====================
 
-    @staticmethod
-    def to_ternary(n: int) -> List[int]:
-        """Convert integer to 10-digit ternary representation (LSB first)."""
+    def to_ternary(self, n: int) -> List[int]:
+        """Convert integer to ternary representation (LSB first)."""
         digits = []
-        for _ in range(10):
+        for _ in range(self._config.trit_width):
             digits.append(n % 3)
             n //= 3
         return digits
 
-    @staticmethod
-    def from_ternary(digits: List[int]) -> int:
-        """Convert 10-digit ternary (LSB first) to integer."""
+    def from_ternary(self, digits: List[int]) -> int:
+        """Convert ternary (LSB first) to integer."""
         result = 0
         for i, d in enumerate(digits):
             result += d * (3 ** i)
@@ -841,8 +838,8 @@ class MalbolgeDebugger:
         rotated = POW9 * lsb + n // 3
 
         # Handle overflow (should not happen for valid values)
-        if rotated >= POW10:
-            rotated = rotated % POW10
+        if rotated >= self._config.memory_size:
+            rotated = rotated % self._config.memory_size
 
         rotated_tern = self.to_ternary(rotated)
 
@@ -920,14 +917,14 @@ class MalbolgeDebugger:
         will_terminate = False
 
         # C and D always increment (unless terminated)
-        new_c = 0 if self._c == POW10 - 1 else self._c + 1
-        new_d = 0 if self._d == POW10 - 1 else self._d + 1
+        new_c = 0 if self._c == self._config.memory_size - 1 else self._c + 1
+        new_d = 0 if self._d == self._config.memory_size - 1 else self._d + 1
 
         if opcode == 4:  # jmp [d]
             new_c = self._mem[self._d]
             # After jmp, c still increments
-            new_c = 0 if new_c == POW10 - 1 else new_c + 1
-            reg_changes['c'] = (self._c, new_c - 1 if new_c > 0 else POW10 - 1)  # Show jump target
+            new_c = 0 if new_c == self._config.memory_size - 1 else new_c + 1
+            reg_changes['c'] = (self._c, new_c - 1 if new_c > 0 else self._config.memory_size - 1)  # Show jump target
             reg_changes['d'] = (self._d, new_d)
 
         elif opcode == 5:  # out a
@@ -972,7 +969,7 @@ class MalbolgeDebugger:
             reg_changes['c'] = (self._c, new_c)
             reg_changes['d'] = (self._d, new_d_val)
             # Note: after mov, d still increments
-            final_d = 0 if new_d_val == POW10 - 1 else new_d_val + 1
+            final_d = 0 if new_d_val == self._config.memory_size - 1 else new_d_val + 1
             reg_changes['d'] = (self._d, final_d)
             calc_details = {
                 'type': 'mov',
@@ -1015,7 +1012,8 @@ class MalbolgeDebugger:
         }
 
 
-def debug(code: str, input_data: str = "") -> MalbolgeDebugger:
+def debug(code: str, input_data: str = "",
+          config: Optional[MalbolgeConfig] = None) -> MalbolgeDebugger:
     """
     Convenience function to create a debugger session.
 
@@ -1024,5 +1022,8 @@ def debug(code: str, input_data: str = "") -> MalbolgeDebugger:
         dbg.add_breakpoint(10)
         dbg.run()
         print(dbg.output)
+
+    For Malbolge20:
+        dbg = debug(code, config=MalbolgeConfig.malbolge20())
     """
-    return MalbolgeDebugger(code, input_data)
+    return MalbolgeDebugger(code, input_data, config=config)

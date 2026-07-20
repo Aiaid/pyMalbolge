@@ -4,6 +4,10 @@ This is a fork from https://github.com/Avantgarde95/pyMalbolge
 
 Simple [Malbolge](https://en.wikipedia.org/wiki/Malbolge) interpreter in Python with built-in debugger.
 
+**Supports multiple variants:**
+- **Original Malbolge** - 10 trits, 59,049 memory cells
+- **Malbolge20** - 20 trits, ~3.48 billion memory cells (sparse memory)
+
 ## Installation
 
 ```bash
@@ -18,26 +22,24 @@ pip install malbolge[tui]
 
 ### Command Line
 
-![TUI Debugger Screenshot](screenshots/cli.png)
-
 ```bash
 # Run a Malbolge program
 python3 -m malbolge hello.mal
 
-# Run with input (for programs that read stdin, like cat.mal)
+# Run with Malbolge20 variant
+python3 -m malbolge --variant=malbolge20 program.mal
+
+# Run with input (for programs that read stdin)
 python3 -m malbolge cat.mal -i "Hello World"
 
-# Start CLI debugger
-python3 -m malbolge.debug_cli hello.mal
+# Start debugger (CLI)
+python3 -m malbolge debug hello.mal
 
-# Start CLI debugger with input
-python3 -m malbolge.debug_cli cat.mal -i "Hello World"
+# Start debugger (TUI, requires textual)
+python3 -m malbolge debug --tui hello.mal
 
-# Start TUI debugger (requires textual)
-python3 -m malbolge.debug_tui hello.mal
-
-# Start TUI debugger with input
-python3 -m malbolge.debug_tui cat.mal -i "Hello World"
+# Debug with Malbolge20 variant
+python3 -m malbolge debug --variant=malbolge20 program.mal
 ```
 
 ### Python API
@@ -54,13 +56,29 @@ eval('''(=BA#9"=<;:3y7x54-21q/p-,+*)"!h%B0/.~P<<:(8&66#"!~}|{zyxwvugJ%''', "abc1
 # Output: abc123
 ```
 
+#### Malbolge20 API
+
+```python
+from malbolge import eval20
+
+# Run code with 20-trit operations
+result = eval20(code, input_data)
+```
+
+> **Note:** Malbolge20 uses 20-trit `crazy()` operations, which produce different results than the original 10-trit version. Programs written for original Malbolge will **not** work correctly in Malbolge20.
+
 ### Debugger API
 
 ```python
 from malbolge import MalbolgeDebugger
+from malbolge.core import MalbolgeConfig
 
-# Create debugger instance
+# Create debugger instance (original Malbolge)
 dbg = MalbolgeDebugger(source_code, input_data)
+
+# Create debugger for Malbolge20
+config = MalbolgeConfig.malbolge20()
+dbg = MalbolgeDebugger(source_code, input_data, config=config)
 
 # Set breakpoints
 dbg.add_breakpoint(10)
@@ -110,6 +128,15 @@ Visual terminal-based debugger with split-screen interface.
 - `h` / `?` - Show help
 - `q` - Quit
 
+## Malbolge Variants
+
+| Feature | Original | Malbolge20 |
+|---------|----------|------------|
+| Word size | 10 trits | 20 trits |
+| Memory | 59,049 cells | ~3.48 billion cells |
+| Memory type | Dense array | Sparse (lazy) |
+| Compatible | - | Not backward compatible |
+
 ## Changes from Original
 
 ### Fixed
@@ -117,6 +144,7 @@ Visual terminal-based debugger with split-screen interface.
 
 ### Added
 - `eval()` function for inline evaluation
+- **Malbolge20 support** with sparse memory
 - Full-featured debugger with:
   - Breakpoints and watchpoints
   - Step-by-step execution
@@ -126,8 +154,15 @@ Visual terminal-based debugger with split-screen interface.
   - CLI and TUI interfaces
 
 ## TODO
-- Support Malbolge20 and Malbolge Unshackled
-- A simple Malbolge compiler/generator
+- [x] Support Malbolge20
+- [ ] Support Malbolge Unshackled (Turing-complete variant)
+- [ ] A simple Malbolge compiler/generator
+
+## References
+
+- [Malbolge - Esolang](https://esolangs.org/wiki/Malbolge)
+- [Malbolge - Wikipedia](https://en.wikipedia.org/wiki/Malbolge)
+- [Malbolge20 - Nagoya University](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/)
 
 ## License
 
