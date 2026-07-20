@@ -12,6 +12,13 @@ import sys
 
 
 def main():
+    # `compile` is a self-contained subcommand with its own option grammar;
+    # dispatch it before the interpreter's positional argument parsing.
+    if len(sys.argv) >= 2 and sys.argv[1] == 'compile':
+        from .compiler.cli import main as compile_main
+        compile_main(sys.argv[2:])
+        return
+
     parser = argparse.ArgumentParser(
         description='Malbolge interpreter - supports multiple variants',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -21,6 +28,8 @@ Examples:
   python -m malbolge --variant=malbolge20 program.mal
   python -m malbolge debug examples/hello.mal
   python -m malbolge debug --tui examples/hello.mal
+  python -m malbolge compile prog.py --emit-c prog.c
+  python -m malbolge compile prog.py -o prog.mb
 '''
     )
 
@@ -28,7 +37,7 @@ Examples:
         'command',
         nargs='?',
         default='run',
-        help='Command: run (default), debug'
+        help='Command: run (default), debug, compile'
     )
 
     parser.add_argument(
