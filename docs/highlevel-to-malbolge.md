@@ -12,13 +12,28 @@ Iizawa 2005 年 99-bottles 论文的后继工作,持续到 2017 年,是**唯一�
 
 | 层 | 语言/工具 | 状态 |
 |---|---|---|
-| C 子集(含递归调用) | Sakanashi et al., IEICE 2017 论文 | 论文公开(日文);编译器源码未公开 |
+| C 子集(含递归调用) | `highlevel`(C 子集 → 伪指令) | **源码公开,MIT**(2026-07 经 GitLab API 发现的未链接仓库,见 §1.1);能力超出 2017 论文:+/-、全部比较、布尔、++/--、+=/-=、递归、数组;缺乘除 |
 | 伪指令语言(.mg) | `ternary`(伪指令 → LAL 翻译器) | **源码公开,MIT**;支持 DEF/CALL/RETURN、IF/ELSE、SWITCH/CASE、REPEAT/BREAK/INF、GOTO、VAR、数组(IND_OPR)、INPUT/OUTPUT |
 | LAL(低级汇编,.mc) | `lowass`(LAL → Malbolge20) | **源码公开,MIT**(perl 两阶段 + C++ init) |
 | Malbolge20 运行时 | 参考解释器(C,分块懒初始化) | **源码公开,MIT**;pyMalbolge 已对齐并通过 conformance(hello20.mb) |
 
-仓库:`git.trs.css.i.nagoya-u.ac.jp/malbolge/{ternary,lowass,malbolge20-interpreter}`
+仓库:`git.trs.css.i.nagoya-u.ac.jp/malbolge/{highlevel,highlevel-examples,ternary,lowass,malbolge20-interpreter}`
 (本地克隆在 `ref/nagoya-*/`,已 gitignore)。
+
+### 1.1 修正与后续调查结论(2026-07-20)
+
+- **C 前端源码其实是公开的**:GitLab group `malbolge` 下共 5 个仓库,其中
+  `highlevel`(C 子集 → .mg)与 `highlevel-examples` 未被项目主页链接,
+  仅能通过 GitLab API 发现。本文此前"前端源码未公开"的结论作废。
+- `highlevel` 在 2017 论文之后继续演进:减法、全套比较运算符、布尔运算、
+  复合赋值均已实现(论文"今後の課題"被部分做掉),2018-03 岩金(Iwagane)
+  加入数组实现(无对应论文)。仅乘法/除法仍缺。
+- **端到端实证**:`highlevel-examples/while.c`(while + 比较 + ++)经
+  highlevel → ternary → lowass 编译为 5.8MB 的 .mb,pyMalbolge 3.6 秒输出
+  `abcde`,与参考 C 解释器逐字节一致——四级管线今天即可用。
+- 研究线活跃度:代码活动止于 2021-01,论文止于 2017-08,主页长期
+  "under construction";酒井本人仍活跃但研究方向已转移。判定为休眠,
+  无接棒团队。
 项目页:https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/
 (2010–2017 年间有约 8 篇 IEICE 技术报告,日文,PDF 可下载)。
 
