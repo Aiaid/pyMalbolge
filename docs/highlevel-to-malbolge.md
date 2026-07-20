@@ -104,3 +104,106 @@ Malbolge20 (.mb)
 (服务于原版 Malbolge 的研究价值);主线转向名古屋栈,理由:目标
 (Malbolge20)内存充裕、许可干净、高层组件现成、且 pyMalbolge 在该
 生态里有明确的独特定位(唯一的现代运行时 + 调试器)。
+
+## 5. Python 前端(已实现 v1)
+
+`malbolge/compiler/` 实现了本路线的最后一块:**Python 子集 → 名古屋高层
+C 子集**的转译器。它没有直接生成 `.mg`,而是复用现成的
+`ref/nagoya-highlevel/parser`(C → `.mg`),因此实际管线是:
+
+```
+Python 子集 (.py)
+   │  ← malbolge/compiler(新组件,纯 Python,用标准库 ast)
+   ▼
+名古屋高层 C 子集 (.c)
+   │  ref/nagoya-highlevel/parser
+   ▼
+伪指令 (.mg) → LAL (.mc) → Malbolge20 (.mb)   (scripts/mg2mb.sh)
+   ▼
+pyMalbolge 运行 / 调试
+```
+
+### 用法
+
+```bash
+# 只转译成 C(-  输出到 stdout)
+python3 -m malbolge compile prog.py --emit-c prog.c
+
+# 走完整管线生成可运行的 .mb(需要构建好 ref/ 工具链)
+python3 -m malbolge compile prog.py -o prog.mb --seed 1
+python3 -m malbolge --variant=malbolge20 prog.mb
+```
+
+```python
+from malbolge.compiler import compile_python_to_c
+c_source = compile_python_to_c("putchar(72)\nputchar(105)\n")
+```
+
+### 支持的 Python 子集
+
+- 整数变量、赋值、`a = b = expr` 多目标赋值;增强赋值 `+= -= *= //= %=`。
+- `if / elif / else`;`while`(含 `while x:` 真值判断);
+  `for i in range(n) / range(a,b) / range(a,b,step)`(step 为正整数字面量,
+  desugar 成 while)。
+- 函数 `def`(位置参数、`return`、递归);`global` 声明写全局变量。
+- 算术 `+ - * // %`;比较 `== != < > <= >=`(含链式 `a < b < c`);
+  布尔 `and / or / not`(短路)。
+- 内建:`putchar(x)`、`getchar()`、`ord('c')`(编译期折叠)。
+- 常量表达式在编译期按 mod 3^20 折叠(如 `9 * 7 + 2` → `65`)。
+
+### 明确的能力边界(友好报错,带行号与源码片段)
+
+- **无负数**:一元负号 / 负字面量拒绝(值环 mod 3^20 无负数,`3 - 5` 折叠
+  成大正数,`x < 0` 恒假)。
+- **无真除法**:`/` 与 `/=` 拒绝,提示改用 `//`。
+- **无 break / continue**(目标 C 子集没有;需改写循环条件)。
+- 不支持:`chr`、`print`、字符串 / f-string、浮点、列表 / 字典 / 集合、
+  类、`import`、`lambda`、推导式、嵌套函数、tuple 解包赋值、关键字实参。
+- 标识符须以字母开头且非 ASCII 会拒绝;`zz` 前缀保留给编译器内部;
+  与 C 关键字(`int`/`while`/`main`/`putchar`/…)同名的变量拒绝;函数名
+  在后端会被转大写,同名(忽略大小写)冲突会拒绝。
+
+### 实现要点(为何这样设计)
+
+后端 C 子集有几个经实测确认的坑,转译器据此规避:
+
+- **无运算符优先级**:`a < b && c` 会解析成 `a < (b && c)`。因此所有表达式
+  一律降为三地址式(每条语句至多一个二元运算,操作数是裸变量或字面量)。
+- **`bool` / `true` / `false` 损坏**:内部常量与 `TRUE_VAL/FALSE_VAL` 同值
+  且被登记为 `INT`,常量缓存按值命名,导致布尔字面量类型错乱、向 bool
+  变量赋值报 "Type mismatch"。因此**从不发射 `bool`/`true`/`false`**,布尔
+  值一律用 `int` 0/1 经控制流物化(`flag = 0; if(cond){ flag = 1; }`,
+  再 `while(flag != 0)` / `if(flag != 0)`)。
+- **无 `* / %` 运算符**:按需注入 C 子集库函数 `zzmul`(倍增 double-and-add,
+  约 32 次加法)、`zzdiv` / `zzmod`(长除),仅在真正用到时发射;除零返回 0
+  以避免死循环。这些库函数的算法已用纯 Python 移植做穷举回归验证
+  (见 `test/test_py2c.py::TestHelperAlgorithms`)。
+- **标识符须字母开头**、**局部声明须在语句之前**、**声明只能用字面量初始化**:
+  故所有局部 / 临时变量提前声明,初始化全部用运行期赋值;模块级变量声明成
+  顶层全局(便于函数读取),其初值在生成的 `main()` 里赋。
+
+### 测试
+
+- `test/test_py2c.py`:纯转译单测(不依赖 ref 工具)——发射结构、常量折叠、
+  临时变量展开、库函数注入、报错用例、库函数算法回归。
+- `test/test_py2c_e2e.py`:两层,均在 ref 工具缺失时自动 skip——
+  parser 接受层(生成的 C 通过 `ref/nagoya-highlevel/parser`)与全管线端到端
+  层(Python → `.mb` 后运行并断言输出)。端到端断言优先用 **C 参考解释器**
+  (`ref/nagoya-malbolge20-interpreter/malbolge20`,比 pyMalbolge 快 15–100 倍),
+  并在 hi / echo 两个小用例上额外用 pyMalbolge 交叉验证输出一致。
+
+### 已知取舍
+
+- 运行时 `zzmul` / `zzdiv` / `zzmod` 正确但在 Malbolge20 上代价高(单个乘法
+  的 `.mb` 可达 ~100MB、运行数分钟)。**能编译期折叠的常量乘除模不产生运行时
+  开销**;因此 e2e 的乘法用例走常量折叠,运行时库函数的正确性由上述纯 Python
+  穷举回归保证。含用户函数的程序在该工具链里体积明显放大(单函数即可达
+  ~50MB)。
+- **上游递归代码生成 bug 及本前端如何规避**:手写 C 里同一表达式**内联两次
+  递归 CALL**(经典 `return fib(n-1) + fib(n-2)`)时,highlevel 生成的代码从
+  fib(4) 起结果错误(fib(4) 得 2 应为 3;第二次 CALL 未保住栈上第一次的中间
+  结果);pyMalbolge 与官方 C 参考解释器结果一致,确认是**上游编译器**问题。
+  **本前端不受影响**:由于"无运算符优先级"本就要求把每个表达式降为三地址式,
+  转译器绝不生成内联的双 CALL,而是发射 `t0 = f(a); t1 = f(b); r = t0 + t1;`。
+  实测(C 参考解释器)该形式结果**正确**:Python 经典双递归 `fib(n-1)+fib(n-2)`
+  编译后 fib(4)=3、fib(5)=5 均正确。即三地址拆分顺带绕开了上游这个 bug。
