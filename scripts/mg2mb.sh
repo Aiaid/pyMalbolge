@@ -119,7 +119,21 @@ MC_FILE="$BASE.mc"
 DATA_FILE="$BASE.data"
 
 echo "==> translating .mg -> .mc (seed=$SEED $STYLE_FLAG $IO_FLAG)" >&2
-"$TERNARY" "$STYLE_FLAG" "$IO_FLAG" -s "$SEED" "$MG_INPUT" > "$MC_FILE"
+# The ternary parser always exits 0, even on syntax/semantic errors -- it
+# only reports them on stderr (main.cc never checks parser.parse()'s
+# return value). Treat any stderr output as fatal so broken .mg input
+# cannot silently produce a garbage .mc.
+PARSER_ERRORS="$WORKDIR/parser-stderr"
+"$TERNARY" "$STYLE_FLAG" "$IO_FLAG" -s "$SEED" "$MG_INPUT" > "$MC_FILE" 2> "$PARSER_ERRORS"
+if [ -s "$PARSER_ERRORS" ]; then
+    echo "error: ternary parser reported errors for $MG_INPUT:" >&2
+    cat "$PARSER_ERRORS" >&2
+    exit 1
+fi
+if [ ! -s "$MC_FILE" ]; then
+    echo "error: ternary parser produced empty output for $MG_INPUT" >&2
+    exit 1
+fi
 
 echo "==> assembling .mc -> .data" >&2
 # parse_mc2.pl iterates Perl hashes when assigning labels/addresses; Perl
@@ -127,7 +141,9 @@ echo "==> assembling .mc -> .data" >&2
 # so without pinning PERL_HASH_SEED the resulting .data (and therefore
 # .mb) byte layout is NOT reproducible across runs even though it is
 # always functionally equivalent.
-PERL_HASH_SEED=0 perl "$PARSE_MC2" "$MC_FILE" "$BASE" >&2
+# Run inside WORKDIR: parse_mc2.pl drops byproduct files (e.g. "info")
+# into the current working directory; keep them in the temp dir.
+( cd "$WORKDIR" && PERL_HASH_SEED=0 perl "$PARSE_MC2" "$MC_FILE" "$BASE" ) >&2
 
 if [ ! -f "$DATA_FILE" ]; then
     echo "error: parse_mc2.pl did not produce $DATA_FILE" >&2
