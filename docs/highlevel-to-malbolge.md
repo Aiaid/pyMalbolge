@@ -95,8 +95,11 @@ Malbolge20 (.mb)
   需翻译),定义 Python 子集,写 `python → .mg` 编译器。
 - **P3 端到端**:hello / 循环 / 递归 fib 从 Python 源码编译到 Malbolge20
   并在测试套里运行验证。
-- **P4(可选)全栈 Python 化**:把 ternary/lowass 移植成 Python 模块
-  (MIT,可直接移植),消除对 C++/perl/flex/bison 的构建依赖。
+- **P4 全栈 Python 化(已完成)**:highlevel/ternary/lowass 三级全部
+  移植为纯 Python(`malbolge/compiler/{c2mg,mg2mc,mc2mb}.py`),与
+  C/C++/Perl 原版逐字节(或行为)对拍验收;`compile_python_to_mb()`
+  一个调用走完全链,无外部构建依赖,全链确定性。ref/ 工具降级为
+  conformance 测试专用。详见 `docs/findings.md` B6。
 
 ### 与 HeLL 汇编器计划的关系
 
@@ -108,29 +111,34 @@ Malbolge20 (.mb)
 ## 5. Python 前端(已实现 v1)
 
 `malbolge/compiler/` 实现了本路线的最后一块:**Python 子集 → 名古屋高层
-C 子集**的转译器。它没有直接生成 `.mg`,而是复用现成的
-`ref/nagoya-highlevel/parser`(C → `.mg`),因此实际管线是:
+C 子集**的转译器。P4 之后,下游三级也全部是本包内的纯 Python 移植
+(与参考实现逐字节对拍验收,见 `docs/findings.md` B6),完整管线
+自包含、确定性、无外部依赖:
 
 ```
 Python 子集 (.py)
-   │  ← malbolge/compiler(新组件,纯 Python,用标准库 ast)
+   │  py2c.py(标准库 ast)
    ▼
 名古屋高层 C 子集 (.c)
-   │  ref/nagoya-highlevel/parser
+   │  c2mg.py(highlevel 的纯 Python 移植)
    ▼
-伪指令 (.mg) → LAL (.mc) → Malbolge20 (.mb)   (scripts/mg2mb.sh)
+伪指令 (.mg)
+   │  mg2mc.py(ternary 移植)
    ▼
-pyMalbolge 运行 / 调试
+LAL (.mc)
+   │  mc2mb.py(lowass 移植,确定性 padding)
+   ▼
+Malbolge20 (.mb) → pyMalbolge 运行 / 调试
 ```
 
 ### 用法
 
 ```bash
-# 只转译成 C(-  输出到 stdout)
+# 只转译成 C(默认输出到 stdout;--emit-mg/--emit-mc 可导出中间层)
 python3 -m malbolge compile prog.py --emit-c prog.c
 
-# 走完整管线生成可运行的 .mb(需要构建好 ref/ 工具链)
-python3 -m malbolge compile prog.py -o prog.mb --seed 1
+# 完整管线生成可运行的 .mb(纯 Python,无需 ref/ 工具)
+python3 -m malbolge compile prog.py -o prog.mb
 python3 -m malbolge --variant=malbolge20 prog.mb
 ```
 

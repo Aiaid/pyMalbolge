@@ -1,6 +1,11 @@
 # 工具链构建与复现指南
 
-> 本项目依赖的外部参考工具的获取、构建与使用,含全部已踩过的平台坑
+> **注(P4 之后)**:编译 Python/C/.mg 程序已**不需要**本文档的任何
+> 外部工具——`malbolge/compiler/` 的纯 Python 移植覆盖了全链
+> (`python3 -m malbolge compile prog.py -o prog.mb`)。本文档保留给
+> **conformance 对拍**(与参考实现比对)与上游考古场景。
+>
+> 外部参考工具的获取、构建与使用,含全部已踩过的平台坑
 >(macOS/Darwin 实测)。工具本体均在 gitignore 的 `ref/` 下,不入库。
 
 ## 1. 获取

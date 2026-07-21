@@ -8,13 +8,13 @@ reference toolchain under ref/ is built:
   accepted by the reference high-level parser (ref/nagoya-highlevel/parser).
   Fast; needs only that one tool.
 
-* EndToEnd -- transpile Python all the way to a Malbolge20 program via
-  scripts/mg2mb.sh and run it through `python3 -m malbolge --variant=
-  malbolge20`, asserting the observed output. Slow (each case builds and
-  runs a multi-megabyte program); needs the full toolchain.
+* EndToEnd -- transpile Python all the way to a Malbolge20 program with the
+  pure-Python pipeline (malbolge.compiler.compile_python_to_mb; no external
+  tools needed) and run it, asserting the observed output. Slow (each case
+  builds and runs a multi-megabyte program). Runs on the C reference
+  interpreter when built (much faster), else falls back to pyMalbolge.
 
-See scripts/mg2mb.sh and test/fixtures/nagoya/README.md for toolchain
-provenance and build instructions.
+See test/fixtures/nagoya/README.md for reference-toolchain provenance.
 """
 
 import os
@@ -23,7 +23,7 @@ import sys
 import tempfile
 import unittest
 
-from malbolge.compiler import compile_python_to_c
+from malbolge.compiler import compile_python_to_c, compile_python_to_mb
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HL_PARSER = os.path.join(REPO_ROOT, "ref", "nagoya-highlevel", "parser")
@@ -144,27 +144,38 @@ class ParserAcceptance(unittest.TestCase):
             "bump()\nemit(0)\n")
 
 
-@unittest.skipUnless(
-    HAVE_PIPELINE, "reference toolchain not built (ref/nagoya-*)")
 class EndToEnd(unittest.TestCase):
     """Transpile Python -> .mb and run it, asserting the observed output.
+
+    Building uses the reference toolchain when built (its C/C++ stages
+    assemble multi-MB programs in seconds) and otherwise falls back to the
+    pure-Python pipeline, whose mc2mb stage is ~40s/MB -- so the larger
+    cases are skipped without the reference tools. Stage equivalence is
+    separately guaranteed byte-for-byte by the conformance suites
+    (test_c2mg / test_mg2mc / test_mc2mb).
 
     Output is checked against the C reference interpreter when it is built
     (much faster than pyMalbolge); a couple of cases are additionally
     cross-checked on pyMalbolge itself."""
 
     def _build_mb(self, source, workdir, seed=1):
-        c_source = py_to_c(source)
-        mg = os.path.join(workdir, "prog.mg")
         mb = os.path.join(workdir, "prog.mb")
-        err = c_to_mg(c_source, mg)
-        self.assertEqual(
-            err.strip(), "", "high-level parser rejected generated C:\n" + err)
-        proc = subprocess.run(
-            ["bash", MG2MB, "-s", str(seed), mg, mb],
-            stderr=subprocess.PIPE, text=True)
-        self.assertEqual(
-            proc.returncode, 0, ".mg -> .mb pipeline failed:\n" + proc.stderr)
+        if HAVE_PIPELINE:
+            c_source = py_to_c(source)
+            mg = os.path.join(workdir, "prog.mg")
+            err = c_to_mg(c_source, mg)
+            self.assertEqual(
+                err.strip(), "",
+                "high-level parser rejected generated C:\n" + err)
+            proc = subprocess.run(
+                ["bash", MG2MB, "-s", str(seed), mg, mb],
+                stderr=subprocess.PIPE, text=True)
+            self.assertEqual(
+                proc.returncode, 0,
+                ".mg -> .mb pipeline failed:\n" + proc.stderr)
+        else:
+            with open(mb, "w") as f:
+                f.write(compile_python_to_mb(source))
         return mb
 
     def _run_c(self, mb, stdin):
@@ -201,15 +212,24 @@ class EndToEnd(unittest.TestCase):
             self.run_python("putchar(72)\nputchar(105)\n", cross_check=True),
             b"Hi")
 
+    @unittest.skipUnless(
+        HAVE_PIPELINE,
+        "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")
     def test_while_countdown(self):
         # prints C, B, A
         out = self.run_python("x = 3\nwhile x > 0:\n    putchar(64 + x)\n    x -= 1\n")
         self.assertEqual(out, b"CBA")
 
+    @unittest.skipUnless(
+        HAVE_PIPELINE,
+        "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")
     def test_if_else(self):
         out = self.run_python("x = 5\nif x < 3:\n    putchar(65)\nelse:\n    putchar(90)\n")
         self.assertEqual(out, b"Z")
 
+    @unittest.skipUnless(
+        HAVE_PIPELINE,
+        "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")
     def test_for_range_desugar(self):
         out = self.run_python("for i in range(3):\n    putchar(65 + i)\n")
         self.assertEqual(out, b"ABC")
@@ -225,6 +245,9 @@ class EndToEnd(unittest.TestCase):
                             cross_check=True),
             b"Q")
 
+    @unittest.skipUnless(
+        HAVE_PIPELINE,
+        "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")
     def test_recursion_single_call(self):
         # Single recursive call per expression: sum 5+4+3+2+1 == 15; +50 == 'A'.
         out = self.run_python(
@@ -232,6 +255,9 @@ class EndToEnd(unittest.TestCase):
             "    return n + s(n - 1)\nputchar(s(5) + 50)\n")
         self.assertEqual(out, b"A")
 
+    @unittest.skipUnless(
+        HAVE_PIPELINE,
+        "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")
     def test_recursion_double_call_fib(self):
         # Classic double-recursion Fibonacci: fib(5) == 5; +60 == 'A'.
         # Hand-written C with two *inline* recursive calls in one expression is
