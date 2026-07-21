@@ -1,0 +1,290 @@
+[
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/examples_array.c",
+    "origin": "upstream: ref/nagoya-highlevel-examples/array.c",
+    "deterministic": true,
+    "stdout_bytes": 11909,
+    "stderr_excerpt": null,
+    "notes": "Identical source to upstream/sample_test2.c (examples repo duplicates the sample); kept as a separate fixture to trace both origins."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/examples_hello.c",
+    "origin": "upstream: ref/nagoya-highlevel-examples/hello.c",
+    "deterministic": true,
+    "stdout_bytes": 549,
+    "stderr_excerpt": null,
+    "notes": "Identical source to upstream/sample_hello.c (examples repo duplicates the sample); kept as a separate fixture to trace both origins."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/examples_simple-echo.c",
+    "origin": "upstream: ref/nagoya-highlevel-examples/simple-echo.c",
+    "deterministic": true,
+    "stdout_bytes": 336,
+    "stderr_excerpt": null,
+    "notes": "Minimal getchar()/putchar() echo, no loop."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/examples_while.c",
+    "origin": "upstream: ref/nagoya-highlevel-examples/while.c",
+    "deterministic": true,
+    "stdout_bytes": 2163,
+    "stderr_excerpt": null,
+    "notes": "While loop over char-literal-initialised global with <=, postfix ++; known-good end-to-end reference case per docs/highlevel-to-malbolge.md (matches pyMalbolge output byte-for-byte through the full pipeline)."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/examples_while2.c",
+    "origin": "upstream: ref/nagoya-highlevel-examples/while2.c",
+    "deterministic": true,
+    "stdout_bytes": 2185,
+    "stderr_excerpt": null,
+    "notes": "While loop counting down with >=, postfix --."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_add.c",
+    "origin": "upstream: runtime/mg/official/add.c",
+    "deterministic": true,
+    "stdout_bytes": 1477,
+    "stderr_excerpt": null,
+    "notes": "Integer addition of two globals, no zzmul/zzdiv/zzmod (backend has native + and -)."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_dec.c",
+    "origin": "upstream: runtime/mg/official/dec.c",
+    "deterministic": true,
+    "stdout_bytes": 815,
+    "stderr_excerpt": null,
+    "notes": "Postfix -- on a global."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_div.c",
+    "origin": "upstream: runtime/mg/official/div.c",
+    "deterministic": true,
+    "stdout_bytes": 5557,
+    "stderr_excerpt": null,
+    "notes": "Floor division implemented by hand as a while-loop of repeated subtraction (no native '/'); same caveat as official_mul.c."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_eq.c",
+    "origin": "upstream: runtime/mg/official/eq.c",
+    "deterministic": true,
+    "stdout_bytes": 1161,
+    "stderr_excerpt": null,
+    "notes": "== comparison, if/else."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_fib.c",
+    "origin": "upstream: runtime/mg/official/fib.c",
+    "deterministic": true,
+    "stdout_bytes": 14497,
+    "stderr_excerpt": null,
+    "notes": "Recursive fib with the classic hand-written inline double recursion 'return fib(n-1)+fib(n-2);'. This is EXACTLY the shape that triggers the known upstream highlevel code-generation bug: the second inlined CALL clobbers the stacked intermediate result from the first, so results are wrong starting at fib(4) (fib(4) comes out 2, should be 3). Expected/intentional: we diff against this same broken reference output, not against correct fib. Contrast with from_py/py_fib_recursive.c, whose three-address lowering avoids this exact bug."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_ge.c",
+    "origin": "upstream: runtime/mg/official/ge.c",
+    "deterministic": true,
+    "stdout_bytes": 1324,
+    "stderr_excerpt": null,
+    "notes": ">= comparison, if/else."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_gt.c",
+    "origin": "upstream: runtime/mg/official/gt.c",
+    "deterministic": true,
+    "stdout_bytes": 1301,
+    "stderr_excerpt": null,
+    "notes": "> comparison, if/else."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_inc.c",
+    "origin": "upstream: runtime/mg/official/inc.c",
+    "deterministic": true,
+    "stdout_bytes": 802,
+    "stderr_excerpt": null,
+    "notes": "Postfix ++ on a global."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_le.c",
+    "origin": "upstream: runtime/mg/official/le.c",
+    "deterministic": true,
+    "stdout_bytes": 1324,
+    "stderr_excerpt": null,
+    "notes": "<= comparison, if/else."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_lt.c",
+    "origin": "upstream: runtime/mg/official/lt.c",
+    "deterministic": true,
+    "stdout_bytes": 1305,
+    "stderr_excerpt": null,
+    "notes": "< comparison, if/else."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_mul.c",
+    "origin": "upstream: runtime/mg/official/mul.c",
+    "deterministic": true,
+    "stdout_bytes": 4799,
+    "stderr_excerpt": null,
+    "notes": "Multiplication implemented by hand as a while-loop of repeated addition (the C subset has no native '*'); does not exercise py2c's injected zzmul helper since it predates py2c and hand-rolls the loop itself."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_ne.c",
+    "origin": "upstream: runtime/mg/official/ne.c",
+    "deterministic": true,
+    "stdout_bytes": 1254,
+    "stderr_excerpt": null,
+    "notes": "!= comparison, if/else."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/official_sub.c",
+    "origin": "upstream: runtime/mg/official/sub.c",
+    "deterministic": true,
+    "stdout_bytes": 2021,
+    "stderr_excerpt": null,
+    "notes": "Integer subtraction of two globals."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/sample_hello.c",
+    "origin": "upstream: ref/nagoya-highlevel/sample/hello.c",
+    "deterministic": true,
+    "stdout_bytes": 549,
+    "stderr_excerpt": null,
+    "notes": "Bundled upstream sample: putchar sequence spelling 'Hello'."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/sample_test.c",
+    "origin": "upstream: ref/nagoya-highlevel/sample/test.c",
+    "deterministic": true,
+    "stdout_bytes": 1937,
+    "stderr_excerpt": null,
+    "notes": "Bundled upstream sample: global int + while loop with prefix ++."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/upstream/sample_test2.c",
+    "origin": "upstream: ref/nagoya-highlevel/sample/test2.c",
+    "deterministic": true,
+    "stdout_bytes": 11909,
+    "stderr_excerpt": null,
+    "notes": "Bundled upstream sample: array declaration/indexing (int j[3]) plus while loop with postfix ++."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_augmented_assign.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 93718,
+    "stderr_excerpt": null,
+    "notes": "Exercises every augmented-assignment operator the subset supports: += -= *= //= %=. The *=, //=, %= are on variable (non-constant) operands so per py2c's _fold (folding only applies when BOTH operands are literal ints) they are NOT constant-folded and route through the injected zzmul/zzdiv/zzmod helpers -- triggers all three helpers in one file."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_chained_compare.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 5114,
+    "stderr_excerpt": null,
+    "notes": "Chained comparison 'a < b < c', lowered by py2c into nested ANDed pairwise comparisons (a < b) && (b < c)."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_fib_recursive.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 34825,
+    "stderr_excerpt": null,
+    "notes": "Recursive fib(n) via Python 'def fib(n): ... return fib(n-1) + fib(n-2)'. py2c always lowers each binary op to three-address form (t0 = fib(n-1); t1 = fib(n-2); r = t0 + t1), which incidentally sidesteps the upstream double-inline-CALL bug seen in upstream/official_fib.c -- so this fixture's reference output should be numerically correct fib(10). Included for recursive-call/prototype conformance coverage, not to reproduce the bug (see upstream/official_fib.c for that)."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_for_range_simple.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 9561,
+    "stderr_excerpt": null,
+    "notes": "Python 'for i in range(n)' desugared by py2c into an equivalent while loop."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_for_range_start_stop_step.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 8310,
+    "stderr_excerpt": null,
+    "notes": "Python 'for i in range(a, b, step)' with a non-1 positive literal step, desugared to while; body uses += to accumulate."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_func_return.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 8746,
+    "stderr_excerpt": null,
+    "notes": "A user function with a return value, called from top-level code and the result passed to putchar()."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_getchar_echo_loop.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 21609,
+    "stderr_excerpt": null,
+    "notes": "getchar()-driven while loop with a compound 'and' condition (c != 0 and c != 10); loop runs until a NUL or newline byte is read from stdin (parser is given no stdin, so getchar() reads EOF immediately -- exercises EOF handling in codegen, not actual echoing)."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_global_and_multi_assign.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 11162,
+    "stderr_excerpt": null,
+    "notes": "'global' declaration used inside a function to mutate a module-level variable across calls, plus chained multi-target assignment 'p = q = bump()'."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_not_and_ord.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 5755,
+    "stderr_excerpt": null,
+    "notes": "'not' operator on an int-truthiness flag, plus ord('N')/ord('Y') single-character literal folding at compile time."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_short_circuit_and.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 36712,
+    "stderr_excerpt": null,
+    "notes": "Short-circuit 'and': two calls with putchar() side effects (L/R markers) let a byte-diff distinguish true short-circuit evaluation from eager/non-short-circuit evaluation."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_short_circuit_or.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 37075,
+    "stderr_excerpt": null,
+    "notes": "Short-circuit 'or': same L/R side-effect-marker technique as short_circuit_and."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_while_loop.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 6826,
+    "stderr_excerpt": null,
+    "notes": "Plain while loop with a += augmented assignment as the increment, incrementing through a char range."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_zzdiv_variable.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 31845,
+    "stderr_excerpt": null,
+    "notes": "q = x // y with both operands variables: forces the injected zzdiv() helper."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_zzmod_variable.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 23161,
+    "stderr_excerpt": null,
+    "notes": "r = x % y with both operands variables: forces the injected zzmod() helper."
+  },
+  {
+    "path": "test/fixtures/c2mg_corpus/from_py/py_zzmul_variable.c",
+    "origin": "from_py: generated via malbolge.compiler.py2c.compile_python_to_c (see test/fixtures/c2mg_corpus/_gen_from_py.py for the Python source of each fixture, also embedded as a header comment in the .c file itself)",
+    "deterministic": true,
+    "stdout_bytes": 36988,
+    "stderr_excerpt": null,
+    "notes": "z = x * y with both operands variables (not literals): forces py2c to emit and use the injected zzmul() helper rather than constant-folding."
+  }
+]

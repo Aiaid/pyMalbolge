@@ -1,0 +1,134 @@
+VAR CONST_0=0
+VAR CONST_1743392201=1743392201
+VAR CONST_3486784398=3486784398
+VAR CONST_3486784399=3486784399
+VAR CONST_97=97
+VAR STACK_TOP=3486784381
+VAR TEMP0=0
+VAR TEMP1=0
+VAR TEMP2=0
+VAR TEMP3=0
+VAR u_i=101
+FLAG TEMP_FLAG0 = FALSE
+PROTO MAIN
+DEF MAIN
+  VAR RETURN_VALUE=0
+  REPEAT INF
+    ROT CON1
+    OPR TEMP1
+    OPR TEMP1
+    OPR TEMP0
+    OPR TEMP0
+    ROT CON2
+    OPR CONST_97
+    ROT CON2
+    OPR CONST_97
+    OPR TEMP1
+    OPR TEMP0
+    ROT CON1
+    OPR TEMP2
+    OPR TEMP2
+    OPR TEMP1
+    OPR TEMP1
+    ROT CON2
+    OPR u_i
+    ROT CON2
+    OPR u_i
+    OPR TEMP2
+    OPR TEMP1
+    ROT CON1
+    OPR TEMP2
+    OPR TEMP2
+    ROT CON2
+    OPR TEMP2
+    ROT CON2
+    OPR TEMP0
+    OPR TEMP2
+    OPR TEMP0
+    OPR TEMP2
+    OPR TEMP1
+    ROT CON2
+    OPR TEMP1
+    OPR TEMP0
+    ROT CON2
+    OPR TEMP1
+    OPR TEMP0
+    ROT CON1
+    OPR TEMP1
+    OPR TEMP1
+    ROT CON2
+    OPR TEMP1
+    ROT CON0
+    OPR CONST_1743392201
+    OPR TEMP1
+    REPEAT 20
+      ROT CON1
+      OPR TEMP3
+      OPR TEMP3
+      OPR TEMP2
+      OPR TEMP2
+      ROT CON2
+      OPR TEMP0
+      ROT CON2
+      OPR TEMP0
+      OPR TEMP3
+      OPR TEMP2
+      ROT CON2
+      OPR TEMP2
+      OPR TEMP1
+      OPR TEMP2
+      OPR TEMP1
+      OPR TEMP2
+      OPR TEMP1
+      ROT TEMP0
+    END
+    SWITCH TEMP1
+      CASE0
+        BREAK
+      CASE1
+        ROT CON1
+        OPR TEMP0
+        OPR TEMP0
+        OPR TEMP3
+        OPR TEMP3
+        ROT CON2
+        OPR u_i
+        ROT CON2
+        OPR u_i
+        OPR TEMP0
+        OPR TEMP3
+        SET TEMP_FLAG0
+        REPEAT 20
+          IF TEMP_FLAG0
+            ROT CON2
+            OPR u_i
+            ROT CON2
+            OPR u_i
+            OPR CONST_0
+            OPR CONST_3486784398
+            OPR u_i
+            ROT CON2
+            OPR u_i
+            SWITCH CONST_3486784398
+              CASE0
+              CASE1
+                RESET TEMP_FLAG0
+              CASE2
+            END
+          ELSE
+          END
+          ROT CON1
+          OPR CONST_0
+          ROT u_i
+        END
+        ROT CON1
+        OPR CONST_3486784398
+        ROT CON2
+        OPR TEMP3
+        ROT CON2
+        OPR TEMP3
+        OUTPUT
+      CASE2
+    END
+  END
+END

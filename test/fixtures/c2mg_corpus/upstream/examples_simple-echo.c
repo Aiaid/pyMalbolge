@@ -1,0 +1,3 @@
+int main() {
+  putchar(getchar());
+}

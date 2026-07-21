@@ -1,0 +1,1713 @@
+VAR CONST_0=0
+VAR CONST_1=1
+VAR CONST_100=100
+VAR CONST_1743392201=1743392201
+VAR CONST_2905653667=2905653667
+VAR CONST_3486784398=3486784398
+VAR CONST_3486784399=3486784399
+VAR CONST_7=7
+VAR STACK_TOP=3486784381
+VAR TEMP0=0
+VAR TEMP1=0
+VAR TEMP10=0
+VAR TEMP11=0
+VAR TEMP12=0
+VAR TEMP13=0
+VAR TEMP14=0
+VAR TEMP15=0
+VAR TEMP16=0
+VAR TEMP17=0
+VAR TEMP18=0
+VAR TEMP19=0
+VAR TEMP2=0
+VAR TEMP3=0
+VAR TEMP4=0
+VAR TEMP5=0
+VAR TEMP6=0
+VAR TEMP7=0
+VAR TEMP8=0
+VAR TEMP9=0
+VAR u_q=0
+VAR u_x=0
+VAR u_y=0
+FLAG TEMP_FLAG0 = FALSE
+PROTO MAIN
+PROTO ZZDIV
+DEF MAIN
+  VAR RETURN_VALUE=0
+  ROT CON1
+  OPR TEMP18
+  OPR TEMP18
+  OPR u_x
+  OPR u_x
+  ROT CON2
+  OPR CONST_100
+  ROT CON2
+  OPR CONST_100
+  OPR TEMP18
+  OPR u_x
+  ROT CON1
+  OPR TEMP18
+  OPR TEMP18
+  OPR u_y
+  OPR u_y
+  ROT CON2
+  OPR CONST_7
+  ROT CON2
+  OPR CONST_7
+  OPR TEMP18
+  OPR u_y
+  ROT CON1
+  OPR TEMP18
+  OPR TEMP18
+  OPR ARG0@ZZDIV
+  OPR ARG0@ZZDIV
+  ROT CON2
+  OPR u_x
+  ROT CON2
+  OPR u_x
+  OPR TEMP18
+  OPR ARG0@ZZDIV
+  ROT CON1
+  OPR TEMP18
+  OPR TEMP18
+  OPR ARG1@ZZDIV
+  OPR ARG1@ZZDIV
+  ROT CON2
+  OPR u_y
+  ROT CON2
+  OPR u_y
+  OPR TEMP18
+  OPR ARG1@ZZDIV
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  IND_OPR STACK_TOP
+  ROT CON2
+  OPR RETURN_ADDR@ZZDIV
+  ROT CON2
+  OPR RETURN_ADDR@ZZDIV
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  CALL ZZDIV
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR RETURN_ADDR@ZZDIV
+  OPR RETURN_ADDR@ZZDIV
+  ROT CON2
+  IND_OPR STACK_TOP
+  ROT CON2
+  IND_OPR STACK_TOP
+  OPR TEMP19
+  OPR RETURN_ADDR@ZZDIV
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR TEMP18
+  OPR TEMP18
+  ROT CON2
+  OPR RETURN_VALUE@ZZDIV
+  ROT CON2
+  OPR RETURN_VALUE@ZZDIV
+  OPR TEMP19
+  OPR TEMP18
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR u_q
+  OPR u_q
+  ROT CON2
+  OPR TEMP18
+  ROT CON2
+  OPR TEMP18
+  OPR TEMP19
+  OPR u_q
+  ROT CON2
+  OPR u_q
+  ROT CON2
+  OPR u_q
+  OUTPUT
+END
+DEF ZZDIV
+  VAR ARG0=0
+  VAR ARG1=0
+  VAR RETURN_VALUE=0
+  VAR u_a=0
+  VAR u_b=0
+  VAR u_bsh=0
+  VAR u_p=0
+  VAR u_q=0
+  VAR u_rem=0
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  IND_OPR STACK_TOP
+  ROT CON2
+  OPR u_a
+  ROT CON2
+  OPR u_a
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  IND_OPR STACK_TOP
+  ROT CON2
+  OPR u_b
+  ROT CON2
+  OPR u_b
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  IND_OPR STACK_TOP
+  ROT CON2
+  OPR u_bsh
+  ROT CON2
+  OPR u_bsh
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  IND_OPR STACK_TOP
+  ROT CON2
+  OPR u_p
+  ROT CON2
+  OPR u_p
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  IND_OPR STACK_TOP
+  ROT CON2
+  OPR u_q
+  ROT CON2
+  OPR u_q
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      ROT CON2
+      OPR STACK_TOP
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  IND_OPR STACK_TOP
+  ROT CON2
+  OPR u_rem
+  ROT CON2
+  OPR u_rem
+  OPR TEMP19
+  IND_OPR STACK_TOP
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_a
+  OPR u_a
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP0
+  OPR u_a
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_b
+  OPR u_b
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP0
+  OPR u_b
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_bsh
+  OPR u_bsh
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP0
+  OPR u_bsh
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_p
+  OPR u_p
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP0
+  OPR u_p
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_q
+  OPR u_q
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP0
+  OPR u_q
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_rem
+  OPR u_rem
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP0
+  OPR u_rem
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_a
+  OPR u_a
+  ROT CON2
+  OPR ARG0
+  ROT CON2
+  OPR ARG0
+  OPR TEMP0
+  OPR u_a
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_b
+  OPR u_b
+  ROT CON2
+  OPR ARG1
+  ROT CON2
+  OPR ARG1
+  OPR TEMP0
+  OPR u_b
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_q
+  OPR u_q
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP0
+  OPR u_q
+  ROT CON1
+  OPR TEMP0
+  OPR TEMP0
+  OPR u_rem
+  OPR u_rem
+  ROT CON2
+  OPR u_a
+  ROT CON2
+  OPR u_a
+  OPR TEMP0
+  OPR u_rem
+  ROT CON1
+  OPR TEMP1
+  OPR TEMP1
+  OPR TEMP0
+  OPR TEMP0
+  ROT CON2
+  OPR u_b
+  ROT CON2
+  OPR u_b
+  OPR TEMP1
+  OPR TEMP0
+  ROT CON1
+  OPR TEMP2
+  OPR TEMP2
+  OPR TEMP1
+  OPR TEMP1
+  ROT CON2
+  OPR CONST_0
+  ROT CON2
+  OPR CONST_0
+  OPR TEMP2
+  OPR TEMP1
+  ROT CON1
+  OPR TEMP2
+  OPR TEMP2
+  ROT CON2
+  OPR TEMP2
+  ROT CON2
+  OPR TEMP0
+  OPR TEMP2
+  OPR TEMP0
+  OPR TEMP2
+  OPR TEMP1
+  OPR TEMP0
+  OPR TEMP0
+  ROT CON1
+  OPR TEMP1
+  OPR TEMP1
+  ROT CON2
+  OPR TEMP1
+  ROT CON0
+  OPR CONST_1743392201
+  OPR TEMP1
+  REPEAT 20
+    ROT CON2
+    OPR TEMP0
+    ROT CON2
+    OPR TEMP0
+    OPR TEMP1
+    ROT TEMP0
+    SWITCH TEMP1
+      CASE0
+        BREAK
+      CASE1
+      CASE2
+    END
+  END
+  ROT CON1
+  OPR TEMP2
+  OPR TEMP2
+  ROT CON2
+  OPR TEMP1
+  ROT CON2
+  OPR TEMP1
+  OPR TEMP2
+  SWITCH TEMP2
+    CASE0
+    CASE1
+      REPEAT INF
+        ROT CON1
+        OPR TEMP3
+        OPR TEMP3
+        OPR TEMP0
+        OPR TEMP0
+        ROT CON2
+        OPR u_b
+        ROT CON2
+        OPR u_b
+        OPR TEMP3
+        OPR TEMP0
+        ROT CON1
+        OPR TEMP4
+        OPR TEMP4
+        OPR TEMP3
+        OPR TEMP3
+        ROT CON2
+        OPR u_rem
+        ROT CON2
+        OPR u_rem
+        OPR TEMP4
+        OPR TEMP3
+        ROT CON1
+        OPR TEMP4
+        OPR TEMP4
+        ROT CON2
+        OPR TEMP4
+        ROT CON2
+        OPR TEMP0
+        OPR TEMP4
+        OPR TEMP0
+        OPR TEMP4
+        OPR TEMP3
+        ROT CON2
+        OPR TEMP3
+        OPR TEMP0
+        ROT CON2
+        OPR TEMP3
+        OPR TEMP0
+        ROT CON1
+        OPR TEMP3
+        OPR TEMP3
+        ROT CON2
+        OPR TEMP3
+        ROT CON0
+        OPR CONST_1743392201
+        OPR TEMP3
+        REPEAT 20
+          ROT CON1
+          OPR TEMP5
+          OPR TEMP5
+          OPR TEMP4
+          OPR TEMP4
+          ROT CON2
+          OPR TEMP0
+          ROT CON2
+          OPR TEMP0
+          OPR TEMP5
+          OPR TEMP4
+          ROT CON2
+          OPR TEMP4
+          OPR TEMP3
+          OPR TEMP4
+          OPR TEMP3
+          OPR TEMP4
+          OPR TEMP3
+          ROT TEMP0
+        END
+        SWITCH TEMP3
+          CASE0
+            BREAK
+          CASE1
+            ROT CON1
+            OPR TEMP5
+            OPR TEMP5
+            OPR u_bsh
+            OPR u_bsh
+            ROT CON2
+            OPR u_b
+            ROT CON2
+            OPR u_b
+            OPR TEMP5
+            OPR u_bsh
+            ROT CON1
+            OPR TEMP0
+            OPR TEMP0
+            OPR u_p
+            OPR u_p
+            ROT CON2
+            OPR CONST_1
+            ROT CON2
+            OPR CONST_1
+            OPR TEMP0
+            OPR u_p
+            REPEAT INF
+              ROT CON1
+              OPR TEMP5
+              OPR TEMP5
+              OPR TEMP4
+              OPR TEMP4
+              ROT CON2
+              OPR u_rem
+              ROT CON2
+              OPR u_rem
+              OPR TEMP5
+              OPR TEMP4
+              ROT CON1
+              OPR TEMP5
+              OPR TEMP5
+              OPR TEMP0
+              OPR TEMP0
+              ROT CON2
+              OPR u_bsh
+              ROT CON2
+              OPR u_bsh
+              OPR TEMP5
+              OPR TEMP0
+              ROT CON2
+              OPR TEMP0
+              OPR CONST_0
+              OPR CONST_0
+              OPR TEMP0
+              ROT CON2
+              OPR TEMP0
+              ROT CON1
+              OPR CONST_0
+              SET TEMP_FLAG0
+              REPEAT 20
+                IF TEMP_FLAG0
+                  ROT CON2
+                  OPR TEMP0
+                  OPR CONST_0
+                  OPR CONST_3486784398
+                  OPR TEMP0
+                  OPR CONST_0
+                  OPR CONST_3486784398
+                  SWITCH CONST_3486784398
+                    CASE0
+                    CASE1
+                      RESET TEMP_FLAG0
+                    CASE2
+                  END
+                ELSE
+                END
+                ROT CON1
+                OPR CONST_0
+                ROT TEMP0
+              END
+              ROT CON1
+              OPR CONST_3486784398
+              REPEAT 20
+                ROT CON1
+                OPR TEMP6
+                OPR TEMP6
+                OPR TEMP5
+                OPR TEMP5
+                ROT CON2
+                OPR TEMP0
+                ROT CON2
+                OPR TEMP0
+                OPR TEMP6
+                OPR TEMP5
+                ROT CON1
+                OPR TEMP6
+                OPR TEMP6
+                ROT CON2
+                OPR TEMP4
+                ROT CON2
+                OPR TEMP4
+                OPR TEMP6
+                OPR TEMP0
+                OPR TEMP6
+                OPR TEMP0
+                ROT CON0
+                OPR TEMP0
+                OPR TEMP0
+                ROT CON2
+                OPR CONST_2905653667
+                OPR TEMP0
+                ROT CON2
+                OPR TEMP0
+                ROT CON2
+                OPR CONST_2905653667
+                ROT CON1
+                OPR TEMP6
+                OPR TEMP6
+                ROT CON2
+                OPR TEMP4
+                OPR TEMP6
+                OPR TEMP6
+                ROT CON0
+                OPR TEMP4
+                ROT CON2
+                OPR TEMP6
+                ROT CON2
+                OPR TEMP5
+                ROT CON2
+                OPR TEMP5
+                OPR TEMP4
+                OPR TEMP5
+                OPR TEMP6
+                OPR TEMP4
+                ROT TEMP4
+                ROT CONST_2905653667
+              END
+              ROT CON1
+              OPR TEMP7
+              OPR TEMP7
+              OPR TEMP6
+              OPR TEMP6
+              ROT CON2
+              OPR u_bsh
+              ROT CON2
+              OPR u_bsh
+              OPR TEMP7
+              OPR TEMP6
+              ROT CON1
+              OPR TEMP7
+              OPR TEMP7
+              ROT CON2
+              OPR TEMP7
+              ROT CON2
+              OPR TEMP6
+              OPR TEMP7
+              OPR TEMP6
+              OPR TEMP7
+              OPR TEMP4
+              ROT CON2
+              OPR TEMP4
+              OPR TEMP6
+              ROT CON2
+              OPR TEMP4
+              OPR TEMP6
+              ROT CON1
+              OPR TEMP4
+              OPR TEMP4
+              ROT CON2
+              OPR TEMP4
+              ROT CON0
+              OPR CONST_1743392201
+              OPR TEMP4
+              REPEAT 20
+                ROT CON1
+                OPR TEMP8
+                OPR TEMP8
+                OPR TEMP7
+                OPR TEMP7
+                ROT CON2
+                OPR TEMP6
+                ROT CON2
+                OPR TEMP6
+                OPR TEMP8
+                OPR TEMP7
+                ROT CON2
+                OPR TEMP7
+                OPR TEMP4
+                OPR TEMP7
+                OPR TEMP4
+                OPR TEMP7
+                OPR TEMP4
+                ROT TEMP6
+              END
+              SWITCH TEMP4
+                CASE0
+                  BREAK
+                CASE1
+                  ROT CON1
+                  OPR TEMP6
+                  OPR TEMP6
+                  OPR TEMP8
+                  OPR TEMP8
+                  ROT CON2
+                  OPR u_bsh
+                  ROT CON2
+                  OPR u_bsh
+                  OPR TEMP6
+                  OPR TEMP8
+                  ROT CON1
+                  OPR TEMP6
+                  OPR TEMP6
+                  OPR TEMP7
+                  OPR TEMP7
+                  ROT CON2
+                  OPR u_bsh
+                  ROT CON2
+                  OPR u_bsh
+                  OPR TEMP6
+                  OPR TEMP7
+                  REPEAT 20
+                    ROT CON1
+                    OPR TEMP9
+                    OPR TEMP9
+                    OPR TEMP6
+                    OPR TEMP6
+                    ROT CON2
+                    OPR TEMP7
+                    ROT CON2
+                    OPR TEMP7
+                    OPR TEMP9
+                    OPR TEMP6
+                    ROT CON1
+                    OPR TEMP9
+                    OPR TEMP9
+                    ROT CON2
+                    OPR TEMP8
+                    ROT CON2
+                    OPR TEMP8
+                    OPR TEMP9
+                    OPR TEMP7
+                    OPR TEMP9
+                    OPR TEMP7
+                    ROT CON0
+                    OPR TEMP7
+                    OPR TEMP7
+                    ROT CON2
+                    OPR CONST_2905653667
+                    OPR TEMP7
+                    ROT CON2
+                    OPR TEMP7
+                    ROT CON2
+                    OPR CONST_2905653667
+                    ROT CON1
+                    OPR TEMP9
+                    OPR TEMP9
+                    ROT CON2
+                    OPR TEMP8
+                    OPR TEMP9
+                    OPR TEMP9
+                    ROT CON0
+                    OPR TEMP8
+                    ROT CON2
+                    OPR TEMP9
+                    ROT CON2
+                    OPR TEMP6
+                    ROT CON2
+                    OPR TEMP6
+                    OPR TEMP8
+                    OPR TEMP6
+                    OPR TEMP9
+                    OPR TEMP8
+                    ROT TEMP8
+                    ROT CONST_2905653667
+                  END
+                  ROT CON1
+                  OPR TEMP9
+                  OPR TEMP9
+                  OPR u_bsh
+                  OPR u_bsh
+                  ROT CON2
+                  OPR TEMP8
+                  ROT CON2
+                  OPR TEMP8
+                  OPR TEMP9
+                  OPR u_bsh
+                  ROT CON1
+                  OPR TEMP10
+                  OPR TEMP10
+                  OPR TEMP9
+                  OPR TEMP9
+                  ROT CON2
+                  OPR u_p
+                  ROT CON2
+                  OPR u_p
+                  OPR TEMP10
+                  OPR TEMP9
+                  ROT CON1
+                  OPR TEMP11
+                  OPR TEMP11
+                  OPR TEMP10
+                  OPR TEMP10
+                  ROT CON2
+                  OPR u_p
+                  ROT CON2
+                  OPR u_p
+                  OPR TEMP11
+                  OPR TEMP10
+                  REPEAT 20
+                    ROT CON1
+                    OPR TEMP12
+                    OPR TEMP12
+                    OPR TEMP11
+                    OPR TEMP11
+                    ROT CON2
+                    OPR TEMP10
+                    ROT CON2
+                    OPR TEMP10
+                    OPR TEMP12
+                    OPR TEMP11
+                    ROT CON1
+                    OPR TEMP12
+                    OPR TEMP12
+                    ROT CON2
+                    OPR TEMP9
+                    ROT CON2
+                    OPR TEMP9
+                    OPR TEMP12
+                    OPR TEMP10
+                    OPR TEMP12
+                    OPR TEMP10
+                    ROT CON0
+                    OPR TEMP10
+                    OPR TEMP10
+                    ROT CON2
+                    OPR CONST_2905653667
+                    OPR TEMP10
+                    ROT CON2
+                    OPR TEMP10
+                    ROT CON2
+                    OPR CONST_2905653667
+                    ROT CON1
+                    OPR TEMP12
+                    OPR TEMP12
+                    ROT CON2
+                    OPR TEMP9
+                    OPR TEMP12
+                    OPR TEMP12
+                    ROT CON0
+                    OPR TEMP9
+                    ROT CON2
+                    OPR TEMP12
+                    ROT CON2
+                    OPR TEMP11
+                    ROT CON2
+                    OPR TEMP11
+                    OPR TEMP9
+                    OPR TEMP11
+                    OPR TEMP12
+                    OPR TEMP9
+                    ROT TEMP9
+                    ROT CONST_2905653667
+                  END
+                  ROT CON1
+                  OPR TEMP12
+                  OPR TEMP12
+                  OPR u_p
+                  OPR u_p
+                  ROT CON2
+                  OPR TEMP9
+                  ROT CON2
+                  OPR TEMP9
+                  OPR TEMP12
+                  OPR u_p
+                CASE2
+              END
+            END
+            ROT CON1
+            OPR TEMP13
+            OPR TEMP13
+            OPR TEMP12
+            OPR TEMP12
+            ROT CON2
+            OPR u_rem
+            ROT CON2
+            OPR u_rem
+            OPR TEMP13
+            OPR TEMP12
+            ROT CON1
+            OPR TEMP14
+            OPR TEMP14
+            OPR TEMP13
+            OPR TEMP13
+            ROT CON2
+            OPR u_bsh
+            ROT CON2
+            OPR u_bsh
+            OPR TEMP14
+            OPR TEMP13
+            ROT CON2
+            OPR TEMP13
+            OPR CONST_0
+            OPR CONST_0
+            OPR TEMP13
+            ROT CON2
+            OPR TEMP13
+            ROT CON1
+            OPR CONST_0
+            SET TEMP_FLAG0
+            REPEAT 20
+              IF TEMP_FLAG0
+                ROT CON2
+                OPR TEMP13
+                OPR CONST_0
+                OPR CONST_3486784398
+                OPR TEMP13
+                OPR CONST_0
+                OPR CONST_3486784398
+                SWITCH CONST_3486784398
+                  CASE0
+                  CASE1
+                    RESET TEMP_FLAG0
+                  CASE2
+                END
+              ELSE
+              END
+              ROT CON1
+              OPR CONST_0
+              ROT TEMP13
+            END
+            ROT CON1
+            OPR CONST_3486784398
+            REPEAT 20
+              ROT CON1
+              OPR TEMP15
+              OPR TEMP15
+              OPR TEMP14
+              OPR TEMP14
+              ROT CON2
+              OPR TEMP13
+              ROT CON2
+              OPR TEMP13
+              OPR TEMP15
+              OPR TEMP14
+              ROT CON1
+              OPR TEMP15
+              OPR TEMP15
+              ROT CON2
+              OPR TEMP12
+              ROT CON2
+              OPR TEMP12
+              OPR TEMP15
+              OPR TEMP13
+              OPR TEMP15
+              OPR TEMP13
+              ROT CON0
+              OPR TEMP13
+              OPR TEMP13
+              ROT CON2
+              OPR CONST_2905653667
+              OPR TEMP13
+              ROT CON2
+              OPR TEMP13
+              ROT CON2
+              OPR CONST_2905653667
+              ROT CON1
+              OPR TEMP15
+              OPR TEMP15
+              ROT CON2
+              OPR TEMP12
+              OPR TEMP15
+              OPR TEMP15
+              ROT CON0
+              OPR TEMP12
+              ROT CON2
+              OPR TEMP15
+              ROT CON2
+              OPR TEMP14
+              ROT CON2
+              OPR TEMP14
+              OPR TEMP12
+              OPR TEMP14
+              OPR TEMP15
+              OPR TEMP12
+              ROT TEMP12
+              ROT CONST_2905653667
+            END
+            ROT CON1
+            OPR TEMP15
+            OPR TEMP15
+            OPR u_rem
+            OPR u_rem
+            ROT CON2
+            OPR TEMP12
+            ROT CON2
+            OPR TEMP12
+            OPR TEMP15
+            OPR u_rem
+            ROT CON1
+            OPR TEMP16
+            OPR TEMP16
+            OPR TEMP15
+            OPR TEMP15
+            ROT CON2
+            OPR u_q
+            ROT CON2
+            OPR u_q
+            OPR TEMP16
+            OPR TEMP15
+            ROT CON1
+            OPR TEMP17
+            OPR TEMP17
+            OPR TEMP16
+            OPR TEMP16
+            ROT CON2
+            OPR u_p
+            ROT CON2
+            OPR u_p
+            OPR TEMP17
+            OPR TEMP16
+            REPEAT 20
+              ROT CON1
+              OPR TEMP18
+              OPR TEMP18
+              OPR TEMP17
+              OPR TEMP17
+              ROT CON2
+              OPR TEMP16
+              ROT CON2
+              OPR TEMP16
+              OPR TEMP18
+              OPR TEMP17
+              ROT CON1
+              OPR TEMP18
+              OPR TEMP18
+              ROT CON2
+              OPR TEMP15
+              ROT CON2
+              OPR TEMP15
+              OPR TEMP18
+              OPR TEMP16
+              OPR TEMP18
+              OPR TEMP16
+              ROT CON0
+              OPR TEMP16
+              OPR TEMP16
+              ROT CON2
+              OPR CONST_2905653667
+              OPR TEMP16
+              ROT CON2
+              OPR TEMP16
+              ROT CON2
+              OPR CONST_2905653667
+              ROT CON1
+              OPR TEMP18
+              OPR TEMP18
+              ROT CON2
+              OPR TEMP15
+              OPR TEMP18
+              OPR TEMP18
+              ROT CON0
+              OPR TEMP15
+              ROT CON2
+              OPR TEMP18
+              ROT CON2
+              OPR TEMP17
+              ROT CON2
+              OPR TEMP17
+              OPR TEMP15
+              OPR TEMP17
+              OPR TEMP18
+              OPR TEMP15
+              ROT TEMP15
+              ROT CONST_2905653667
+            END
+            ROT CON1
+            OPR TEMP18
+            OPR TEMP18
+            OPR u_q
+            OPR u_q
+            ROT CON2
+            OPR TEMP15
+            ROT CON2
+            OPR TEMP15
+            OPR TEMP18
+            OPR u_q
+          CASE2
+        END
+      END
+    CASE2
+  END
+  ROT CON1
+  OPR TEMP18
+  OPR TEMP18
+  OPR RETURN_VALUE
+  OPR RETURN_VALUE
+  ROT CON2
+  OPR u_q
+  ROT CON2
+  OPR u_q
+  OPR TEMP18
+  OPR RETURN_VALUE
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR u_rem
+  OPR u_rem
+  ROT CON2
+  IND_OPR STACK_TOP
+  ROT CON2
+  IND_OPR STACK_TOP
+  OPR TEMP19
+  OPR u_rem
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR u_q
+  OPR u_q
+  ROT CON2
+  IND_OPR STACK_TOP
+  ROT CON2
+  IND_OPR STACK_TOP
+  OPR TEMP19
+  OPR u_q
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR u_p
+  OPR u_p
+  ROT CON2
+  IND_OPR STACK_TOP
+  ROT CON2
+  IND_OPR STACK_TOP
+  OPR TEMP19
+  OPR u_p
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR u_bsh
+  OPR u_bsh
+  ROT CON2
+  IND_OPR STACK_TOP
+  ROT CON2
+  IND_OPR STACK_TOP
+  OPR TEMP19
+  OPR u_bsh
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR u_b
+  OPR u_b
+  ROT CON2
+  IND_OPR STACK_TOP
+  ROT CON2
+  IND_OPR STACK_TOP
+  OPR TEMP19
+  OPR u_b
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  ROT CON1
+  OPR TEMP19
+  OPR TEMP19
+  OPR u_a
+  OPR u_a
+  ROT CON2
+  IND_OPR STACK_TOP
+  ROT CON2
+  IND_OPR STACK_TOP
+  OPR TEMP19
+  OPR u_a
+  SET TEMP_FLAG0
+  ROT CON2
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  OPR CONST_0
+  OPR CONST_3486784398
+  OPR STACK_TOP
+  ROT CON2
+  OPR STACK_TOP
+  SWITCH CONST_3486784398
+    CASE0
+      RESET TEMP_FLAG0
+    CASE1
+    CASE2
+  END
+  ROT CON1
+  OPR CONST_0
+  ROT STACK_TOP
+  REPEAT 19
+    IF TEMP_FLAG0
+      ROT CON2
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      OPR STACK_TOP
+      OPR CONST_0
+      OPR CONST_3486784398
+      SWITCH CONST_3486784398
+        CASE0
+        CASE1
+          RESET TEMP_FLAG0
+        CASE2
+      END
+    ELSE
+    END
+    ROT CON1
+    OPR CONST_0
+    ROT STACK_TOP
+  END
+  ROT CON1
+  OPR CONST_3486784398
+  RETURN
+END
