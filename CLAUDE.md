@@ -47,9 +47,19 @@ python3 -m malbolge debug --tui examples/hello.mal
 python3 -m malbolge debug --variant=malbolge20 program.mal
 ```
 
+### Compile Python to Malbolge20
+```bash
+python3 -m malbolge compile foo.py -o foo.mb                    # default 'c' backend
+python3 -m malbolge compile foo.py --backend=direct -o foo.mb   # py->.mg direct backend
+python3 -m malbolge --variant=malbolge20 foo.mb                 # run the result
+```
+Subset spec: `docs/python-subset-spec.md`. Direct-backend design: `docs/py2mg-backend.md`.
+
 ### Run tests
 ```bash
 python3 -m pytest test/
+# Parallel (~2.6x faster, needs pytest-xdist: pip install -e .[dev]):
+python3 -m pytest test/ -n auto
 # Or with unittest:
 python3 -m unittest discover -v test/
 ```
@@ -69,6 +79,12 @@ python3 -m build
 | `malbolge/malbolge.py` | Original Malbolge interpreter (10 trits) |
 | `malbolge/malbolge20.py` | Malbolge20 interpreter (20 trits, sparse memory) |
 | `malbolge/debugger.py` | Debugger with breakpoints, watchpoints, step-back |
+| `malbolge/compiler/py2c.py` | Python subset -> Nagoya C subset (front-end, 'c' backend) |
+| `malbolge/compiler/py2mg.py` | Python subset -> .mg directly ('direct' backend, smaller output, native double recursion) |
+| `malbolge/compiler/c2mg.py` | C subset -> .mg (pure-Python port of nagoya-highlevel, bug-for-bug) |
+| `malbolge/compiler/mg2mc.py` | .mg -> .mc LAL (port of nagoya-ternary) |
+| `malbolge/compiler/mc2mb.py` | .mc -> .mb Malbolge20 (port of nagoya-lowass, deterministic padding) |
+| `malbolge/compiler/cli.py` | `python3 -m malbolge compile` entry point |
 | `malbolge/debug_cli.py` | CLI debugger interface |
 | `malbolge/debug_tui.py` | TUI debugger (textual-based) |
 
@@ -91,6 +107,7 @@ python3 -m build
 ### Completed
 - [x] Support Malbolge20
 - [x] Add debug mode (CLI + TUI)
+- [x] Python -> Malbolge20 compiler: pure-Python toolchain ports (c2mg/mg2mc/mc2mb) + py2c front-end + py2mg direct backend (see `docs/findings.md` B5/B6/B8)
 
 ### Pending: Malbolge Unshackled
 
@@ -117,10 +134,11 @@ Malbolge Unshackled is a Turing-complete variant with unbounded memory. Implemen
 4. **Unbounded memory initialization**
    - Extend the 6-cell period pattern to all addresses using mod 6 remainders
 
-### Pending: Compiler/Generator
+### Pending: Compiler v2
 
-- Simple Malbolge code generator from higher-level constructs
-- Reference: LMFAO assembler for Malbolge Unshackled
+- Signed integers, decimal `print()`/`input()`, `break`/`continue`
+- Arrays/strings via `IND_OPR` (design: `docs/iwagane-arrays.md`)
+- (Original-Malbolge generator via LMAO port remains shelved — GPL question, see `docs/hell-assembler-design.md` §6)
 
 ## References
 

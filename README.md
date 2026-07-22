@@ -2,7 +2,7 @@
 
 This is a fork from https://github.com/Avantgarde95/pyMalbolge
 
-Simple [Malbolge](https://en.wikipedia.org/wiki/Malbolge) interpreter in Python with built-in debugger.
+Simple [Malbolge](https://en.wikipedia.org/wiki/Malbolge) interpreter in Python with built-in debugger — plus a **pure-Python compiler** that turns a subset of Python into runnable Malbolge20 programs.
 
 **Supports multiple variants:**
 - **Original Malbolge** - 10 trits, 59,049 memory cells
@@ -128,6 +128,70 @@ Visual terminal-based debugger with split-screen interface.
 - `h` / `?` - Show help
 - `q` - Quit
 
+## Compiler (Python → Malbolge20)
+
+A complete, pure-Python compilation pipeline — no C++/flex/bison/Perl build
+dependencies. It includes faithful Python ports of the Nagoya University
+Malbolge20 toolchain plus our own Python front-end:
+
+```
+Python subset ──py2c──> C subset ──c2mg──> .mg ──mg2mc──> .mc (LAL) ──mc2mb──> .mb (Malbolge20)
+       └────────────────py2mg (direct backend)──┘
+```
+
+### Command line
+
+```bash
+# Compile a Python file to a runnable Malbolge20 program
+python3 -m malbolge compile examples/foo.py -o foo.mb
+
+# Run it
+python3 -m malbolge --variant=malbolge20 foo.mb
+
+# Direct backend (skips the C layer; typically 2-4x smaller output,
+# supports double recursion natively)
+python3 -m malbolge compile foo.py --backend=direct -o foo.mb
+
+# Inspect intermediate stages
+python3 -m malbolge compile foo.py --emit-c - --emit-mg foo.mg --emit-mc foo.mc
+```
+
+### Python API
+
+```python
+from malbolge.compiler import compile_python_to_mb
+from malbolge import eval20
+
+mb = compile_python_to_mb(source)                     # default 'c' backend
+mb = compile_python_to_mb(source, backend="direct")   # direct py->.mg backend
+print(eval20(mb))
+
+# Individual stages are also exposed:
+from malbolge.compiler import (
+    compile_python_to_c,    # Python subset -> Nagoya C subset
+    compile_python_to_mg,   # Python subset -> .mg (direct backend)
+    translate_mg_to_mc,     # .mg -> .mc  (port of nagoya-ternary)
+    assemble_mc_to_mb,      # .mc -> .mb  (port of nagoya-lowass)
+)
+```
+
+### Supported Python subset (v1)
+
+`int` variables and arithmetic (`+ - * // %`, constant folding mod 3^20),
+`while` / `if` / `elif` / `else`, `for i in range(...)`, chained comparisons,
+short-circuit `and` / `or` / `not`, function definitions and calls including
+(mutual) recursion, and `putchar()` / `getchar()` I/O. Integers live on the
+mod 3^20 ring; negative literals, `bool`, floats, strings and containers are
+rejected with line-numbered `CompileError`s.
+
+The full normative specification — accepted AST whitelist, all semantic
+divergences from CPython, and the diagnostic contract — is in
+[docs/python-subset-spec.md](docs/python-subset-spec.md). Design notes for the
+direct backend live in [docs/py2mg-backend.md](docs/py2mg-backend.md).
+
+Output is fully deterministic (unlike the upstream toolchain's
+`srand(time(NULL))` padding), so builds are byte-for-byte reproducible.
+
 ## Malbolge Variants
 
 | Feature | Original | Malbolge20 |
@@ -145,6 +209,13 @@ Visual terminal-based debugger with split-screen interface.
 ### Added
 - `eval()` function for inline evaluation
 - **Malbolge20 support** with sparse memory
+- **Python → Malbolge20 compiler** (`python3 -m malbolge compile`):
+  - Pure-Python ports of the Nagoya highlevel/ternary/lowass toolchain
+    (byte-exact against the reference tools, deterministic output)
+  - Python front-end with `* // %` (absent upstream), for-range, chained
+    comparisons, short-circuit booleans, and line-numbered diagnostics
+  - Direct py→.mg backend (`--backend=direct`): 46-75% smaller output on
+    programs with control flow/functions, native double-recursion support
 - Full-featured debugger with:
   - Breakpoints and watchpoints
   - Step-by-step execution
@@ -155,14 +226,16 @@ Visual terminal-based debugger with split-screen interface.
 
 ## TODO
 - [x] Support Malbolge20
+- [x] Python → Malbolge20 compiler (pure-Python toolchain + direct backend)
+- [ ] Compiler v2: signed integers, decimal `print()`/`input()`, arrays/strings
 - [ ] Support Malbolge Unshackled (Turing-complete variant)
-- [ ] A simple Malbolge compiler/generator
 
 ## References
 
 - [Malbolge - Esolang](https://esolangs.org/wiki/Malbolge)
 - [Malbolge - Wikipedia](https://en.wikipedia.org/wiki/Malbolge)
 - [Malbolge20 - Nagoya University](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/)
+- [Nagoya Malbolge toolchain sources](https://git.trs.css.i.nagoya-u.ac.jp/malbolge) (MIT; `ref/` mirrors, used for conformance testing only)
 
 ## License
 
