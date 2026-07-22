@@ -849,6 +849,20 @@ def _op_rev(dest):
     return ans
 
 
+class _JmpAddrs(list):
+    """``jmpaddrs`` with a mutation counter: ``dm_mov_search`` is a pure
+    function of ``(d, pos, depth)`` for a fixed jmpaddrs state, so its results
+    are memoised and the cache is invalidated whenever any slot is written."""
+
+    def __init__(self, iterable):
+        super().__init__(iterable)
+        self.version = 0
+
+    def __setitem__(self, index, value):
+        self.version += 1
+        super().__setitem__(index, value)
+
+
 class _Assembler:
     """Port of the C++ ``init`` code generator (init/dmod/comm.cpp)."""
 
@@ -857,7 +871,9 @@ class _Assembler:
         self.code_size = 0
         self.C = 0
         self.D = 0
-        self.jmpaddrs = [-1] * 100
+        self.jmpaddrs = _JmpAddrs([-1] * 100)
+        self._dm_cache = {}
+        self._dm_cache_version = -1
         self.dataLine = {}      # absolute addr -> value (default -1)
         self.using_dmod = 0
         self.dmod_ptr = -1
@@ -885,6 +901,13 @@ class _Assembler:
     # --- dmod.cpp: D-register movement ------------------------------------
     def dm_mov_search(self, d, pos, depth=0):
         """Returns (min_noops, jpos)."""
+        if self._dm_cache_version != self.jmpaddrs.version:
+            self._dm_cache = {}
+            self._dm_cache_version = self.jmpaddrs.version
+        key = (d, pos, depth)
+        cached = self._dm_cache.get(key)
+        if cached is not None:
+            return cached
         min_noops = -1
         jpos = -1
         if pos >= d:
@@ -899,6 +922,7 @@ class _Assembler:
                         if min_noops == -1 or min_noops > noops:
                             min_noops = noops
                             jpos = i
+        self._dm_cache[key] = (min_noops, jpos)
         return min_noops, jpos
 
     def dm_move(self, pos):
