@@ -18,21 +18,39 @@ Individual stages are also exported for tooling and debugging.
 """
 
 from .py2c import compile_python_to_c, CompileError
+from .py2mg import compile_python_to_mg, Py2MgError
 from .c2mg import compile_c_to_mg, C2MgError
 from .mg2mc import translate_mg_to_mc, Mg2McError
 from .mc2mb import assemble_mc_to_mb, Mc2MbError
 
 
-def compile_python_to_mb(py_source: str) -> str:
-    """Compile a Python-subset program all the way to Malbolge20 source."""
-    c_source = compile_python_to_c(py_source)
-    mg_source = compile_c_to_mg(c_source)
+def compile_python_to_mb(py_source: str, backend: str = "c") -> str:
+    """Compile a Python-subset program all the way to Malbolge20 source.
+
+    ``backend`` selects the front half of the pipeline:
+
+    * ``"c"`` (default) -- the two-step ``py2c`` + ``c2mg`` path (unchanged
+      behaviour).
+    * ``"direct"`` -- the ``py2mg`` direct Python -> ``.mg`` backend, which
+      skips the C layer (smaller, non-recursive functions carry no frame
+      protection; see ``docs/py2mg-backend.md``).
+
+    Both paths share the ``mg2mc`` and ``mc2mb`` back half.
+    """
+    if backend == "direct":
+        mg_source = compile_python_to_mg(py_source)
+    elif backend == "c":
+        mg_source = compile_c_to_mg(compile_python_to_c(py_source))
+    else:
+        raise ValueError("unknown backend {!r} (use 'c' or 'direct')".format(
+            backend))
     mc_source = translate_mg_to_mc(mg_source)
     return assemble_mc_to_mb(mc_source)
 
 
 __all__ = [
     "compile_python_to_c", "CompileError",
+    "compile_python_to_mg", "Py2MgError",
     "compile_c_to_mg", "C2MgError",
     "translate_mg_to_mc", "Mg2McError",
     "assemble_mc_to_mb", "Mc2MbError",

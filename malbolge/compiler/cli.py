@@ -19,6 +19,7 @@ import sys
 
 from . import (
     compile_python_to_c, CompileError,
+    compile_python_to_mg, Py2MgError,
     compile_c_to_mg, C2MgError,
     translate_mg_to_mc, Mg2McError,
     assemble_mc_to_mb, Mc2MbError,
@@ -56,13 +57,24 @@ def main(argv):
     parser.add_argument(
         "-o", "--output", metavar="MB", default=None,
         help="write the final Malbolge20 program to MB")
+    parser.add_argument(
+        "--backend", choices=("c", "direct"), default="c",
+        help="front-end path to .mg: 'c' (default, via py2c+c2mg) or 'direct' "
+             "(py2mg, skips the C layer)")
     args = parser.parse_args(argv)
 
     wants_intermediate = (args.emit_c is not None or args.emit_mg is not None
                           or args.emit_mc is not None)
     if not wants_intermediate and args.output is None:
-        # Default: print the generated C to stdout.
-        args.emit_c = "-"
+        # Default: print the first intermediate the backend produces.
+        if args.backend == "direct":
+            args.emit_mg = "-"
+        else:
+            args.emit_c = "-"
+
+    if args.backend == "direct" and args.emit_c is not None:
+        _die("--emit-c is not available with --backend=direct "
+             "(the direct backend does not generate C)")
 
     try:
         with open(args.source) as f:
@@ -70,21 +82,28 @@ def main(argv):
     except OSError as e:
         _die("cannot read {}: {}".format(args.source, e))
 
-    try:
-        c_source = compile_python_to_c(py_source)
-    except CompileError as e:
-        sys.stderr.write("{}: {}\n".format(args.source, e))
-        sys.exit(1)
-    if args.emit_c is not None:
-        _write(args.emit_c, c_source, "C")
+    if args.backend == "direct":
+        try:
+            mg_source = compile_python_to_mg(py_source)
+        except Py2MgError as e:
+            sys.stderr.write("{}: {}\n".format(args.source, e))
+            sys.exit(1)
+    else:
+        try:
+            c_source = compile_python_to_c(py_source)
+        except CompileError as e:
+            sys.stderr.write("{}: {}\n".format(args.source, e))
+            sys.exit(1)
+        if args.emit_c is not None:
+            _write(args.emit_c, c_source, "C")
+        if args.emit_mg is None and args.emit_mc is None \
+                and args.output is None:
+            return
+        try:
+            mg_source = compile_c_to_mg(c_source)
+        except C2MgError as e:
+            _die("internal: generated C rejected by c2mg: {}".format(e))
 
-    if args.emit_mg is None and args.emit_mc is None and args.output is None:
-        return
-
-    try:
-        mg_source = compile_c_to_mg(c_source)
-    except C2MgError as e:
-        _die("internal: generated C rejected by c2mg: {}".format(e))
     if args.emit_mg is not None:
         _write(args.emit_mg, mg_source, ".mg")
 
