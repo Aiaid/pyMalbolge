@@ -46,6 +46,12 @@ MOD = 3 ** 20  # 3486784401
 # helpers we inject.  A user function may not upper-case to any of these.
 RESERVED_FUNCS = {"MAIN", "PUTCHAR", "GETCHAR", "ZZMUL", "ZZDIV", "ZZMOD"}
 
+# Names `_call()` special-cases at every call site, before it ever consults
+# `self.functions`.  A user-defined function with one of these names could be
+# registered but never successfully called, so they're reserved at
+# definition time instead (see defects.md B3-B6).
+BUILTIN_CALL_NAMES = {"putchar", "getchar", "ord", "chr", "print", "range"}
+
 # C keywords / builtins in the subset; a Python variable may not be named one
 # of these (they are legal Python identifiers but illegal here).
 C_KEYWORDS = {
@@ -158,6 +164,9 @@ class _Compiler:
         self.used_helpers = set()     # subset of {"zzmul","zzdiv","zzmod"}
         self.global_names = []        # module-level variable names, in order
         self._global_seen = set()
+        self.module_globals = set()   # names assigned anywhere at module
+                                       # level (prescanned before any
+                                       # function/main is compiled)
 
         # Per-function emission state (reset in _compile_function).
         self.buf = None               # list[str] of body lines (indented)
@@ -168,6 +177,10 @@ class _Compiler:
         self.params = None            # set of parameter names (declared in sig)
         self.globals_in_scope = None  # names bound to module scope in this func
         self.in_main = False          # compiling the synthetic main()?
+        self.bound = None             # names definitely assigned so far, in
+                                       # actual compile order, in the current
+                                       # function/main (definite-assignment
+                                       # tracking; see _is_bound)
 
     # -- diagnostics --------------------------------------------------------
     def err(self, msg, node):
@@ -207,6 +220,10 @@ class _Compiler:
 
     def check_func_name(self, name, node):
         self.check_var_name(name, node)
+        if name in BUILTIN_CALL_NAMES:
+            raise self.err(
+                "function name {!r} is reserved (it is a built-in the "
+                "compiler special-cases at call sites)".format(name), node)
         upper = name.upper()
         if upper in RESERVED_FUNCS:
             raise self.err(
@@ -233,6 +250,31 @@ class _Compiler:
             self._global_seen.add(name)
             self.global_names.append(name)
 
+    # -- definite-assignment tracking ---------------------------------------
+    def _is_bound(self, name):
+        """True if a read of `name` here is guaranteed to see a value.
+
+        `self.bound` tracks names assigned so far in the *actual* compile
+        order of the current function/main (params seeded up front, then
+        updated as `_bind_target`/`global` statements are processed while
+        `_compile_body` walks statements in source order) -- so a read is
+        rejected unless something textually earlier already assigned it.
+
+        User functions additionally accept any name assigned anywhere at
+        module level (`self.module_globals`), even without a `global`
+        declaration: real Python resolves a bare global read at call time,
+        long after module-level code has run, and py2c has no way to reason
+        about call-time ordering statically, so this is intentionally
+        permissive.  The synthesized main() IS the module-level code, so it
+        gets no such fallback -- reading a module global there before its
+        own assignment is exactly the use-before-assignment bug we reject.
+        """
+        if name in self.bound:
+            return True
+        if not self.in_main and name in self.module_globals:
+            return True
+        return False
+
     # =======================================================================
     # Expression lowering.  Returns either an int (a folded literal, reduced
     # mod 3**20) or a str (a bare C variable name).  Any intermediate
@@ -243,7 +285,12 @@ class _Compiler:
             return self._const(node)
         if isinstance(node, ast.Name):
             if isinstance(node.ctx, ast.Load):
-                return self.check_var_name(node.id, node)
+                name = self.check_var_name(node.id, node)
+                if not self._is_bound(name):
+                    raise self.err(
+                        "name {!r} is used before it is assigned".format(
+                            name), node)
+                return name
             raise self.err("unsupported name context", node)
         if isinstance(node, ast.BinOp):
             return self._binop(node)
@@ -546,6 +593,7 @@ class _Compiler:
             pass  # already declared in the function signature
         else:
             self.locals.add(name)
+        self.bound.add(name)
 
     def _assign_into(self, target_name, value_node):
         """Compute value_node directly into an existing variable target_name."""
@@ -591,9 +639,13 @@ class _Compiler:
 
     def _stmt_AnnAssign(self, node):
         if node.value is None:
-            # bare annotation (`x: int`) -- just declare the binding.
+            # bare annotation (`x: int`, no value) has no runtime effect in
+            # CPython: it records the annotation but does NOT bind the name
+            # (a subsequent read is a NameError). Validate the identifier
+            # shape but do not bind it -- a later read falls through to the
+            # normal use-before-assignment check.
             if isinstance(node.target, ast.Name):
-                self._bind_target(node.target.id, node)
+                self.check_var_name(node.target.id, node)
             return
         if not isinstance(node.target, ast.Name):
             raise self.err("unsupported annotated assignment target", node)
@@ -606,7 +658,14 @@ class _Compiler:
                 "augmented assignment is only supported on simple names", node)
         name = node.target.id
         self.check_var_name(name, node)
-        # x must already be bound; treat like a normal read+write binding.
+        # x must already be bound: `x += 1` reads the current value of x
+        # before writing the new one, so an unbound x is a use-before-
+        # assignment error, not an implicit declaration.
+        if not self._is_bound(name):
+            raise self.err(
+                "name {!r} is used before it is assigned (augmented "
+                "assignment reads the current value before writing the "
+                "new one)".format(name), node)
         self._bind_target(name, node)
         op = node.op
         if isinstance(op, ast.Div):
@@ -722,7 +781,7 @@ class _Compiler:
         return start, stop, step
 
     def _stmt_Return(self, node):
-        if self.locals is None:
+        if self.in_main:
             raise self.err("'return' outside function", node)
         if node.value is None:
             self.emit("return 0;")
@@ -738,7 +797,11 @@ class _Compiler:
             raise self.err("'global' outside function", node)
         for name in node.names:
             self.check_var_name(name, node)
+            if self.params is not None and name in self.params:
+                raise self.err(
+                    "name {!r} is parameter and global".format(name), node)
             self.globals_in_scope.add(name)
+            self.bound.add(name)
 
     def _stmt_Break(self, node):
         raise self.err(
@@ -779,7 +842,9 @@ class _Compiler:
                 self.generic_visit(n)
 
             def visit_AnnAssign(self, n):
-                if isinstance(n.target, ast.Name):
+                # A bare annotation (`x: int`, no value) does not bind the
+                # name in CPython -- only annotate-with-value does.
+                if n.value is not None and isinstance(n.target, ast.Name):
                     add(n.target.id)
                 self.generic_visit(n)
 
@@ -825,6 +890,7 @@ class _Compiler:
         self.temps = set()
         self.in_main = is_main
         self.params = set(params)
+        self.bound = set(params)
         gset = self._global_decls_in(node.body)
         self.globals_in_scope = set(gset)
         self.locals = set()
@@ -855,6 +921,7 @@ class _Compiler:
         self.params = None
         self.globals_in_scope = None
         self.in_main = False
+        self.bound = None
         return "\n".join(lines)
 
     def compile(self):
@@ -887,6 +954,11 @@ class _Compiler:
                 "define top-level code directly, not a main() function "
                 "(the compiler generates main from module-level statements)",
                 self.functions["main"])
+
+        # Prescan module-level assignment targets so user functions can
+        # freely read a module global without a `global` declaration (see
+        # _is_bound); must happen before any function/main is compiled.
+        self.module_globals = set(self._collect_locals(module_body, set(), set()))
 
         # Compile user functions.
         func_chunks = []
@@ -931,6 +1003,9 @@ class _Compiler:
         return "\n\n".join(out) + "\n"
 
     def _register_function(self, node):
+        if node.decorator_list:
+            raise self.err(
+                "decorators are unsupported", node.decorator_list[0])
         name = node.name
         if name in self.functions:
             raise self.err(
