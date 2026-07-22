@@ -22,7 +22,7 @@ dependencies = []
 
 [project.optional-dependencies]
 tui = ["textual>=0.40.0"]
-dev = ["pytest", "textual>=0.40.0"]
+dev = ["pytest", "pytest-xdist", "textual>=0.40.0"]
 
 [project.scripts]
 malbolge = "malbolge.malbolge:main"
