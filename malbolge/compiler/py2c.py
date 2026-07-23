@@ -181,6 +181,21 @@ class _Compiler:
                                        # actual compile order, in the current
                                        # function/main (definite-assignment
                                        # tracking; see _is_bound)
+        self.loop_stack = []          # stack of (skip_var, break_var) pairs,
+                                       # innermost loop last; entries are
+                                       # (None, None) for loops that don't use
+                                       # break/continue (see
+                                       # _body_has_break_continue)
+        self.current_skip = None      # skip-flag variable name of the
+                                       # innermost loop whose body statements
+                                       # are being emitted right now (None if
+                                       # not inside a break/continue-bearing
+                                       # loop) -- consulted by _compile_body
+                                       # to guard every statement so a
+                                       # break/continue can "skip" the rest
+                                       # of the current iteration without a
+                                       # real break/continue/goto in the
+                                       # target C subset.
 
     # -- diagnostics --------------------------------------------------------
     def err(self, msg, node):
@@ -302,8 +317,27 @@ class _Compiler:
             return self._materialize_cond(node)
         if isinstance(node, ast.Call):
             return self._call(node)
+        if isinstance(node, ast.IfExp):
+            return self._ifexp(node)
         raise self.err(
             "unsupported expression: {}".format(type(node).__name__), node)
+
+    def _ifexp(self, node):
+        """`a if c else b` -- materialise into a temp via real if/else so
+        only the selected branch's side effects (e.g. function calls) run;
+        this is lazy evaluation, unlike a plain ternary value lookup."""
+        flag = self._materialize_cond(node.test)
+        result = self.newtmp()
+        self.emit("if({} != 0){{".format(flag))
+        self.indent += 1
+        self._assign_into(result, node.body)
+        self.indent -= 1
+        self.emit("} else {")
+        self.indent += 1
+        self._assign_into(result, node.orelse)
+        self.indent -= 1
+        self.emit("}")
+        return result
 
     def _const(self, node):
         v = node.value
@@ -414,8 +448,9 @@ class _Compiler:
                 node)
         if fname == "print":
             raise self.err(
-                "print() is unsupported; use putchar(codepoint) to emit output",
-                node)
+                "print() is only supported as a top-level statement with "
+                "compile-time constant arguments; it cannot be used as a "
+                "value (use putchar(codepoint) to emit output)", node)
         if fname == "range":
             raise self.err("range() is only valid in a 'for' loop header", node)
         # user function
@@ -686,18 +721,115 @@ class _Compiler:
 
     def _stmt_Expr(self, node):
         value = node.value
-        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name) \
-                and value.func.id == "putchar":
-            if len(value.args) != 1 or value.keywords:
-                raise self.err("putchar() takes exactly one argument", node)
-            arg = _operand(self.lower(value.args[0]))
-            self.emit("putchar({});".format(arg))
-            return
+        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
+            if value.func.id == "putchar":
+                if len(value.args) != 1 or value.keywords:
+                    raise self.err("putchar() takes exactly one argument", node)
+                arg = _operand(self.lower(value.args[0]))
+                self.emit("putchar({});".format(arg))
+                return
+            if value.func.id == "print":
+                self._stmt_print(node, value)
+                return
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            # A bare string-literal statement is only tolerated as a
+            # docstring, and only in the first statement of a module/
+            # function body -- that case is stripped out before compilation
+            # ever reaches _stmt_Expr (see _compile_function/compile()), so
+            # any bare string Expr that gets here is *not* in docstring
+            # position and is rejected exactly like any other string
+            # literal.
+            raise self.err(
+                "string literals are unsupported (only single characters "
+                "via ord('c') are allowed); a bare string literal is only "
+                "accepted as a docstring, and only as the first statement "
+                "of a module or function body", node)
         if isinstance(value, ast.Constant):
-            # bare literal / docstring: no effect.
+            # bare non-string literal: no effect (matches CPython evaluating
+            # and discarding an expression statement).
             return
         # Any other expression statement: evaluate for side effects, discard.
         self.lower(value)
+
+    # -- print() ------------------------------------------------------------
+    # print() only accepts compile-time constant arguments: string literals,
+    # f-strings whose every part is itself constant, and int expressions the
+    # existing constant folder (_fold/_binop) can reduce to a literal. Every
+    # accepted call is rendered once, at compile time, into a fixed sequence
+    # of putchar() calls -- there is no runtime formatting support (that is
+    # deferred to a v2 decimal print()).
+    def _check_bytes_range(self, text, node):
+        for ch in text:
+            cp = ord(ch)
+            if cp > 255:
+                raise self.err(
+                    "character {!r} (U+{:04X}) cannot be emitted by "
+                    "putchar(), which only supports codepoints 0-255"
+                    .format(ch, cp), node)
+
+    def _print_render_arg(self, arg):
+        """Render one print()/f-string part to a compile-time Python str."""
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            self._check_bytes_range(arg.value, arg)
+            return arg.value
+        if isinstance(arg, ast.JoinedStr):
+            return self._render_fstring(arg)
+        value = self.lower(arg)
+        if not isinstance(value, int):
+            raise self.err(
+                "print() only accepts compile-time constant arguments "
+                "(string literals, f-strings with constant parts, or "
+                "int expressions the compiler can fold); use "
+                "putchar(codepoint) for runtime values (decimal print() "
+                "of runtime values is planned for a future version)", arg)
+        return str(value % MOD)
+
+    def _render_fstring(self, node):
+        out = []
+        for part in node.values:
+            if isinstance(part, ast.Constant) and isinstance(part.value, str):
+                self._check_bytes_range(part.value, part)
+                out.append(part.value)
+            elif isinstance(part, ast.FormattedValue):
+                if part.conversion != -1:
+                    raise self.err(
+                        "f-string conversion specifiers (!r/!s/!a) are "
+                        "unsupported", part)
+                if part.format_spec is not None:
+                    raise self.err(
+                        "f-string format specifiers are unsupported", part)
+                out.append(self._print_render_arg(part.value))
+            else:
+                raise self.err(
+                    "unsupported f-string part: {}".format(
+                        type(part).__name__), part)
+        return "".join(out)
+
+    def _stmt_print(self, node, call):
+        sep, end = " ", "\n"
+        seen_kw = set()
+        for kw in call.keywords:
+            if kw.arg is None or kw.arg not in ("sep", "end") \
+                    or kw.arg in seen_kw:
+                raise self.err(
+                    "print() only supports the 'sep' and 'end' keyword "
+                    "arguments, each a compile-time constant string "
+                    "literal", node)
+            seen_kw.add(kw.arg)
+            if not (isinstance(kw.value, ast.Constant)
+                    and isinstance(kw.value.value, str)):
+                raise self.err(
+                    "print()'s {!r} argument must be a compile-time "
+                    "constant string literal".format(kw.arg), kw.value)
+            self._check_bytes_range(kw.value.value, kw.value)
+            if kw.arg == "sep":
+                sep = kw.value.value
+            else:
+                end = kw.value.value
+        parts = [self._print_render_arg(a) for a in call.args]
+        text = sep.join(parts) + end
+        for ch in text:
+            self.emit("putchar({});".format(ord(ch)))
 
     def _stmt_If(self, node):
         flag = self._materialize_cond(node.test)
@@ -716,13 +848,29 @@ class _Compiler:
         if node.orelse:
             raise self.err("while/else is unsupported", node)
         # Recompute the condition into the same flag before the loop and at the
-        # end of the body (the C subset has no break/continue).
+        # end of the body (the C subset has no break/continue/goto).
+        has_bc = self._body_has_break_continue(node.body)
+        skip = brk = None
+        if has_bc:
+            skip = self.newtmp()
+            brk = self.newtmp()
+            self.emit("{} = 0;".format(brk))
         flag = self.newtmp()
         self._cond_into(node.test, flag)
         self.emit("while({} != 0){{".format(flag))
         self.indent += 1
-        self._compile_body(node.body)
+        if has_bc:
+            self.emit("{} = 0;".format(skip))
+        self._compile_loop_body(node.body, skip, brk)
         self._cond_into(node.test, flag)
+        if has_bc:
+            # break forces the loop to end regardless of what the (still
+            # correctly recomputed) condition says.
+            self.emit("if({} != 0){{".format(brk))
+            self.indent += 1
+            self.emit("{} = 0;".format(flag))
+            self.indent -= 1
+            self.emit("}")
         self.indent -= 1
         self.emit("}")
 
@@ -748,13 +896,37 @@ class _Compiler:
         self._assign_into(var, start)
         # bound = stop (evaluate once)
         bound = _operand(self.lower(stop))
+        has_bc = self._body_has_break_continue(node.body)
+        skip = brk = None
+        if has_bc:
+            skip = self.newtmp()
+            brk = self.newtmp()
+            self.emit("{} = 0;".format(brk))
         flag = self.newtmp()
         self._single_cmp_into(var, ast.Lt(), bound, flag)
         self.emit("while({} != 0){{".format(flag))
         self.indent += 1
-        self._compile_body(node.body)
-        self.emit("{} += {};".format(var, step))
+        if has_bc:
+            self.emit("{} = 0;".format(skip))
+        self._compile_loop_body(node.body, skip, brk)
+        # `continue` still advances the loop variable (it only skips the
+        # rest of the body); `break` must not, so the increment is guarded
+        # by the break flag alone, not the skip flag.
+        if has_bc:
+            self.emit("if({} == 0){{".format(brk))
+            self.indent += 1
+            self.emit("{} += {};".format(var, step))
+            self.indent -= 1
+            self.emit("}")
+        else:
+            self.emit("{} += {};".format(var, step))
         self._single_cmp_into(var, ast.Lt(), bound, flag)
+        if has_bc:
+            self.emit("if({} != 0){{".format(brk))
+            self.indent += 1
+            self.emit("{} = 0;".format(flag))
+            self.indent -= 1
+            self.emit("}")
         self.indent -= 1
         self.emit("}")
 
@@ -804,22 +976,82 @@ class _Compiler:
             self.bound.add(name)
 
     def _stmt_Break(self, node):
-        raise self.err(
-            "'break' is unsupported: the target backend has no break/continue; "
-            "restructure the loop condition instead", node)
+        if not self.loop_stack:
+            raise self.err("'break' outside loop", node)
+        skip, brk = self.loop_stack[-1]
+        # break both abandons the rest of this iteration (skip) and marks
+        # the loop itself for termination (brk); see _stmt_While/_stmt_For.
+        self.emit("{} = 1;".format(skip))
+        self.emit("{} = 1;".format(brk))
 
     def _stmt_Continue(self, node):
-        raise self.err(
-            "'continue' is unsupported: the target backend has no "
-            "break/continue; restructure the loop condition instead", node)
+        if not self.loop_stack:
+            raise self.err("'continue' outside loop", node)
+        skip, _brk = self.loop_stack[-1]
+        self.emit("{} = 1;".format(skip))
 
     def _stmt_FunctionDef(self, node):
         raise self.err(
             "nested function definitions are unsupported", node)
 
+    def _body_has_break_continue(self, stmts):
+        """True if `stmts` contains a break/continue that targets *this*
+        loop -- i.e. one not nested inside a deeper loop or function def
+        (those own their own break/continue, or reject it themselves)."""
+        found = []
+
+        class V(ast.NodeVisitor):
+            def visit_Break(self, n):
+                found.append(True)
+
+            def visit_Continue(self, n):
+                found.append(True)
+
+            def visit_While(self, n):
+                pass  # a nested loop's break/continue targets it, not us
+
+            def visit_For(self, n):
+                pass
+
+            def visit_FunctionDef(self, n):
+                pass  # unreachable in practice (nested defs are rejected)
+
+        v = V()
+        for s in stmts:
+            v.visit(s)
+            if found:
+                return True
+        return bool(found)
+
+    def _compile_loop_body(self, stmts, skip, brk):
+        """Compile a while/for body under the given (skip, break) flags.
+
+        `skip`/`brk` are None when the loop has no break/continue at all, in
+        which case this is exactly the old unguarded _compile_body."""
+        self.loop_stack.append((skip, brk))
+        prev_skip = self.current_skip
+        self.current_skip = skip
+        try:
+            self._compile_body(stmts)
+        finally:
+            self.current_skip = prev_skip
+            self.loop_stack.pop()
+
     def _compile_body(self, stmts):
         for s in stmts:
-            self.compile_stmt(s)
+            if self.current_skip is not None:
+                # Once break/continue sets the skip flag, every later
+                # statement in this iteration (at this nesting level, and
+                # recursively inside any if/elif/else nested in it) must be
+                # a no-op -- the target C subset has no break/continue/goto
+                # to jump past them directly.
+                self.emit("if({} == 0){{".format(self.current_skip))
+                self.indent += 1
+                self.compile_stmt(s)
+                self.indent -= 1
+                self.emit("}")
+            else:
+                self.compile_stmt(s)
 
     # =======================================================================
     # Top-level driver.
@@ -894,13 +1126,27 @@ class _Compiler:
         gset = self._global_decls_in(node.body)
         self.globals_in_scope = set(gset)
         self.locals = set()
+        self.loop_stack = []
+        self.current_skip = None
         # Pre-seed declared locals so ordering of first-use doesn't matter.
         # In main() every assigned name is a module global, not a local.
         if not is_main:
             for name in self._collect_locals(node.body, set(params), gset):
                 self.locals.add(name)
 
-        self._compile_body(node.body)
+        body = node.body
+        if not is_main and body and isinstance(body[0], ast.Expr) \
+                and isinstance(body[0].value, ast.Constant) \
+                and isinstance(body[0].value.value, str):
+            # Function docstring: only the literal first statement of a real
+            # (user-written) function body is tolerated bare -- main()'s
+            # body is a compiler-synthesized list of module-level
+            # statements, not a real function body, so it never gets this
+            # treatment here (the true module docstring, if any, was
+            # already stripped out of it by compile() before module_body
+            # was ever assembled).
+            body = body[1:]
+        self._compile_body(body)
 
         # Assemble: signature, declarations (locals + temps), body.
         decl_names = []
@@ -922,6 +1168,8 @@ class _Compiler:
         self.globals_in_scope = None
         self.in_main = False
         self.bound = None
+        self.loop_stack = []
+        self.current_skip = None
         return "\n".join(lines)
 
     def compile(self):
@@ -935,13 +1183,17 @@ class _Compiler:
                 "Python syntax error: {}".format(e.msg), node, self.source)
 
         module_body = []
-        for stmt in tree.body:
+        for i, stmt in enumerate(tree.body):
             if isinstance(stmt, ast.FunctionDef):
                 self._register_function(stmt)
-            elif isinstance(stmt, ast.Expr) and isinstance(
+            elif i == 0 and isinstance(stmt, ast.Expr) and isinstance(
                     stmt.value, ast.Constant) and isinstance(
                     stmt.value.value, str):
-                continue  # module docstring
+                # Module docstring: only recognised as the literal first
+                # statement of the file (matches CPython); a bare string
+                # statement anywhere else is just a rejected string literal
+                # expression (see _stmt_Expr), same as inside a function.
+                continue
             elif isinstance(stmt, (ast.Import, ast.ImportFrom)):
                 raise self.err("'import' is unsupported", stmt)
             elif isinstance(stmt, ast.ClassDef):

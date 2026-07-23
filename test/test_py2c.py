@@ -19,6 +19,13 @@ def norm(c):
     return re.sub(r"\s+", " ", c).strip()
 
 
+def putchar_codes(c):
+    """Every `putchar(N);` call's N, in emission order -- lets a test assert
+    on the exact byte sequence a program emits without caring about the
+    surrounding control-flow scaffolding."""
+    return [int(n) for n in re.findall(r"putchar\((\d+)\);", c)]
+
+
 class TestBasicEmission(unittest.TestCase):
     def test_putchar_sequence(self):
         c = compile_python_to_c("putchar(72)\nputchar(105)\n")
@@ -200,8 +207,13 @@ class TestStaticErrors(unittest.TestCase):
     def test_chr_unsupported(self):
         self.assert_error("putchar(chr(65))\n", "chr()")
 
-    def test_print_unsupported(self):
-        self.assert_error("print(65)\n", "print()")
+    def test_print_runtime_arg_unsupported(self):
+        # print() now accepts compile-time constant arguments (see
+        # TestPrintSugar below); a runtime variable is still rejected.
+        self.assert_error("x = 65\nprint(x)\n", "compile-time constant")
+
+    def test_print_as_value_unsupported(self):
+        self.assert_error("x = print(65)\n", "cannot be used as a value")
 
     def test_string_literal(self):
         self.assert_error("s = 'hello'\n", "string literals")
@@ -218,11 +230,14 @@ class TestStaticErrors(unittest.TestCase):
     def test_import(self):
         self.assert_error("import os\n", "'import'")
 
-    def test_break(self):
-        self.assert_error("x = 1\nwhile x:\n    break\n", "'break'")
+    def test_break_outside_loop(self):
+        # break/continue are now supported *inside* a loop (batch-one
+        # syntax sugar, see TestBreakContinueSugar below); outside any loop
+        # they're still a CompileError.
+        self.assert_error("break\nputchar(65)\n", "outside loop")
 
-    def test_continue(self):
-        self.assert_error("for i in range(3):\n    continue\n", "'continue'")
+    def test_continue_outside_loop(self):
+        self.assert_error("continue\nputchar(65)\n", "outside loop")
 
     def test_lambda(self):
         self.assert_error("f = lambda x: x + 1\n", "unsupported expression")
@@ -323,6 +338,200 @@ class TestHelperAlgorithms(unittest.TestCase):
     def test_div_mod_by_zero_returns_zero(self):
         self.assertEqual(self.zzdiv(42, 0), 0)
         self.assertEqual(self.zzmod(42, 0), 42)
+
+
+class TestPrintSugar(unittest.TestCase):
+    """print() with compile-time constant arguments (batch-one sugar #1)."""
+
+    def test_multi_arg_default_sep_end(self):
+        c = compile_python_to_c("print('A', 'B')\n")
+        self.assertEqual(
+            putchar_codes(c), [ord("A"), ord(" "), ord("B"), ord("\n")])
+
+    def test_custom_sep_and_end(self):
+        c = compile_python_to_c("print('A', 'B', sep='-', end='!')\n")
+        self.assertEqual(putchar_codes(c), [ord(ch) for ch in "A-B!"])
+
+    def test_no_args_emits_only_end(self):
+        c = compile_python_to_c("print()\n")
+        self.assertEqual(putchar_codes(c), [ord("\n")])
+
+    def test_int_literal_renders_decimal(self):
+        c = compile_python_to_c("print(65)\n")
+        self.assertEqual(putchar_codes(c), [ord(ch) for ch in "65\n"])
+
+    def test_folds_constant_int_expression(self):
+        c = compile_python_to_c("print(9 * 7 + 2)\n")  # == 65
+        self.assertEqual(putchar_codes(c), [ord(ch) for ch in "65\n"])
+
+    def test_fstring_folds_constant_int_part(self):
+        c = compile_python_to_c("print(f'x={1 + 2}!')\n")
+        self.assertEqual(putchar_codes(c), [ord(ch) for ch in "x=3!\n"])
+
+    def test_fstring_folds_string_literal_part(self):
+        c = compile_python_to_c("print(f\"{'AB'}\")\n")
+        self.assertEqual(putchar_codes(c), [ord(ch) for ch in "AB\n"])
+
+    def test_rejects_runtime_variable_argument(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("x = 65\nprint(x)\n")
+        msg = str(ctx.exception)
+        self.assertIn("compile-time constant", msg)
+        self.assertIn("putchar", msg)
+
+    def test_rejects_fstring_conversion(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("print(f'{1!r}')\n")
+        self.assertIn("conversion", str(ctx.exception))
+
+    def test_rejects_fstring_format_spec(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("print(f'{1:03d}')\n")
+        self.assertIn("format spec", str(ctx.exception))
+
+    def test_rejects_non_constant_sep(self):
+        # sep/end must be constant *string* literals; an int (or anything
+        # else non-string) is rejected even though it's compile-time-known.
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("print('A', 'B', sep=1)\n")
+        self.assertIn("sep", str(ctx.exception))
+
+    def test_rejects_unknown_keyword(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("print('A', file=None)\n")
+        self.assertIn("sep", str(ctx.exception))
+
+    def test_rejects_codepoint_above_255(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("print('\u3042')\n")  # U+3042, not U+00FF
+        self.assertIn("U+3042", str(ctx.exception))
+
+    def test_fstring_still_rejected_outside_print(self):
+        # Batch-one only lifts the JoinedStr ban for print()'s own argument
+        # position; everywhere else it's still an unsupported expression.
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("x = 65\ny = f'{x}'\nputchar(65)\n")
+        self.assertIn("unsupported expression", str(ctx.exception))
+
+
+class TestConditionalExpressionSugar(unittest.TestCase):
+    """`a if c else b` (batch-one sugar #4): materialised via real if/else."""
+
+    def test_accepted_and_materialised_through_if_else(self):
+        c = compile_python_to_c(
+            "x = 5\ny = 1 if x > 0 else 0\nputchar(y + 64)\n")
+        self.assertIn("if(", c)
+        self.assertIn("} else {", c)
+
+    def test_nested_ifexp_in_print_int_position_still_runtime(self):
+        # An IfExp never folds to a compile-time constant (it always goes
+        # through real control flow), so it's rejected as a print() arg --
+        # documents the boundary rather than a print()-specific bug.
+        with self.assertRaises(CompileError):
+            compile_python_to_c("x = 5\nprint(1 if x > 0 else 0)\n")
+
+    def test_usable_as_function_argument(self):
+        c = compile_python_to_c(
+            "def f(n):\n    return n\nx = 5\n"
+            "putchar(f(65 if x > 0 else 90))\n")
+        self.assertIn("if(", c)
+
+
+class TestAugmentedAssignmentSugar(unittest.TestCase):
+    """`*= //= %=` (batch-one sugar #5) -- already wired through the
+    existing zzmul/zzdiv/zzmod helpers; locked here as a regression test."""
+
+    def test_mult_augassign_injects_zzmul(self):
+        c = compile_python_to_c("x = 5\nx *= 3\nputchar(x)\n")
+        self.assertIn("int zzmul(int a, int b){", c)
+        self.assertIn("x = zzmul(x, 3);", c)
+
+    def test_floordiv_augassign_injects_zzdiv(self):
+        c = compile_python_to_c("x = 17\nx //= 5\nputchar(x + 64)\n")
+        self.assertIn("int zzdiv(int a, int b){", c)
+        self.assertIn("x = zzdiv(x, 5);", c)
+
+    def test_mod_augassign_injects_zzmod(self):
+        c = compile_python_to_c("x = 17\nx %= 5\nputchar(x + 64)\n")
+        self.assertIn("int zzmod(int a, int b){", c)
+        self.assertIn("x = zzmod(x, 5);", c)
+
+    def test_pow_augassign_still_rejected(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("x = 2\nx **= 3\n")
+        self.assertIn("unsupported augmented operator", str(ctx.exception))
+
+
+class TestBreakContinueSugar(unittest.TestCase):
+    """break/continue (batch-one sugar #6) via a flag-downgrade rewrite."""
+
+    def test_break_in_while_accepted(self):
+        c = compile_python_to_c(
+            "x = 1\nwhile x:\n    putchar(65)\n    break\n")
+        self.assertIn("putchar(65);", c)
+
+    def test_continue_in_for_still_advances(self):
+        c = compile_python_to_c(
+            "for i in range(3):\n    continue\n    putchar(65)\n")
+        # the increment must not be textually inside the same guarded block
+        # as the (never-reached) putchar -- both must still appear, but the
+        # increment must not be conditioned on the break flag alone being
+        # false in a way that also guards on skip (continue must not stop
+        # the index from advancing).
+        self.assertIn("i += 1;", c)
+
+    def test_break_continue_outside_loop_rejected(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("def f():\n    break\n")
+        self.assertIn("outside loop", str(ctx.exception))
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c("def f():\n    continue\n")
+        self.assertIn("outside loop", str(ctx.exception))
+
+    def test_nested_loops_get_independent_flags(self):
+        c = compile_python_to_c(
+            "for i in range(3):\n"
+            "    for j in range(3):\n"
+            "        if j == 1:\n"
+            "            break\n"
+            "        putchar(65)\n"
+            "    if i == 1:\n"
+            "        continue\n"
+            "    putchar(90)\n")
+        # each loop that uses break/continue allocates its own pair of
+        # flag temporaries; the outer and inner loop must not share one
+        # (that would make an inner break also terminate the outer loop).
+        skip_and_break_temps = set(re.findall(r"\bzzt\d+\b(?= = 0;)", c))
+        self.assertGreaterEqual(len(skip_and_break_temps), 4)
+
+
+class TestDocstringPositionRule(unittest.TestCase):
+    """Bare string-literal statements are only tolerated as a docstring in
+    the first statement of a module or function body (batch-one sugar #7);
+    any other position is rejected like any other string literal."""
+
+    def test_module_docstring_position_zero_ignored(self):
+        c = compile_python_to_c('"""module doc"""\nputchar(65)\n')
+        self.assertIn("putchar(65);", c)
+
+    def test_function_docstring_position_zero_ignored(self):
+        c = compile_python_to_c(
+            "def f():\n    '''func doc'''\n    return 1\n"
+            "putchar(f() + 64)\n")
+        self.assertIn("int f(){", norm(c))
+
+    def test_module_stray_string_not_first_rejected(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c(
+                "putchar(65)\n'not a docstring'\nputchar(66)\n")
+        self.assertIn("string literals", str(ctx.exception))
+
+    def test_function_stray_string_not_first_rejected(self):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c(
+                "def f():\n    x = 1\n    'not a docstring'\n"
+                "    return x\nputchar(f() + 64)\n")
+        self.assertIn("string literals", str(ctx.exception))
 
 
 if __name__ == "__main__":

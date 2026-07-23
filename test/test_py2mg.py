@@ -212,6 +212,26 @@ class TestMg2McAcceptance(unittest.TestCase):
         "globals": "counter = 0\nbase = 65\n"
                    "def bump():\n    global counter\n    counter += 1\n"
                    "def emit(off):\n    putchar(base + off)\nbump()\nemit(0)\n",
+        # -- batch-one sugar --
+        "print_str": "print(\"foo\")\n",
+        "print_multi": "print(\"a\", 65, sep=\"-\", end=\"!\")\n",
+        "print_empty": "print()\n",
+        "print_fstring": "print(f\"n={1 + 2}\")\n",
+        "cond_expr": "x = 5\ny = 1 if x < 3 else 2\nputchar(y + 64)\n",
+        "aug_mul": "x = 6\nx *= 7\nputchar(x - 42)\n",
+        "aug_div": "x = 20\nx //= 3\nputchar(x + 59)\n",
+        "aug_mod": "x = 20\nx %= 7\nputchar(x + 59)\n",
+        "while_break": "x = 0\nwhile x < 100:\n    if x == 3:\n        break\n"
+                       "    putchar(65 + x)\n    x += 1\n",
+        "while_continue": "x = 0\nwhile x < 5:\n    x += 1\n"
+                          "    if x == 3:\n        continue\n    putchar(64 + x)\n",
+        "for_break": "for i in range(100):\n    if i == 3:\n        break\n"
+                     "    putchar(65 + i)\n",
+        "for_continue": "for i in range(5):\n    if i == 2:\n        continue\n"
+                        "    putchar(65 + i)\n",
+        "nested_loop_break": "for i in range(3):\n    for j in range(3):\n"
+                             "        if j == 1:\n            break\n"
+                             "        putchar(65 + i)\n",
     }
 
     def test_all_cases_accepted_by_mg2mc(self):
@@ -236,13 +256,16 @@ class TestRejections(unittest.TestCase):
     def test_negative_literal(self):
         self.assert_rejects("putchar(-5)\n", "negative")
 
-    def test_break(self):
-        self.assert_rejects(
-            "x = 0\nwhile x < 3:\n    break\n    x += 1\n", "break")
+    def test_break_outside_loop(self):
+        self.assert_rejects("break\n", "outside loop")
 
-    def test_continue(self):
+    def test_continue_outside_loop(self):
+        self.assert_rejects("continue\n", "outside loop")
+
+    def test_break_in_function_outside_loop(self):
         self.assert_rejects(
-            "x = 0\nwhile x < 3:\n    continue\n", "continue")
+            "def f(n):\n    break\n    return n\nputchar(f(1))\n",
+            "outside loop")
 
     def test_undefined_name(self):
         self.assert_rejects("putchar(y)\n", "not defined")
@@ -323,6 +346,259 @@ class TestRejections(unittest.TestCase):
         mg = compile_python_to_mg(
             "def f():\n    return base\nbase = 65\nputchar(f())\n")
         self.assertIn("CALL F", mg)
+
+
+# ---------------------------------------------------------------------------
+# Batch-one syntactic sugar
+# ---------------------------------------------------------------------------
+class TestPrint(unittest.TestCase):
+    def _outputs(self, mg):
+        return mg.count("OUTPUT")
+
+    def test_print_string_bytes(self):
+        # print("foo") -> f o o \n  (102 111 111 10)
+        mg = compile_python_to_mg('print("foo")\n')
+        for cp in (102, 111, 10):
+            self.assertIn("VAR CONST_{}={}".format(cp, cp), mg)
+        self.assertEqual(self._outputs(mg), 4)  # f o o \n
+
+    def test_print_int_is_decimal(self):
+        # print(65) renders the DECIMAL "65", not the character 'A'.
+        mg = compile_python_to_mg("print(65)\n")
+        self.assertIn("VAR CONST_54=54", mg)   # '6'
+        self.assertIn("VAR CONST_53=53", mg)   # '5'
+        self.assertIn("VAR CONST_10=10", mg)   # '\n'
+        self.assertNotIn("VAR CONST_65=65", mg)
+        self.assertEqual(self._outputs(mg), 3)
+
+    def test_print_empty_emits_end_only(self):
+        mg = compile_python_to_mg("print()\n")
+        self.assertEqual(self._outputs(mg), 1)  # just '\n'
+        self.assertIn("VAR CONST_10=10", mg)
+
+    def test_print_sep_and_end(self):
+        # print("a", "b", sep="-", end="!") -> a - b !
+        mg = compile_python_to_mg('print("a", "b", sep="-", end="!")\n')
+        self.assertEqual(self._outputs(mg), 4)
+        self.assertIn("VAR CONST_45=45", mg)   # '-'
+        self.assertIn("VAR CONST_33=33", mg)   # '!'
+
+    def test_print_multi_default_sep(self):
+        # print(1, 2) -> "1 2\n" : '1' ' ' '2' '\n'
+        mg = compile_python_to_mg("print(1, 2)\n")
+        self.assertEqual(self._outputs(mg), 4)
+        self.assertIn("VAR CONST_32=32", mg)   # ' '
+
+    def test_print_folded_int_expr(self):
+        mg = compile_python_to_mg("print(9 * 7)\n")   # "63\n"
+        self.assertIn("VAR CONST_54=54", mg)   # '6'
+        self.assertIn("VAR CONST_51=51", mg)   # '3'
+        # A constant-folded multiply must NOT drag in the ZZMUL helper.
+        self.assertNotIn("DEF ZZMUL", mg)
+
+    def test_print_ord_constant(self):
+        mg = compile_python_to_mg("print(ord('A'))\n")   # "65\n"
+        self.assertIn("VAR CONST_54=54", mg)   # '6'
+        self.assertIn("VAR CONST_53=53", mg)   # '5'
+
+    def test_print_fstring_constant(self):
+        mg = compile_python_to_mg('print(f"n={1 + 2}")\n')  # "n=3\n"
+        self.assertIn("VAR CONST_110=110", mg)  # 'n'
+        self.assertIn("VAR CONST_61=61", mg)    # '='
+        self.assertIn("VAR CONST_51=51", mg)    # '3'
+
+    def test_print_variable_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg("x = 5\nprint(x)\n")
+        msg = str(cm.exception)
+        self.assertIn("putchar", msg)
+        self.assertIn("v2", msg)
+
+    def test_print_fstring_variable_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg('x = 5\nprint(f"{x}")\n')
+        self.assertIn("putchar", str(cm.exception))
+
+    def test_print_fstring_conversion_rejected(self):
+        self.assertRaises(
+            Py2MgError, compile_python_to_mg, 'print(f"{1!r}")\n')
+
+    def test_print_fstring_format_spec_rejected(self):
+        self.assertRaises(
+            Py2MgError, compile_python_to_mg, 'print(f"{1:03d}")\n')
+
+    def test_print_nonconstant_sep_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg('s = 5\nprint("a", "b", sep=s)\n')
+        self.assertIn("constant string", str(cm.exception))
+
+    def test_print_unknown_kwarg_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg('print("a", file=1)\n')
+        self.assertIn("sep", str(cm.exception))
+
+    def test_print_as_value_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg("x = print(1)\n")
+        self.assertIn("cannot be used as a value", str(cm.exception))
+
+    def test_print_char_above_255_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg('print("中")\n')
+        self.assertIn("255", str(cm.exception))
+
+    def test_bare_fstring_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg('x = 5\nq = f"{x}"\n')
+        self.assertIn("f-string", str(cm.exception))
+        self.assertEqual(cm.exception.lineno, 2)
+
+
+class TestOrd(unittest.TestCase):
+    def test_ord_folds_to_codepoint(self):
+        mg = compile_python_to_mg("putchar(ord('A'))\n")
+        self.assertIn("VAR CONST_65=65", mg)
+
+    def test_ord_multichar_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg("putchar(ord('AB'))\n")
+        self.assertIn("single character", str(cm.exception))
+
+    def test_ord_nonliteral_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg("x = 5\nputchar(ord(x))\n")
+        self.assertIn("single-character string literal", str(cm.exception))
+
+
+class TestConditionalExpr(unittest.TestCase):
+    def test_cond_expr_accepted(self):
+        mg = compile_python_to_mg("x = 5\ny = 1 if x < 3 else 2\nputchar(y+64)\n")
+        self.assertIn("SWITCH", mg)
+        self.assertIn("OUTPUT", mg)
+
+    def test_cond_expr_in_call_arg(self):
+        mg = compile_python_to_mg("x = 5\nputchar((66 if x > 0 else 90))\n")
+        self.assertIn("OUTPUT", mg)
+
+    def test_cond_expr_lazy_only_selected_branch_calls(self):
+        # Each branch is a separate SWITCH case, so only the chosen call runs.
+        src = ("def a(n):\n    return n + 1\n"
+               "def b(n):\n    return n + 2\n"
+               "x = 5\nputchar(a(64) if x < 3 else b(63))\n")
+        mg = compile_python_to_mg(src)
+        # Both calls are compiled (into their cases) but placed under a SWITCH.
+        self.assertIn("CALL A", mg)
+        self.assertIn("CALL B", mg)
+        self.assertIn("SWITCH", mg)
+
+
+class TestAugAssign(unittest.TestCase):
+    def test_aug_mul(self):
+        mg = compile_python_to_mg("x = 6\nx *= 7\nputchar(x - 42)\n")
+        self.assertIn("CALL ZZMUL", mg)
+
+    def test_aug_floordiv(self):
+        mg = compile_python_to_mg("x = 20\nx //= 3\nputchar(x + 59)\n")
+        self.assertIn("CALL ZZDIV", mg)
+
+    def test_aug_mod(self):
+        mg = compile_python_to_mg("x = 20\nx %= 7\nputchar(x + 59)\n")
+        self.assertIn("CALL ZZMOD", mg)
+
+    def test_aug_pow_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg("x = 2\nx **= 3\nputchar(x)\n")
+        self.assertIn("unsupported augmented operator", str(cm.exception))
+
+
+class TestBreakContinue(unittest.TestCase):
+    def _def_body(self, mg, name):
+        start = mg.index("DEF " + name + "\n")
+        depth = 0
+        body = []
+        openers = ("DEF ", "IF ", "SWITCH ", "REPEAT")
+        for ln in mg[start:].splitlines():
+            body.append(ln)
+            s = ln.strip()
+            if any(s.startswith(o) for o in openers):
+                depth += 1
+            elif s == "END":
+                depth -= 1
+                if depth == 0:
+                    break
+        return "\n".join(body)
+
+    def test_while_break_accepted(self):
+        mg = compile_python_to_mg(
+            "x = 0\nwhile x < 100:\n    if x == 3:\n        break\n"
+            "    putchar(65 + x)\n    x += 1\n")
+        self.assertIn("VAR BRK0=0", mg)
+        self.assertIn("VAR SKP0=0", mg)
+        self.assertIn("BREAK", mg)
+
+    def test_while_continue_accepted(self):
+        mg = compile_python_to_mg(
+            "x = 0\nwhile x < 5:\n    x += 1\n"
+            "    if x == 3:\n        continue\n    putchar(64 + x)\n")
+        self.assertIn("VAR SKP0=0", mg)
+
+    def test_for_break_accepted(self):
+        mg = compile_python_to_mg(
+            "for i in range(100):\n    if i == 3:\n        break\n"
+            "    putchar(65 + i)\n")
+        self.assertIn("VAR BRK0=0", mg)
+
+    def test_for_continue_accepted(self):
+        mg = compile_python_to_mg(
+            "for i in range(5):\n    if i == 2:\n        continue\n"
+            "    putchar(65 + i)\n")
+        self.assertIn("VAR SKP0=0", mg)
+
+    def test_nested_loops_independent_flags(self):
+        # Inner and outer loops each own their own break, so two flag pairs.
+        mg = compile_python_to_mg(
+            "for i in range(3):\n    if i == 2:\n        break\n"
+            "    for j in range(3):\n        if j == 1:\n            break\n"
+            "        putchar(65 + j)\n")
+        self.assertIn("VAR BRK0=0", mg)
+        self.assertIn("VAR BRK1=0", mg)
+
+    def test_loop_without_control_has_no_flags(self):
+        # A loop with no break/continue must keep the lean, flag-free lowering.
+        mg = compile_python_to_mg(
+            "for i in range(3):\n    putchar(65 + i)\n")
+        self.assertNotIn("VAR BRK", mg)
+        self.assertNotIn("VAR SKP", mg)
+
+    def test_break_outside_loop_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg("break\n")
+        self.assertIn("outside loop", str(cm.exception))
+        self.assertEqual(cm.exception.lineno, 1)
+
+    def test_continue_outside_loop_rejected(self):
+        with self.assertRaises(Py2MgError) as cm:
+            compile_python_to_mg("x = 1\ncontinue\n")
+        self.assertIn("outside loop", str(cm.exception))
+        self.assertEqual(cm.exception.lineno, 2)
+
+
+class TestDocstringTolerance(unittest.TestCase):
+    def test_module_docstring_ignored(self):
+        mg = compile_python_to_mg('"""module doc"""\nputchar(65)\n')
+        self.assertIn("OUTPUT", mg)
+
+    def test_function_docstring_ignored(self):
+        mg = compile_python_to_mg(
+            'def f(n):\n    """doc"""\n    return n + 1\nputchar(f(64))\n')
+        self.assertIn("DEF F", mg)
+        self.assertIn("OUTPUT", mg)
+
+    def test_bare_nondocstring_expr_still_bare(self):
+        # A bare non-first string is a no-op statement (tolerated), like a
+        # bare integer literal.
+        mg = compile_python_to_mg('putchar(65)\n"trailing"\n')
+        self.assertIn("OUTPUT", mg)
 
 
 if __name__ == "__main__":

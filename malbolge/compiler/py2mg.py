@@ -34,14 +34,33 @@ generated programs compute identical results):
 
 The public entry point is :func:`compile_python_to_mg`.
 
+Language subset (int arithmetic, ``while``, ``if``/``elif``/``else``,
+``for``-``range``, chained comparison, boolean ops, functions incl. recursion,
+``putchar``/``getchar``) plus batch-one syntactic sugar:
+
+* ``print(...)`` of *compile-time constants only* -- string/int literals,
+  foldable int expressions, and all-constant f-strings.  Each argument is
+  rendered (ints as unsigned mod-3**20 decimal, strings verbatim), joined by
+  ``sep`` and terminated by ``end`` (both constant strings), and emitted byte by
+  byte.  A runtime (variable) argument is rejected with a line number pointing
+  at ``putchar`` -- variable printing is a v2 feature.
+* ``ord('c')`` folds a one-character string literal to its codepoint.
+* Conditional expressions ``a if c else b`` materialise into a temp filled by
+  whichever branch the condition selects (lazy: only the taken arm runs).
+* Augmented assignment ``+= -= *= //= %=`` (``**=`` unsupported).  The
+  multiply/divide/modulo helpers stay lazily injected.
+* ``break``/``continue`` for the innermost ``while``/``for``-``range`` loop,
+  lowered via per-loop ``BRK``/``SKP`` flag variables.  The guard that
+  suppresses the rest of a body after a break/continue always SWITCHes on a
+  fresh, normalised ``skip == 0`` comparison -- never on the raw flag cell --
+  so the A3 self-modification trap never arises (findings.md A3).
+
 Known v0 limitations (documented in ``docs/py2mg-backend.md``):
 
 * ``and``/``or`` are evaluated non-short-circuit (both sides always run).  This
   differs from Python only when an operand has side effects; the pure-Python
   subset's boolean operands in practice are comparisons of pure values.
-* The language subset is exactly ``py2c`` v1's (int arithmetic, ``while``,
-  ``if``/``elif``/``else``, ``for``-``range``, chained comparison, boolean ops,
-  functions incl. recursion, ``putchar``/``getchar``); no new features.
+* ``while``/``for``-``else`` are unsupported.
 """
 
 import ast
@@ -172,6 +191,8 @@ class _DirectCompiler(c2mg.Compiler):
         self._globals_decl = set()
         self._module_globals = set()
         self._live = []              # temporaries held across a sub-lowering
+        self._loops = []             # stack of enclosing loops that own flags
+        self._active_loop = None     # innermost flag-owning loop (guard target)
 
         self._fdefs = {}             # UPPER name -> ast.FunctionDef
         self._pynames = {}           # UPPER name -> original Python name
@@ -286,10 +307,52 @@ class _DirectCompiler(c2mg.Compiler):
             return self._unary(node)
         if isinstance(node, (ast.BoolOp, ast.Compare)):
             return self._bool_as_int(node)
+        if isinstance(node, ast.IfExp):
+            return self._cond_expr(node)
         if isinstance(node, ast.Call):
             return self._call_value(node)
+        if isinstance(node, ast.JoinedStr):
+            raise self.err(
+                "f-strings are only supported as print() arguments", node)
         raise self.err(
             "unsupported expression: {}".format(type(node).__name__), node)
+
+    def _cond_expr(self, node):
+        """Lower ``a if c else b`` into a temp filled by whichever branch the
+        condition selects.  Only the selected branch's code runs (lazy: each
+        branch is a separate SWITCH case), so side effects fire exactly like
+        CPython's short-circuit conditional expression."""
+        cond = self._lower_cond(node.test)
+        r = self.get_temporary_variable(INT)
+        # Keep cond and r live across each branch so a recursive callee inside a
+        # branch protects their cells (cross-call temp tracking).
+        pushed = []
+        if self._is_temp(cond):
+            self._live.append(cond)
+            pushed.append(cond)
+        self._live.append(r)
+        pushed.append(r)
+        saved = self.current_block
+        then_blk = Block(self)
+        self.current_block = then_blk
+        self._store_into(self.lower(node.body), r)
+        else_blk = Block(self)
+        self.current_block = else_blk
+        self._store_into(self.lower(node.orelse), r)
+        self.current_block = saved
+        for _ in pushed:
+            self._live.pop()
+        # SWITCH low trit: CASE0 (cond false) -> else, CASE1 (cond true) -> then.
+        self.current_block.switch_(cond, else_blk, then_blk, Block(self))
+        self._release_if_temp(cond)
+        return r
+
+    def _store_into(self, val, r):
+        """Copy an int literal or Variable ``val`` into temp ``r``."""
+        if val is r:
+            return
+        self.copy(self.current_block, self._as_var(val), r)
+        self._release_if_temp(val)
 
     def _const(self, node):
         v = node.value
@@ -393,7 +456,7 @@ class _DirectCompiler(c2mg.Compiler):
                 node)
         if fname == "print":
             raise self.err(
-                "print() is unsupported; use putchar(codepoint)", node)
+                "print(...) returns None and cannot be used as a value", node)
         if fname == "range":
             raise self.err("range() is only valid in a 'for' loop header", node)
         upper = fname.upper()
@@ -725,25 +788,227 @@ class _DirectCompiler(c2mg.Compiler):
             (self.current_block.rot(self.CON2).opr(arg)
                  .rot(self.CON2).opr(arg).output())
             return
+        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name) \
+                and value.func.id == "print":
+            self._emit_print(value, node)
+            return
         if isinstance(value, ast.Constant):
             return  # bare literal / docstring
         result = self.lower(value)
         self._release_if_temp(result)
 
+    # -- print() and f-strings (compile-time constant rendering) ------------
+    def _putbyte(self, cp):
+        """Emit a single output byte for codepoint ``cp`` (assumed 0..255)."""
+        argv = self.get_const_variable(INT, cp)
+        (self.current_block.rot(self.CON2).opr(argv)
+             .rot(self.CON2).opr(argv).output())
+
+    def _emit_print(self, call, node):
+        sep = " "
+        end = "\n"
+        for kw in call.keywords:
+            if kw.arg == "sep":
+                sep = self._const_str_kwarg(kw, "sep")
+            elif kw.arg == "end":
+                end = self._const_str_kwarg(kw, "end")
+            elif kw.arg is None:
+                raise self.err(
+                    "print() does not support ** keyword unpacking", node)
+            else:
+                raise self.err(
+                    "print() only supports the 'sep' and 'end' keyword "
+                    "arguments, not {!r}".format(kw.arg), node)
+        parts = [self._render_print_arg(a) for a in call.args]
+        text = sep.join(parts) + end
+        for ch in text:
+            cp = ord(ch)
+            if cp > 255:
+                raise self.err(
+                    "print() cannot emit character {!r} (codepoint {} > 255); "
+                    "output is byte-oriented".format(ch, cp), node)
+            self._putbyte(cp)
+
+    def _const_str_kwarg(self, kw, name):
+        v = kw.value
+        if isinstance(v, ast.Constant) and isinstance(v.value, str):
+            return v.value
+        raise self.err(
+            "print() {}= must be a constant string literal".format(name),
+            kw.value)
+
+    def _render_print_arg(self, node):
+        """Render a print() argument to the text it contributes.  Only
+        compile-time constants are accepted; a runtime value is rejected with
+        a line number (variable printing is a v2 feature)."""
+        if isinstance(node, ast.JoinedStr):
+            return self._render_fstring(node)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        folded = self._fold_int_const(node)
+        if folded is None:
+            raise self.err(
+                "print() only accepts compile-time constants (string/int "
+                "literals, foldable int expressions, all-constant f-strings); "
+                "use putchar(codepoint) for runtime values -- variable "
+                "printing is a v2 feature", node)
+        return str(folded)
+
+    def _render_fstring(self, node):
+        out = []
+        for part in node.values:
+            if isinstance(part, ast.Constant) and isinstance(part.value, str):
+                out.append(part.value)
+            elif isinstance(part, ast.FormattedValue):
+                if part.conversion is not None and part.conversion != -1:
+                    raise self.err(
+                        "f-string conversions (!s/!r/!a) are unsupported", node)
+                if part.format_spec is not None:
+                    raise self.err(
+                        "f-string format specifiers (:...) are unsupported",
+                        node)
+                out.append(self._render_print_arg(part.value))
+            else:
+                raise self.err("unsupported f-string component", node)
+        return "".join(out)
+
+    def _fold_int_const(self, node):
+        """Purely constant-fold ``node`` to an int in ``[0, MOD)`` or return
+        None if it is not a compile-time integer constant.  Emits no code."""
+        if isinstance(node, ast.Constant):
+            v = node.value
+            if isinstance(v, bool):
+                return 1 if v else 0
+            if isinstance(v, int):
+                if v < 0:
+                    raise self.err(
+                        "negative integer literal is unsupported (values are "
+                        "mod 3**20 with no negatives)", node)
+                return v % MOD
+            return None
+        if isinstance(node, ast.UnaryOp):
+            if isinstance(node.op, ast.UAdd):
+                return self._fold_int_const(node.operand)
+            if isinstance(node.op, ast.USub):
+                raise self.err(
+                    "unary minus is unsupported (the value ring has no "
+                    "negatives)", node)
+            return None
+        if isinstance(node, ast.BinOp):
+            left = self._fold_int_const(node.left)
+            right = self._fold_int_const(node.right)
+            if left is None or right is None:
+                return None
+            return self._fold(node.op, left, right, node)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                and node.func.id == "ord":
+            return self._fold_ord(node)
+        return None
+
     def _stmt_If(self, node):
         folded = self._static_bool(node.test)
         if folded is True:
-            self._compile_body(node.body)
+            self._compile_seq_inline(node.body)
             return
         if folded is False:
-            self._compile_body(node.orelse)
+            self._compile_seq_inline(node.orelse)
             return
         cond = self._lower_cond(node.test)
-        then_block = self._compile_into_block(node.body)
-        else_block = self._compile_into_block(node.orelse)
+        then_block = self._compile_stmt_block(node.body)
+        else_block = self._compile_stmt_block(node.orelse)
         # SWITCH on the low trit: CASE0 (false) -> else, CASE1 (true) -> then.
         self.current_block.switch_(cond, else_block, then_block, Block(self))
         self._release_if_temp(cond)
+
+    # -- statement-sequence compilation with break/continue guarding --------
+    def _compile_seq_inline(self, stmts):
+        """Compile a sequence into the *current* block, honouring break/continue
+        guarding when inside a flag-owning loop."""
+        if self._active_loop is not None:
+            self._compile_loop_seq(stmts)
+        else:
+            self._compile_body(stmts)
+
+    def _compile_stmt_block(self, stmts):
+        """Compile a nested sequence into a fresh Block (guard-aware)."""
+        blk = Block(self)
+        saved = self.current_block
+        self.current_block = blk
+        self._compile_seq_inline(stmts)
+        self.current_block = saved
+        return blk
+
+    def _compile_loop_seq(self, stmts):
+        """Compile a loop-body sequence: once a statement that may set the
+        current loop's break/continue flag is emitted, wrap every following
+        sibling in ``if not skip`` so their side effects are suppressed after a
+        break/continue.  The guard SWITCHes on a *fresh, normalised* ``skip==0``
+        comparison, never on the raw flag cell -- so the A3 self-modification
+        trap (SWITCH on an OPR-written cell inside a loop) never arises."""
+        n = len(stmts)
+        for i, s in enumerate(stmts):
+            self._stmt(s)
+            if i + 1 < n and self._contains_loop_control(s):
+                rest = stmts[i + 1:]
+                skip = self._active_loop["skip"]
+                guard = self._flag_is_zero(skip)   # BOOL: skip == 0
+                rest_block = self._compile_loop_body(rest)
+                # CASE0 (skip != 0) -> drop rest; CASE1 (skip == 0) -> run rest.
+                self.current_block.switch_(
+                    guard, Block(self), rest_block, Block(self))
+                self._release_if_temp(guard)
+                return
+
+    def _compile_loop_body(self, stmts):
+        blk = Block(self)
+        saved = self.current_block
+        self.current_block = blk
+        self._compile_loop_seq(stmts)
+        self.current_block = saved
+        return blk
+
+    def _contains_loop_control(self, node):
+        """True if ``node`` can ``break``/``continue`` the *enclosing* loop --
+        i.e. it holds a Break/Continue not buried inside a nested loop or def."""
+        if isinstance(node, (ast.For, ast.While, ast.FunctionDef,
+                             ast.AsyncFunctionDef)):
+            return False
+        if isinstance(node, (ast.Break, ast.Continue)):
+            return True
+        for child in ast.iter_child_nodes(node):
+            if self._contains_loop_control(child):
+                return True
+        return False
+
+    def _loop_has_control(self, body):
+        return any(self._contains_loop_control(s) for s in body)
+
+    # -- loop control flag helpers ------------------------------------------
+    def _new_loop_flags(self):
+        """Allocate a matched ``BRK<n>``/``SKP<n>`` flag pair for one loop."""
+        f = self._func
+        n = f._flag_id
+        f._flag_id += 1
+        brk = Variable(INT, "BRK" + str(n))
+        skip = Variable(INT, "SKP" + str(n))
+        f.variables[brk.name] = brk
+        f.variables[skip.name] = skip
+        return brk, skip
+
+    def _set_flag(self, block, var, val):
+        self.copy(block, self.get_const_variable(INT, val), var)
+
+    def _flag_is_zero(self, var):
+        """A fresh, SWITCH-normalised BOOL that is true iff ``var == 0``."""
+        return self.eq(self.current_block, var,
+                       self.get_const_variable(INT, 0))
+
+    def _emit_break_check(self, block, brk):
+        """After a loop body, break out of the REPEAT when ``brk != 0``."""
+        guard = self.eq(block, brk, self.get_const_variable(INT, 0))
+        # CASE0 (brk != 0) -> BREAK the loop; CASE1 (brk == 0) -> keep looping.
+        block.switch_(guard, Block(self).break_(), Block(self), Block(self))
+        self._release_if_temp(guard)
 
     def _stmt_While(self, node):
         if node.orelse:
@@ -751,19 +1016,51 @@ class _DirectCompiler(c2mg.Compiler):
         folded = self._static_bool(node.test)
         if folded is False:
             return
-        if folded is True:
-            body = self._compile_into_block(node.body)
-            self.current_block.repeat_inf(body)
+        if not self._loop_has_control(node.body):
+            prev = self._active_loop
+            self._active_loop = None
+            try:
+                if folded is True:
+                    body = self._compile_into_block(node.body)
+                    self.current_block.repeat_inf(body)
+                    return
+                inner = Block(self)
+                saved = self.current_block
+                self.current_block = inner
+                cond = self._lower_cond(node.test)
+                body = self._compile_into_block(node.body)
+                inner.switch_(cond, Block(self).break_(), body, Block(self))
+                self._release_if_temp(cond)
+                self.current_block = saved
+                self.current_block.repeat_inf(inner)
+            finally:
+                self._active_loop = prev
             return
-        inner = Block(self)
-        saved = self.current_block
-        self.current_block = inner
-        cond = self._lower_cond(node.test)
-        body = self._compile_into_block(node.body)
-        inner.switch_(cond, Block(self).break_(), body, Block(self))
-        self._release_if_temp(cond)
-        self.current_block = saved
-        self.current_block.repeat_inf(inner)
+        # break/continue present: lower via per-loop flags.
+        brk, skip = self._new_loop_flags()
+        self._set_flag(self.current_block, brk, 0)
+        loop = {"brk": brk, "skip": skip}
+        prev = self._active_loop
+        self._loops.append(loop)
+        self._active_loop = loop
+        try:
+            inner = Block(self)
+            saved = self.current_block
+            self.current_block = inner
+            self._set_flag(inner, skip, 0)       # top of each iteration
+            if folded is True:
+                self._compile_loop_seq(node.body)
+            else:
+                cond = self._lower_cond(node.test)
+                body = self._compile_loop_body(node.body)
+                inner.switch_(cond, Block(self).break_(), body, Block(self))
+                self._release_if_temp(cond)
+            self._emit_break_check(inner, brk)
+            self.current_block = saved
+            self.current_block.repeat_inf(inner)
+        finally:
+            self._loops.pop()
+            self._active_loop = prev
 
     def _stmt_For(self, node):
         if node.orelse:
@@ -783,17 +1080,51 @@ class _DirectCompiler(c2mg.Compiler):
         var = self._target_var(node.target.id, node)
         self._store(self.lower(start), var)
         bound = self._as_var(self.lower(stop))
-        inner = Block(self)
-        saved = self.current_block
-        self.current_block = inner
-        cond = self.lt(inner, var, bound, False)     # var < bound
-        body = self._compile_into_block(node.body)
-        self.add(body, var, self.get_const_variable(INT, step % MOD))
-        inner.switch_(cond, Block(self).break_(), body, Block(self))
-        self._release_if_temp(cond)
-        self.current_block = saved
-        self.current_block.repeat_inf(inner)
-        self._release_if_temp(bound)
+        stepc = self.get_const_variable(INT, step % MOD)
+        if not self._loop_has_control(node.body):
+            prev = self._active_loop
+            self._active_loop = None
+            try:
+                inner = Block(self)
+                saved = self.current_block
+                self.current_block = inner
+                cond = self.lt(inner, var, bound, False)     # var < bound
+                body = self._compile_into_block(node.body)
+                self.add(body, var, stepc)
+                inner.switch_(cond, Block(self).break_(), body, Block(self))
+                self._release_if_temp(cond)
+                self.current_block = saved
+                self.current_block.repeat_inf(inner)
+                self._release_if_temp(bound)
+            finally:
+                self._active_loop = prev
+            return
+        # break/continue present: lower via per-loop flags.  The range step is
+        # appended after the (guarded) body, outside the guard, so ``continue``
+        # still advances the loop variable.
+        brk, skip = self._new_loop_flags()
+        self._set_flag(self.current_block, brk, 0)
+        loop = {"brk": brk, "skip": skip}
+        prev = self._active_loop
+        self._loops.append(loop)
+        self._active_loop = loop
+        try:
+            inner = Block(self)
+            saved = self.current_block
+            self.current_block = inner
+            self._set_flag(inner, skip, 0)       # top of each iteration
+            cond = self.lt(inner, var, bound, False)     # var < bound
+            body = self._compile_loop_body(node.body)
+            self.add(body, var, stepc)
+            inner.switch_(cond, Block(self).break_(), body, Block(self))
+            self._release_if_temp(cond)
+            self._emit_break_check(inner, brk)
+            self.current_block = saved
+            self.current_block.repeat_inf(inner)
+            self._release_if_temp(bound)
+        finally:
+            self._loops.pop()
+            self._active_loop = prev
 
     def _range_args(self, call):
         n = len(call.args)
@@ -839,13 +1170,22 @@ class _DirectCompiler(c2mg.Compiler):
             self._globals_decl.add(name)
 
     def _stmt_Break(self, node):
-        raise self.err(
-            "'break' is unsupported: the backend has no break/continue", node)
+        if not self._loops:
+            raise self.err("'break' outside loop", node)
+        loop = self._loops[-1]
+        # Break sets both flags: skip suppresses the rest of the body this
+        # iteration; brk makes the post-body check exit the REPEAT.
+        self._set_flag(self.current_block, loop["brk"], 1)
+        self._set_flag(self.current_block, loop["skip"], 1)
 
     def _stmt_Continue(self, node):
-        raise self.err(
-            "'continue' is unsupported: the backend has no break/continue",
-            node)
+        if not self._loops:
+            raise self.err("'continue' outside loop", node)
+        loop = self._loops[-1]
+        # Continue only suppresses the rest of the body; the loop keeps running
+        # (and, for for-range, the step still fires -- it is emitted outside the
+        # guard).
+        self._set_flag(self.current_block, loop["skip"], 1)
 
     def _stmt_FunctionDef(self, node):
         raise self.err("nested function definitions are unsupported", node)
@@ -977,7 +1317,7 @@ class _DirectCompiler(c2mg.Compiler):
         if not stmts:
             return False
         last = stmts[-1]
-        if isinstance(last, ast.Return):
+        if isinstance(last, (ast.Return, ast.Break, ast.Continue)):
             return True
         if isinstance(last, ast.If) and last.orelse:
             return (_DirectCompiler._da_terminates(last.body)
@@ -1015,6 +1355,7 @@ class _DirectCompiler(c2mg.Compiler):
     def _new_func(self, upper):
         f = Func(self, INT, upper)
         f._temp_id = 0
+        f._flag_id = 0
         f._free_temps = []
         f._cross_call_temps = set()
         self.functions[upper] = f
@@ -1046,6 +1387,8 @@ class _DirectCompiler(c2mg.Compiler):
         self._locals = set(self._collect_assigned(
             fdef.body, self._params, self._globals_decl))
         self._live = []
+        self._loops = []
+        self._active_loop = None
 
         # Reject use-before-assignment before emitting anything.
         external = self._params | self._globals_decl | self._module_globals
@@ -1092,6 +1435,8 @@ class _DirectCompiler(c2mg.Compiler):
         self._globals_decl = set()
         self._locals = set()
         self._live = []
+        self._loops = []
+        self._active_loop = None
         # In main, module-level names are its own sequential locals -- reading
         # one before its first assignment is a NameError in CPython.
         self._check_definite_assignment(module_body, set(), self._module_globals)

@@ -69,6 +69,29 @@ BIG_CASES = {
         "    return isodd(n - 1)\n"
         "def isodd(n):\n    if n == 0:\n        return 0\n"
         "    return iseven(n - 1)\nputchar(iseven(4) + 64)\n", b"", b"A"),
+    # -- batch-one sugar (dual-backend contract: both paths must render the
+    #    same bytes).  The direct path is independently verified end-to-end in
+    #    the batch-one verification script; these run under the shared suite
+    #    once the py2c side lands the same sugar. --
+    "print_const": (
+        'print("foo")\nprint("a", 65, sep="-", end="!\\n")\n', b"", b"foo\na-65!\n"),
+    "print_folded": ('print(9 * 7)\nprint(f"n={1 + 2}")\n', b"", b"63\nn=3\n"),
+    # Nested loops with break in both: inner breaks at j==1, outer at i==2.
+    "nested_break_continue": (
+        "for i in range(5):\n    if i == 2:\n        break\n"
+        "    for j in range(5):\n        if j == 1:\n            continue\n"
+        "        if j == 3:\n            break\n"
+        "        putchar(65 + i)\n", b"", b"AABB"),
+    # Conditional expression with a call in each arm: only the taken arm runs.
+    "cond_expr_lazy": (
+        "def a(n):\n    return n + 1\n"
+        "def b(n):\n    return n + 2\n"
+        "x = 5\nputchar(a(64) if x < 3 else b(63))\n", b"", b"A"),
+    # break inside a while loop that itself sits in a recursive function.
+    "break_in_recursion": (
+        "def f(n):\n    i = 0\n    while i < 10:\n"
+        "        if i == n:\n            break\n        i += 1\n"
+        "    return i\nputchar(f(3) + 64)\n", b"", b"C"),
 }
 
 

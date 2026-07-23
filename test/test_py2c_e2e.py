@@ -255,6 +255,54 @@ class EndToEnd(unittest.TestCase):
             "    return n + s(n - 1)\nputchar(s(5) + 50)\n")
         self.assertEqual(out, b"A")
 
+    def test_print_string_literal(self):
+        # Batch-one syntax sugar: print() with compile-time constant
+        # arguments desugars to a fixed putchar() sequence at compile time.
+        self.assertEqual(self.run_python("print('foo')\n"), b"foo\n")
+
+    def test_print_multi_arg_sep_end(self):
+        self.assertEqual(
+            self.run_python("print('A', 'B', sep='-', end='!')\n"), b"A-B!")
+
+    @unittest.skipUnless(
+        HAVE_PIPELINE,
+        "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")
+    def test_nested_loop_break_continue_independent(self):
+        # Inner loop's break must not terminate the outer loop, and the
+        # outer loop's continue must still advance its own index -- this is
+        # the whole point of giving each break/continue-bearing loop its
+        # own pair of flag temporaries (py2c.py _stmt_While/_stmt_For).
+        src = (
+            "for i in range(3):\n"
+            "    for j in range(3):\n"
+            "        if j == 1:\n"
+            "            break\n"
+            "        putchar(65)\n"
+            "    if i == 1:\n"
+            "        continue\n"
+            "    putchar(90)\n"
+        )
+        # i=0: inner prints one 'A' (break at j=1); i!=1 -> 'Z'.
+        # i=1: inner prints one 'A'; i==1 -> continue skips 'Z'.
+        # i=2: inner prints one 'A'; i!=1 -> 'Z'.
+        out = self.run_python(src)
+        self.assertEqual(out, b"AZAAZ")
+
+    @unittest.skipUnless(
+        HAVE_PIPELINE,
+        "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")
+    def test_ifexp_lazy_side_effects(self):
+        # `a if c else b` must only evaluate the selected branch: the
+        # not-taken branch's putchar() must never fire.
+        src = (
+            "def emit(c):\n"
+            "    putchar(c)\n"
+            "    return c\n"
+            "x = 1\n"
+            "y = emit(65) if x > 0 else emit(90)\n"
+        )
+        self.assertEqual(self.run_python(src), b"A")
+
     @unittest.skipUnless(
         HAVE_PIPELINE,
         "multi-MB program; pure-Python mc2mb is ~40s/MB -- build ref/ tools for the fast path")

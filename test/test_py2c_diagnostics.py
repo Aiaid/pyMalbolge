@@ -216,11 +216,6 @@ class TestAcceptedRejections:
         self.assert_rejected(
             "if (n := 5) > 0:\n    putchar(n)\n", 1, "unsupported expression")
 
-    def test_ternary_ifexp(self):
-        self.assert_rejected(
-            "x = 5\ny = 1 if x > 0 else 0\nputchar(65)\n", 2,
-            "unsupported expression")
-
     def test_subscript_read(self):
         self.assert_rejected(
             "a = 5\nx = a[0]\nputchar(65)\n", 2, "unsupported expression")
@@ -318,15 +313,6 @@ class TestAcceptedRejections:
             "n = 2\nfor i in range(0, 10, n):\n    putchar(65)\n", 2,
             "positive integer literal")
 
-    def test_break_in_loop(self):
-        self.assert_rejected(
-            "x = 1\nwhile x:\n    putchar(65)\n    break\n", 4, "'break'")
-
-    def test_continue_in_loop(self):
-        self.assert_rejected(
-            "for i in range(3):\n    continue\n    putchar(65)\n", 2,
-            "'continue'")
-
     def test_getchar_with_args(self):
         self.assert_rejected(
             "putchar(getchar(1))\n", 1, "no arguments")
@@ -349,9 +335,6 @@ class TestAcceptedRejections:
 
     def test_chr_call(self):
         self.assert_rejected("putchar(chr(65))\n", 1, "chr()")
-
-    def test_print_call(self):
-        self.assert_rejected("print(65)\n", 1, "print()")
 
     def test_true_division(self):
         self.assert_rejected(
@@ -505,6 +488,64 @@ class TestKnownDefects:
             compile_python_to_c(src)
         assert excinfo.value.lineno == 1
         assert "reserved" in str(excinfo.value)
+
+
+# ===========================================================================
+# Batch-one syntax sugar (docs/python-subset-spec.md v2 plan items now
+# implemented): four probe IDs from the original audit corpus that were
+# A-class "correctly rejected" results are now A-class "correctly accepted"
+# results instead, because the underlying constructs moved from the "must
+# reject" column of the accept table into the "accept" column. Flipped here
+# the same way TestKnownDefects flips B/C-class fixes: keep the original
+# probe ID in a docstring for audit traceability, assert the NEW behaviour.
+# ===========================================================================
+class TestBatchOneSugar:
+    def test_ternary_ifexp_now_accepted(self):
+        """probe ID ast_ternary_ifexp, FLIPPED: `a if c else b` is now
+        materialised into a temp through real if/else (see py2c.py
+        _ifexp), so only the selected branch's side effects run."""
+        c = compile_python_to_c(
+            "x = 5\ny = 1 if x > 0 else 0\nputchar(y + 64)\n")
+        assert "if(" in c and "} else {" in c
+
+    def test_break_in_loop_now_accepted(self):
+        """probe ID sem_break_in_loop, FLIPPED: break is now supported
+        inside while/for loops via a flag-downgrade rewrite (the target C
+        subset still has no real break/continue/goto)."""
+        c = compile_python_to_c(
+            "x = 1\nwhile x:\n    putchar(65)\n    break\n")
+        assert "putchar(65);" in c
+
+    def test_continue_in_loop_now_accepted(self):
+        """probe ID sem_continue_in_loop, FLIPPED: continue is now
+        supported the same way as break."""
+        c = compile_python_to_c(
+            "for i in range(3):\n    continue\n    putchar(65)\n")
+        assert "i += 1;" in c
+
+    def test_print_call_now_accepted(self):
+        """probe ID sem_print_call, FLIPPED: print() with compile-time
+        constant arguments now compiles to a fixed putchar() sequence
+        (65 -> the decimal text "65" followed by the default "\\n" end)."""
+        c = compile_python_to_c("print(65)\n")
+        assert "putchar(54);" in c  # '6'
+        assert "putchar(53);" in c  # '5'
+        assert "putchar(10);" in c  # '\n'
+
+    # -- new diagnostic surface introduced by this batch: break/continue
+    # outside a loop (previously unreachable -- break/continue were
+    # *always* rejected, in or out of a loop) --------------------------
+    def test_break_outside_loop_rejected(self):
+        with pytest.raises(CompileError) as excinfo:
+            compile_python_to_c("break\nputchar(65)\n")
+        assert excinfo.value.lineno == 1
+        assert "outside loop" in str(excinfo.value)
+
+    def test_continue_outside_loop_rejected(self):
+        with pytest.raises(CompileError) as excinfo:
+            compile_python_to_c("continue\nputchar(65)\n")
+        assert excinfo.value.lineno == 1
+        assert "outside loop" in str(excinfo.value)
 
 
 if __name__ == "__main__":
