@@ -178,10 +178,14 @@ from malbolge.compiler import (
 ### Supported Python subset (v1)
 
 `int` variables and arithmetic (`+ - * // %`, constant folding mod 3^20),
-`while` / `if` / `elif` / `else`, `for i in range(...)`, chained comparisons,
-short-circuit `and` / `or` / `not`, function definitions and calls including
-(mutual) recursion, and `putchar()` / `getchar()` I/O. Integers live on the
-mod 3^20 ring; negative literals, `bool`, floats, strings and containers are
+`while` / `if` / `elif` / `else`, `for i in range(...)`, `break` / `continue`,
+chained comparisons, short-circuit `and` / `or` / `not`, conditional
+expressions (`a if c else b`, lazily evaluated), function definitions and
+calls including (mutual) recursion, `putchar()` / `getchar()` I/O, and
+`print()` with compile-time-constant arguments (string literals, constant
+ints, constant f-strings, `sep=`/`end=`) — `print("Hello")` compiles to a
+putchar chain. Docstrings are tolerated. Integers live on the mod 3^20 ring;
+negative literals, `bool`, floats, runtime strings and containers are
 rejected with line-numbered `CompileError`s.
 
 The full normative specification — accepted AST whitelist, all semantic

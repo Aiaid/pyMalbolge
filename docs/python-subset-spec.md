@@ -54,8 +54,8 @@
 | `Return` | `_stmt_Return` | 无值 `return` 发射 `return 0;`;有值发射 `return <expr>;`;**"return 在函数外"检查是死代码,见 §2 语义偏差 D10** |
 | `Pass` | `_stmt_Pass` | no-op |
 | `Global` | `_stmt_Global` | 只能出现在函数体内(合成 `main()` 里也算"函数体内",因此模块级 `global x` 语法上被接受、语义上是 no-op,见 §2);**不检查名字是否与形参同名**(§2 D12 偏差) |
-| `Break` | `_stmt_Break` | 无条件拒绝:`"'break' is unsupported ..."`(即使写在语法合法的循环体内也一样拒绝,不存在部分支持) |
-| `Continue` | `_stmt_Continue` | 无条件拒绝,同上 |
+| `Break` | `_stmt_Break` | **批次一(2026-07-23)起接受**:仅限循环体内(`while`/`for`),经标志变量降级实现(每个含 break/continue 的循环分配 `skip`+`brk` 两个标志,循环体每条语句包 `if(skip==0)` 守卫);嵌套循环各自独立标志,`break` 只终止最内层循环并跳过 `for` 步进;循环外使用拒绝:`"'break' outside loop"` |
+| `Continue` | `_stmt_Continue` | 同上;`continue` 跳过本轮剩余语句,`for` 的步进**仍执行**;循环外拒绝 |
 | `FunctionDef`(嵌套) | `_stmt_FunctionDef` | 无条件拒绝:`"nested function definitions are unsupported"` |
 
 未在上表的语句类型(`ClassDef` 嵌套、`Import`/`ImportFrom` 嵌套、`Try`、
@@ -91,11 +91,13 @@
 
 ### 1.4 表达式(Expression)
 
-`lower()` (`py2c.py:241-259`) 处理以下节点类型,每种展开如下;不在此列的
-节点类型(`List`、`Dict`、`Set`、`Tuple`、`ListComp`/`SetComp`/`DictComp`/
-`GeneratorExp`、`Lambda`、`IfExp`、`Attribute`、`Subscript`、`Slice`、
-`Starred`、`NamedExpr`、`JoinedStr`/`FormattedValue`、`Yield`/`YieldFrom`、
-`Await` 等)一律落到通用拒绝:`"unsupported expression: {TypeName}"`。
+`lower()` 处理以下节点类型,每种展开如下;不在此列的节点类型(`List`、
+`Dict`、`Set`、`Tuple`、`ListComp`/`SetComp`/`DictComp`/`GeneratorExp`、
+`Lambda`、`Attribute`、`Subscript`、`Slice`、`Starred`、`NamedExpr`、
+`Yield`/`YieldFrom`、`Await` 等)一律落到通用拒绝:`"unsupported
+expression: {TypeName}"`。`JoinedStr`(f-string)例外:**仅在 `print()`
+实参位置**接受(全部部件必须编译期常量,见 §1.7),其他位置维持
+"unsupported expression: JoinedStr" 拒绝。
 
 | AST 节点 | 接受形态 |
 |---|---|
@@ -106,6 +108,7 @@
 | `BoolOp`(`and`/`or`) | 走条件物化,短路求值,通过嵌套 `if/else` 实现 |
 | `Compare` | 走条件物化;比较符限于 `< <= > >= == !=`(见 §1.5);支持链式比较 `a < b < c`(降为 `(a<b) && (b<c)`,每个操作数只求值一次);`is`/`is not`/`in`/`not in` 在遍历 `node.ops` 时即被拒绝,**先于任何操作数求值**,不会因操作数本身非法而报出无关错误 |
 | `Call` | 见 §1.7 内建函数与 §1.3 用户函数调用 |
+| `IfExp`(`a if c else b`,批次一新增) | 物化为 temp + 真实 `if/else` 双分支,**惰性求值**:仅被选中分支的副作用(如函数调用)发生 |
 
 **条件物化(condition materialisation)**:任何布尔语义的表达式(比较、
 布尔运算、`not`、`while`/`if` 的 `test`)从不作为一个"比较结果值"存进变量,
@@ -122,7 +125,7 @@
 | `bool`(`True`/`False`) | 折成整数 `1`/`0`(不发射 `bool`/`true`/`false`,见 §2) |
 | `int`,`v >= 0` | 折成 `v % MOD` |
 | `int`,`v < 0` | 拒绝(见下方"负数"行) |
-| `str` | 拒绝:`"string literals are unsupported (only single characters via ord('c') are allowed)"` |
+| `str` | 一般表达式位置拒绝:`"string literals are unsupported ..."`。**两个例外**(批次一):`ord('c')` 的单字符实参;`print()` 实参/`sep=`/`end=` 位置的字符串字面量(编译期展开,见 §1.7)。另见 §1.2 docstring 位置规则:模块/函数体首条裸字符串被静默忽略 |
 | `float` | 拒绝:`"floating-point values are unsupported"` |
 | 其他(`bytes`、`complex`、`Ellipsis`、`None` 等) | 拒绝,落到通用分支 `"unsupported constant: {!r}"` |
 
@@ -194,7 +197,7 @@ callees)")分派:
 | `getchar()` | 是 | 零参数,无关键字参数(否则报 `"getchar() takes no arguments"`) |
 | `ord(c)` | 是,但 `c` 必须是**编译期字面量**、且是长度恰为 1 的字符串常量(`ast.Constant(str)`),在编译期直接折成 `ord(c) % MOD` | 非字面量参数报 "... (evaluated at compile time)";长度 ≠ 1 报 "expects a single character" |
 | `chr(x)` | 否 | 拒绝:`"chr() is unsupported; emit characters with putchar(codepoint)"` |
-| `print(...)` | 否 | 拒绝:`"print() is unsupported; use putchar(codepoint) to emit output"` |
+| `print(...)` | **批次一(2026-07-23)起部分接受**:仅编译期常量实参 | 接受:字符串字面量、可常量折叠的 int 表达式、全常量部件的 f-string(部件含文本/可折叠 int/字符串字面量;有 conversion 或 format_spec 拒绝);`sep=`/`end=` 仅常量字符串(默认 `" "`/`"\n"`);空参只发 `end`。渲染:参数渲染值以 sep 连接加 end,逐字符 putchar;int 渲染为折叠后 mod 3**20 值的十进制(见 §2 D17);字符 codepoint >255 拒绝。**运行时(非常量)实参拒绝**,消息指引 putchar 并注明 future version 支持;`print()` 用作表达式值拒绝 |
 | `range(...)` | 仅作为 `for` 循环头 | 在其他任何表达式位置调用 `range(...)` 一律拒绝:`"range() is only valid in a 'for' loop header"` |
 | 用户函数名 | 是 | 需已在 `self.functions` 里注册;不允许关键字参数;参数个数必须与形参个数完全一致(否则报 "{}() takes {} argument(s) but {} given") |
 | 其他任意名字(未注册的用户函数) | 否 | `"call to undefined function {!r}"` |
@@ -232,7 +235,8 @@ callees)")分派:
 | D13 | `range(...)`/`print(...)`/`ord(...)`/`chr(...)` 作为用户函数名 | 合法,遮蔽内建;调用走用户函数 | **已修复(2026-07-22)**:`check_func_name` 新增 `BUILTIN_CALL_NAMES` 保留字检查,在函数**注册**阶段就以准确行号拒绝,不再放行到调用点才报出文不对题的错误(见 `defects.md` B3-B6,已修复) | 已修复(2026-07-22,原 B 类缺陷) |
 | D14 | 函数末尾缺少 `return` | 隐式 `return None`;若调用方把结果当整数用会在运行时 `TypeError` | C 函数体末尾没有 `return` 语句,C 语义下是未定义行为(若返回值被使用);py2c 既不静态检测"是否所有路径都有 return",也不注入兜底 `return 0;` | 已知设计留白(非 CompileError 也非静默错译,是一个 C 语言未定义行为的传递,建议 v1.x 澄清或注入兜底 `return`,见"版本节") |
 | D15 | 标识符:非 ASCII / 前导下划线 | 合法(Python 3 标识符规则) | 拒绝(仅接受 `[a-zA-Z][0-9a-zA-Z_]*` 且整体 ASCII) | 设计性偏差(下游 C 词法限制,已文档化) |
-| D16 | 模块文档字符串跳过规则 | 仅**首条**语句是字符串常量时才是文档字符串(其余位置的裸字符串语句只是被求值后丢弃,语义等价但概念不同) | `compile()` 对模块顶层**任意位置**匹配 `Expr(Constant(str))` 的语句都直接 `continue`(当"文档字符串"跳过);函数体内则是 `_stmt_Expr` 通用的"裸 Constant 语句 no-op"逻辑,覆盖任意位置的裸字符串 | 观测到的实现细节,**不构成可观察的行为偏差**(两种路径最终都是"这条语句不产生任何代码",与 CPython 的"求值后丢弃"效果一致),记录以避免误读源码 |
+| D16 | 模块文档字符串跳过规则 | 仅**首条**语句是字符串常量时才是文档字符串(其余位置的裸字符串语句只是被求值后丢弃,语义等价但概念不同) | **已收紧(2026-07-23,批次一)**:模块与函数体仅**首条**裸字符串按 docstring 静默忽略,与 CPython 的 docstring 概念对齐;其余位置的裸字符串语句现在**拒绝**(CPython 是求值后丢弃)——从"过宽接受"变为"显式拒绝",属设计性偏差(裸字符串在本子集中无任何可产生的效果,拒绝优于沉默) | 设计性偏差(2026-07-23 起,已文档化) |
+| D17 | `print()` 常量整数渲染 | `print(3-5)` 输出 `-2`(有符号十进制) | 常量折叠在 mod 3**20 非负环上进行,`print(3-5)` 输出 `3486784398`(D1 偏差在 print 渲染上的显现);正常非负常量与 CPython 一致 | 设计性偏差(D1 的推论,已文档化;带符号整数落地后随 D2 一并消除) |
 
 **已验证的"看似偏差、实测无偏差"反例**(方法论记录):函数名与模块级同名
 全局变量共存(`def foo(): ...` 之后 `foo = 5`)在生成的 C 源码里表面重复声明,
@@ -317,6 +321,19 @@ D12/D13(`defects.md` 的 C1-C5、B1-B6)此前不满足下述第 1 条,已于
     被静默接受的输入)。
 - D14(缺失 return 路径)与 D5(EOF 语义未在 py2c 层文档化)仍属于"留白"而
   非已确认的错译,建议在 v1.x 补充说明或加轻量检查,不在本轮修复范围内。
+- 2026-07-23:**批次一语法糖**在 `py2c.py`('c' 后端)与 `py2mg.py`
+  ('direct' 后端)按同一语义契约同步实现,两后端对同一源码产生相同程序
+  输出(双后端 e2e 对拍验证):
+  1. `print()` 常量实参(字符串/可折叠 int/全常量 f-string,`sep=`/`end=`,
+     详见 §1.7 与 §2 D17);
+  2. f-string(仅 print 实参位置,全常量部件);
+  3. `ord('x')`(核实原有实现已符合契约,补测试锁定);
+  4. 条件表达式 `a if c else b`(temp + if/else 物化,惰性求值);
+  5. `*= //= %=`(核实 py2c 原有实现已支持,补测试;py2mg 侧同步);
+  6. `break`/`continue`(标志变量降级,嵌套独立,循环外拒绝);
+  7. docstring 位置规则(仅模块/函数体首条,见 §2 D16 收紧)。
+  本批次为**纯前端展开**,未新增任何运行时原语;`py2mg` 侧另受
+  `docs/findings.md` A3 约束(标志走无分支累积 + 单次 SWITCH 模式)。
 
 ### v2 计划项(**保留字段** —— 以下能力当前一律不在接受集合内,任何试图使用
 它们的输入**必须继续被 §3 诊断契约拒绝**,直到对应特性真正实现为止;实现前
@@ -324,13 +341,13 @@ D12/D13(`defects.md` 的 C1-C5、B1-B6)此前不满足下述第 1 条,已于
 
 - **带符号整数语义**:引入显式的补码约定或符号位表示,解除 §1.5"负数"行与
   §2 D2 的静态拒绝。
-- **十进制 `print`/`input`**:目前只有逐字符的 `putchar`/`getchar`/`ord`;
-  十进制格式化输入输出需要新的运行时支持。
-- **`break`/`continue`**:目前无条件拒绝(§1.2);需要下游 C 子集或 py2c 自身
-  的循环改写策略支持后才能开放。
-- **数组/字符串**:`Subscript`/`Slice`/字符串字面量目前全部拒绝(§1.4、
-  §1.5);已有名古屋 2018 年 `highlevel` 数组实现(`docs/findings.md` A1)可
-  参考,但 py2c 尚未对接。
+- **运行时十进制 `print`/`input`**:批次一(2026-07-23)已支持**常量**
+  print;**运行时值**的十进制输出(divmod-10 循环)与 `input()` 解析仍
+  保留,需要新的运行时支持。
+- ~~**`break`/`continue`**~~ 批次一(2026-07-23)已实现,见 §1.2。
+- **数组/运行时字符串**:`Subscript`/`Slice`/字符串**变量**仍全部拒绝
+  (§1.4、§1.5;字符串**字面量**在 print/ord 位置已按批次一放开);数组
+  机制解剖与 LOADI/STOREI 设计建议见 `docs/iwagane-arrays.md`。
 - 本表任何一项从"保留、必须拒绝"变为"已实现、加入接受集合"时,必须同步:
   更新本文档 §1 对应小节、在 §2 补充/移除相应偏差表行、在 `defects.md` 里
   确认不会引入新的 D6-D13 式定值分析漏洞(尤其是数组/字符串,一旦引入
