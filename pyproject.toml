@@ -44,3 +44,25 @@ malbolge-tui = "malbolge.debug_tui:main"
 [project.urls]
 Homepage = "https://github.com/Aiaid/pyMalbolge"
 Issues = "https://github.com/Aiaid/pyMalbolge/issues"
+
+# Explicit allowlist. Hatchling's default is "everything not VCS-ignored",
+# which swept a local virtualenv, scratch files and .claude/ into the sdist.
+# Anything not listed here never reaches PyPI.
+[tool.hatch.build.targets.sdist]
+include = [
+    "/malbolge",
+    "/test",
+    "/examples",
+    "/runtime",
+    "/scripts",
+    "/docs",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+exclude = [
+    "/docs/research",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["malbolge"]

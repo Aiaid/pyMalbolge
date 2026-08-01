@@ -1,9 +1,27 @@
 
 .vscode/*
 *.pyc
+__pycache__/
 dist/*
+build/
+*.egg-info/
 testpip.md
 temp.md
+
+# Local virtualenvs
+pyenv/
+.venv/
+venv/
+
+# Scratch compiler in/out
+foo.py
+foo.mb
+foo.mg
+foo.mc
+foo.c
+
+# Research notes kept in a private companion repository
+docs/research/
 
 # Reference tools (built locally, not tracked)
 ref/LMAO/
