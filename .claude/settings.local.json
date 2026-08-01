@@ -25,7 +25,8 @@
       "WebFetch(domain:www.trs.css.i.nagoya-u.ac.jp)",
       "WebFetch(domain:www.trs.cm.is.nagoya-u.ac.jp)",
       "WebFetch(domain:pypi.org)",
-      "WebFetch(domain:lutter.cc)"
+      "WebFetch(domain:lutter.cc)",
+      "Bash(python3 *)"
     ]
   }
 }
