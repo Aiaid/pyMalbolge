@@ -4,15 +4,27 @@ build-backend = "hatchling.build"
 
 [project]
 name = "malbolge"
-version = "0.1.0"
+version = "1.0.0"
 authors = [
   { name="Anend", email="anend@live.com" },
 ]
-description = "Simple Malbolge(https://en.wikipedia.org/wiki/Malbolge) interpreter in python with debugger"
+description = "Malbolge / Malbolge20 interpreter, debugger and pure-Python Python-to-Malbolge20 compiler"
 readme = "README.md"
 requires-python = ">=3.8"
+keywords = ["malbolge", "malbolge20", "esolang", "interpreter", "compiler", "debugger"]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Software Development :: Interpreters",
+    "Topic :: Software Development :: Debuggers",
     "Operating System :: OS Independent",
 ]
 license = "MIT"
