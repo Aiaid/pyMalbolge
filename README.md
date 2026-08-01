@@ -116,7 +116,7 @@ Interactive command-line debugger similar to GDB.
 
 Visual terminal-based debugger with split-screen interface.
 
-![TUI Debugger Screenshot](screenshots/tui.png)
+![TUI Debugger Screenshot](https://raw.githubusercontent.com/Aiaid/pyMalbolge/master/screenshots/tui.png)
 
 **Keybindings:**
 - `↓` - Step one instruction
@@ -148,8 +148,8 @@ python3 -m malbolge compile examples/foo.py -o foo.mb
 # Run it
 python3 -m malbolge --variant=malbolge20 foo.mb
 
-# Direct backend (skips the C layer; typically 2-4x smaller output,
-# supports double recursion natively)
+# Direct backend (skips the C layer; 46-75% smaller output on programs
+# with control flow or functions, and native double recursion)
 python3 -m malbolge compile foo.py --backend=direct -o foo.mb
 
 # Inspect intermediate stages
@@ -190,8 +190,8 @@ rejected with line-numbered `CompileError`s.
 
 The full normative specification — accepted AST whitelist, all semantic
 divergences from CPython, and the diagnostic contract — is in
-[docs/python-subset-spec.md](docs/python-subset-spec.md). Design notes for the
-direct backend live in [docs/py2mg-backend.md](docs/py2mg-backend.md).
+[docs/python-subset-spec.md](https://github.com/Aiaid/pyMalbolge/blob/master/docs/python-subset-spec.md). Design notes for the
+direct backend live in [docs/py2mg-backend.md](https://github.com/Aiaid/pyMalbolge/blob/master/docs/py2mg-backend.md).
 
 Output is fully deterministic (unlike the upstream toolchain's
 `srand(time(NULL))` padding), so builds are byte-for-byte reproducible.
@@ -199,12 +199,12 @@ Output is fully deterministic (unlike the upstream toolchain's
 ## Documentation
 
 Design notes and reverse-engineered language specs live in
-[`docs/`](docs/README.md). Every document is available in both English
+[`docs/`](https://github.com/Aiaid/pyMalbolge/blob/master/docs/README.md). Every document is available in both English
 (`<name>.md`) and Chinese (`<name>.zh.md`). Highlights:
 
-- [docs/python-subset-spec.md](docs/python-subset-spec.md) — normative spec for the accepted Python subset
-- [docs/py2mg-backend.md](docs/py2mg-backend.md) — design of the direct `py → .mg` backend
-- [docs/mg-spec.md](docs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered
+- [docs/python-subset-spec.md](https://github.com/Aiaid/pyMalbolge/blob/master/docs/python-subset-spec.md) — normative spec for the accepted Python subset
+- [docs/py2mg-backend.md](https://github.com/Aiaid/pyMalbolge/blob/master/docs/py2mg-backend.md) — design of the direct `py → .mg` backend
+- [docs/mg-spec.md](https://github.com/Aiaid/pyMalbolge/blob/master/docs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered
 
 ## Malbolge Variants
 
