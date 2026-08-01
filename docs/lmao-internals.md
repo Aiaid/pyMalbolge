@@ -1,162 +1,164 @@
-# LMAO 内部算法分析(v0.6.0)
+# LMAO Internals Analysis (v0.6.0)
 
-> 依据 `ref/LMAO/src/` 约 4500 行有效 C 代码逐模块分析,作为 Python 移植的算法参考。
-> 整理日期:2026-07-20。文中 `文件:行号` 均指 `ref/LMAO/src/` 下的文件。
+> [中文](lmao-internals.zh.md) | **English**
 
-## 0. 预备:Malbolge 语义与依赖常量(malbolge.h/malbolge.c)
+> Module-by-module analysis of roughly 4500 lines of effective C code in `ref/LMAO/src/`, serving as the algorithmic reference for the Python port.
+> Compiled on: 2026-07-20. `file:line` references in this document all point into `ref/LMAO/src/`.
 
-- 内存 59049 = 3^10 格,10-trit 值 [0, C2]。常量 C0=0, C1=29524, C2=59048, C21=59047, C20=59046。
-- 指令 = `(mem[C]+C) % 94`:Jmp=4, Out=5, In=23, Rot=39, MovD=40, Opr=62, Nop=68, Hlt=81(malbolge.h:38-103);其余值全当 Nop(xlat.c:26)。
-- `crazy(a,d)` = 逐 trit 查表 `crz[a%3 + 3*(d%3)]`,crz={1,0,0,1,0,2,2,2,1}(malbolge.c:25)。Opr 做 `[D]=A=crazy(A,[D])`。
-- `rotate_right(d) = d/3 + (d%3)*19683`(malbolge.c:46)。Rot 做 `[D]=A=rotate_right([D])`。
-- 自加密:每条指令执行后 `mem[C] = XLAT2[mem[C]-33]`(XLAT2 表见 malbolge.h:113)。一格想重复执行相同语义,必须在 XLAT2 轨道上循环回自身——这是汇编器的核心对抗对象。
-- 合法源字符:`(pos+c) % 94` ∈ 8 个 opcode 且 c ∈ [33,126](xlat.c:36 `is_valid_initial_character`)。
+## 0. Prerequisites: Malbolge semantics and dependent constants (malbolge.h/malbolge.c)
 
-**核心洞察**:多数内存字既非合法源字符、又需要精确的 10-trit 值,必须在运行时用 Rot/Opr 从少数常量格"算"出来。汇编器绝大部分复杂度都在自举生成器(§5)。
+- Memory has 59049 = 3^10 cells, 10-trit values in [0, C2]. Constants C0=0, C1=29524, C2=59048, C21=59047, C20=59046.
+- Instruction = `(mem[C]+C) % 94`: Jmp=4, Out=5, In=23, Rot=39, MovD=40, Opr=62, Nop=68, Hlt=81 (malbolge.h:38-103); every other value is treated as Nop (xlat.c:26).
+- `crazy(a,d)` = trit-by-trit table lookup `crz[a%3 + 3*(d%3)]`, crz={1,0,0,1,0,2,2,2,1} (malbolge.c:25). Opr performs `[D]=A=crazy(A,[D])`.
+- `rotate_right(d) = d/3 + (d%3)*19683` (malbolge.c:46). Rot performs `[D]=A=rotate_right([D])`.
+- Self-encryption: after every instruction executes, `mem[C] = XLAT2[mem[C]-33]` (see XLAT2 table at malbolge.h:113). For a cell to repeatedly execute the same semantics, it must loop back to itself along the XLAT2 track — this is the assembler's core adversary.
+- Valid source characters: `(pos+c) % 94` must land in one of the 8 opcodes, with c ∈ [33,126] (xlat.c:36 `is_valid_initial_character`).
 
-## 1. 整体流水线(main.c:45-396)
+**Core insight**: most memory words are neither valid source characters nor coincide with the exact 10-trit value they need — they must be "computed" at runtime from a handful of constant cells using Rot/Opr. Nearly all of the assembler's complexity lives in the bootstrap generator (§5).
 
-1. `parse_input_args`(cli.c:42):`-o/-f/-l/-d`。默认 `.hell` → `.mb`。
-2. `yyparse()`:构造三个全局结构——labeltree(标签 BST)、datablocks、codeblocks(块链头数组,globals.h)。
-3. 取 ENTRY 标签(main.c:96):必须是 .DATA 标签,值 = 要跳入的代码地址。
-4. `handle_u_and_r_prefixes`(§3)。
-5. 分配 4 个 `MemoryCell[59049]`:preinitialized_section / to_be_initialized_section / fixed_offsets / memory_layout,全置 UNUSED。
-6. 代码块路由(main.c:119-200):计算 `possible_positions[94]` + 判定 `needs_initialization`,分流:.OFFSET→fixed;需运行时构造→toinitial;可直接嵌入源文件→preinitial。调 `add_codeblock_to_memory_layout`。
-7. 数据块路由(main.c:203):.OFFSET→fixed,否则→toinitial。
-8. 装配主循环(main.c:228-328,带尺寸估计):`put_all_memcells_together` → `update_offsets` → `generate_opcodes_from_memory_layout` → `generate_malbolge_initialization_code`;失败则 `initialize_code_size += 32` 重试;fast_mode 直接用满内存,失败自动回退普通模式。
-9. 输出 smaller_program(可折行)+ 调试文件(`-d`)。
+## 1. Overall pipeline (main.c:45-396)
 
-### 核心 struct(types.h / gen_init.h)
+1. `parse_input_args` (cli.c:42): `-o/-f/-l/-d`. Default `.hell` → `.mb`.
+2. `yyparse()`: builds three global structures — labeltree (label BST), datablocks, codeblocks (array of block-chain heads, globals.h).
+3. Fetch the ENTRY label (main.c:96): must be a .DATA label whose value is the code address to jump into.
+4. `handle_u_and_r_prefixes` (§3).
+5. Allocate 4 `MemoryCell[59049]` arrays: preinitialized_section / to_be_initialized_section / fixed_offsets / memory_layout, all set to UNUSED.
+6. Code-block routing (main.c:119-200): compute `possible_positions[94]` and decide `needs_initialization`, then dispatch: .OFFSET → fixed; needs runtime construction → toinitial; can be embedded directly in the source file → preinitial. Calls `add_codeblock_to_memory_layout`.
+7. Data-block routing (main.c:203): .OFFSET → fixed, otherwise → toinitial.
+8. Main assembly loop (main.c:228-328, with size estimation): `put_all_memcells_together` → `update_offsets` → `generate_opcodes_from_memory_layout` → `generate_malbolge_initialization_code`; on failure, `initialize_code_size += 32` and retry; fast_mode uses the full memory space directly, and falls back to normal mode automatically on failure.
+9. Emit the smaller_program (may be line-wrapped) plus debug files (`-d`).
 
-| struct | 位置 | 内容 |
+### Core structs (types.h / gen_init.h)
+
+| struct | location | contents |
 |---|---|---|
-| XlatCycle | types.h:59 | 一格的 xlat2 循环链表;循环抵抗 NOP:`next==self`;单次序列末尾 `next==NULL` |
-| DataAtom | types.h:72 | 常量或标签引用;`number==1`→R_ 前缀;`operand_label` 非空→U_ 前缀待解析;-1 未用,-2 don't-care |
-| DataCell | types.h:122 | 值表达式树(LEAF/PLUS/MINUS/TIMES/DIVIDE/ROTATE_R/L/CRAZY/DONTCARE/NOT_USED) |
-| Data/CodeBlock | types.h:132/150 | 连续格双向链表,offset(-1 未定),CodeBlock 有 `virtual_block`(U_ 合成的虚拟 NOP) |
-| LabelTree | types.h:174 | 名 → code 或 data 块 |
-| MemoryCell | types.h:236 | {code, data, usage},usage ∈ UNUSED/PREINITIALIZED_CODE/CODE/DATA/RESERVED_CODE/RESERVED_DATA |
-| DRegPos/Cell/Module/State | gen_init.h:55-141 | 自举生成器的虚拟机镜像(§5) |
+| XlatCycle | types.h:59 | The xlat2 cycle chain for one cell; a cycle resists NOP with `next==self`; a one-shot sequence ends with `next==NULL` |
+| DataAtom | types.h:72 | A constant or a label reference; `number==1` → `R_` prefix; non-empty `operand_label` → `U_` prefix pending resolution; -1 unused, -2 don't-care |
+| DataCell | types.h:122 | A value expression tree (LEAF/PLUS/MINUS/TIMES/DIVIDE/ROTATE_R/L/CRAZY/DONTCARE/NOT_USED) |
+| Data/CodeBlock | types.h:132/150 | Doubly-linked chain of contiguous cells, offset(-1 = undefined); CodeBlock has a `virtual_block` (synthetic NOPs generated by `U_`) |
+| LabelTree | types.h:174 | name → code or data block |
+| MemoryCell | types.h:236 | {code, data, usage}, usage ∈ UNUSED/PREINITIALIZED_CODE/CODE/DATA/RESERVED_CODE/RESERVED_DATA |
+| DRegPos/Cell/Module/State | gen_init.h:55-141 | The bootstrap generator's virtual-machine mirror (§5) |
 
-## 2. xlat 循环(xlat.c + main.c:119-200)
+## 2. xlat cycles (xlat.c + main.c:119-200)
 
-HeLL 里 `Opr/Nop`、`Nop/MovD` 等,`/` 分隔 = 该格被反复执行时依次表现的指令序列(沿 XLAT2 轨道走)。可用条件:存在起始字符 c 使 `(c+pos)%94` 给出序列首指令,沿 XLAT2 依次得到各指令,走完后闭合回起始字符。
+In HeLL, forms like `Opr/Nop`, `Nop/MovD` — separated by `/` — represent the sequence of instructions a cell exhibits successively as it is repeatedly executed (walking along the XLAT2 track). This is feasible when there exists a starting character c such that `(c+pos)%94` yields the first instruction of the sequence, walking along XLAT2 produces each subsequent instruction in turn, and the walk closes back to the starting character once done.
 
-`is_xlatcycle_existent`(xlat.c:55-141):
-- `next==NULL`(单指令只执行一次):任意位置可放,直接反解字符。
-- 跳过前导 NOP 计数;纯 NOP(RNop)查 `immutable_nops[position]` 表(Lou Scheffer 的不动 NOP,xlat.c:96)。
-- 否则沿 XLAT2 逐步校验:is_nop 属性处处一致 + 非 NOP 操作码精确相等,验尾部 NOP 前缀 + 闭合。
+`is_xlatcycle_existent` (xlat.c:55-141):
+- `next==NULL` (a single instruction that executes only once): can be placed at any position, the character is solved directly.
+- Skips a leading NOP count; a pure-NOP cycle (RNop) is looked up in the `immutable_nops[position]` table (Lou Scheffer's fixed-point NOPs, xlat.c:96).
+- Otherwise it steps along XLAT2 one position at a time to verify: the is_nop property is consistent throughout, non-NOP opcodes match exactly, and the trailing NOP prefix and the closing-back condition both check out.
 
-main.c:130-176 `possible_positions[94]`:94 个残基初值 2(可嵌入源文件)/0;逐格沿 cycle:不存在→0;原为 2 但起始字符非合法源字符→降为 1(必须运行时构造);全部无法保持 2 → `needs_initialization=1`。pos 每格 +1 保证连续残基。
+main.c:130-176 `possible_positions[94]`: 94 residues, initially 2 (embeddable directly in the source file) or 0; for each cell, walk the cycle: nonexistent → 0; still 2 but the starting character isn't a valid source character → downgraded to 1 (must be constructed at runtime); if none can stay at 2 → `needs_initialization=1`. pos advances by +1 per cell to keep residues contiguous.
 
-## 3. 前缀解析(prefix.c)
+## 3. Prefix resolution (prefix.c)
 
-解析器已区分三种形式(lmao.y:496):普通(number=0)、`R_label`(number=1)、`U_label operand`(operand_label 非空)。
+The parser already distinguishes three forms (lmao.y:496): plain (number=0), `R_label` (number=1), and `U_label operand` (operand_label non-empty).
 
-`resolve_prefix_for_dataatom`(prefix.c:43-204):
-- **普通标签**:仅校验存在;取值 = `label.offset + number` 再 -1(补偿 Jmp/MovD 后 C/D 自增,求值在 initialize.c:82)。
-- **`R_label`**(prefix.c:156):后继格(地址+1,再经统一 -1 → 净值为地址本身)。用于执行完某 xlat 指令后"恢复"它(典型:`R_CRAZY R_MOVED`)。校验 `dest->next != NULL`。
-- **`U_label operand`**(prefix.c:48-154,最复杂):从本格后继沿链前走到 operand 所在 DataBlock,得负偏移(必须同一连续数据块);写入 number;再在目标代码标签前合成 |offset| 个虚拟循环抵抗 NOP CodeBlock(能复用已有前导 NOP,否则新建 `virtual_block=1`)。用途:构造 MovD 目标,使跳到它时先跑一串 NOP,NOP 数 = operand 在块内的位置——实现"用 D 指针移动步数判定值"(cat 示例的 EOF 检测)。
+`resolve_prefix_for_dataatom` (prefix.c:43-204):
+- **Plain label**: only checked for existence; value = `label.offset + number`, then -1 (compensates for the C/D auto-increment that follows Jmp/MovD; evaluated at initialize.c:82).
+- **`R_label`** (prefix.c:156): the successor cell (address+1, and after the uniform -1 the net value is the address itself). Used to "resume" a cell after an xlat instruction has executed on it (typically `R_CRAZY R_MOVED`). Checks `dest->next != NULL`.
+- **`U_label operand`** (prefix.c:48-154, the most complex case): starting from this cell's successor, walk the chain forward to the DataBlock containing operand, obtaining a negative offset (must be within the same contiguous data block); writes it into number; then synthesizes |offset| virtual cycle-resistant NOP CodeBlocks in front of the target code label (existing leading NOPs may be reused, otherwise a new one is created with `virtual_block=1`). Used to construct a MovD target so that jumping to it first runs a run of NOPs, with the NOP count equal to operand's position within the block — this implements "using the D pointer's travel distance to test a value" (the EOF-detection technique used in the cat example).
 
-最后 `handle_u_and_r_prefixes` 把 codeblocks 各链头沿 prev 回退到真正的头(虚拟 NOP 可能加在前面)。
+Finally, `handle_u_and_r_prefixes` walks each codeblocks chain head backward along prev to the true head (virtual NOPs may have been prepended).
 
-## 4. 内存布局(layout.c + main.c)
+## 4. Memory layout (layout.c + main.c)
 
-三分区 + 贪心首次适配(**非回溯**):
+Three regions plus greedy first-fit (**no backtracking**):
 
-- `add_codeblock`(layout.c:28-137):有 .OFFSET 则在 offset-1 放 RESERVED_CODE 前哨,逐格放 CODE/PREINIT,mod 环绕,重叠即失败;相对块则 try_pos 从 1 起(0 留给前哨)前进到 `possible_positions` 允许的残基,要求前一格空 + 整块空,首个满足即放。贪心取最低位,不回溯。
-- `add_datablock`(layout.c:139):类似,try_pos 从 0 起,NOT_USED 格跳过(允许重叠复用),DONTCARE→RESERVED_DATA。
+- `add_codeblock` (layout.c:28-137): if .OFFSET is given, a RESERVED_CODE sentinel is placed at offset-1, then CODE/PREINIT cells are laid down one by one, wrapping mod-wise; any overlap is a failure. For a relative block, try_pos starts at 1 (0 is reserved for the sentinel) and advances to a residue permitted by `possible_positions`, requiring the previous cell to be empty and the whole block to be empty; the first position satisfying this is used. Greedy, takes the lowest position, no backtracking.
+- `add_datablock` (layout.c:139): similar, try_pos starts at 0, NOT_USED cells are skipped (overlap reuse is allowed), DONTCARE → RESERVED_DATA.
 
-`put_all_memcells_together`(layout.c:218-364,最微妙),产出地址几何(低→高):
+`put_all_memcells_together` (layout.c:218-364, the most subtle part), producing the address geometry (low → high):
 
-1. 复制 fixed_offsets,记录 last_toinitial / last_preinitial。
-2. 放 toinitial 区:对齐相对 C2 的 mod-94 边界,起点靠内存顶端(C2-...),冲突则 -=94 下滑 → **运行时构造的格全在高地址(近 59048)**。
-3. 定位 **RQ**:从 startoffset-2 向下找残基 ∈ {16,17,35,51,52,74,80,93} 且相邻两格非 PREINIT 的位置,须 ≥500,clamp 到 end_of_init_code+1。`last_preinitialized_cell = RQ+1`。
-4. 放 preinitial 区:紧贴 RQ 之下,mod-94 对齐,冲突下滑。
+1. Copy fixed_offsets, recording last_toinitial / last_preinitial.
+2. Lay out the toinitial region: align to a mod-94 boundary relative to C2, starting near the top of memory (C2-...); on conflict, slide down by -=94 → **cells constructed at runtime end up entirely in the high addresses (near 59048)**.
+3. Locate **RQ**: search downward from startoffset-2 for a position whose residue ∈ {16,17,35,51,52,74,80,93} and whose two neighboring cells are not PREINIT; must be ≥500, clamped to end_of_init_code+1. `last_preinitialized_cell = RQ+1`.
+4. Lay out the preinitial region: packed immediately below RQ, mod-94 aligned, sliding down on conflict.
 
-**RQ 的作用**:源文件只写到 RQ(程序长度 = last_preinitialized+1),`'R''Q'` 是源码末两个字符(initialize.c:453)。Malbolge 装载后,超出程序长度的格由末两格反复 crazy 填充;R、Q 的选定使无限填充恰好产生生成器假设的 `81 / (C1-81)` 按地址奇偶交替的图案。高地址的运行时构造格不出现在源文件里。
+**Role of RQ**: the source file only extends up to RQ (program length = last_preinitialized+1); `'R''Q'` are the last two characters of the source (initialize.c:453). Once Malbolge loads the program, cells beyond the program length are filled by infinitely repeating crazy() on the last two cells; R and Q are chosen so that this infinite fill produces exactly the `81 / (C1-81)` pattern alternating by address parity that the generator assumes. The runtime-constructed cells at high addresses never appear in the source file.
 
-尺寸估计(main.c:228):`end_of_init_code` 是自举代码长度上界,决定 RQ 放多高;失败则 +=32 重试(启发式收敛,非精确)。
+Size estimation (main.c:228): `end_of_init_code` is an upper bound on the bootstrap code length, which determines how high RQ is placed; on failure it is retried with +=32 (a heuristic that converges, not an exact computation).
 
-## 5. 初始化代码生成(gen_init.c + initialize.c,最核心)
+## 5. Initialization code generation (gen_init.c + initialize.c, the most central part)
 
-思路:只用 Rot/Opr 对少数常量格做运算、用 MovD/Jmp 驱动 D 指针,在运行时把任意格写成任意值。
+Idea: using only Rot/Opr on a handful of constant cells, and MovD/Jmp to drive the D pointer, write any cell to any value at runtime.
 
-### 数据模块系统(State,gen_init.h:125 / initialize.c:286)
+### The data-module system (State, gen_init.h:125 / initialize.c:286)
 
-4 个模块,State 静态镜像全部格值,**无需真跑解释器即可预测 A/D/各格值**:
+4 modules, with State statically mirroring every cell value, **allowing A/D/cell values to be predicted without actually running the interpreter**:
 
-- **模块 0 = 协调器**(15 格,绝对地址 82-96):cell0=C0,cell5=C1,cell6=TMP,cell7-10=进位掩码,cell11=C2,cell12=DESTINATION(写入目标指针),其余 PTR。
-- **模块 1/2/3 = 值生成器**(各 8 格,绝对 33-40 / 48-55 / 71-78,内存图见 ref/LMAO/datamodule.txt):cell0=C0,cell1=C1,cell2=C21,cell3=VAR(常量累加器),cell4=C2,cell5-7=PTR。暖启动值 VALUE1=126,VALUE2=58688,VALUE3=29495。
-- **魔法初值**:INIT_A_REG=58328,INIT_POS_IN_MOD=8,INIT_DEST_VAL=68,INIT_TMP_VAL=C1(initialize.c:224)——与 init_datamodule 前缀字符串一一绑定,**不可独立更改,只能连同前缀照抄**。
-- Cell.type 约束合法运算:PTR/CONST 不能被 crazy;C20_OR_C21 只能与 C0/C1 crazy;Rot 只作用于 VAR 或 C0/C1/C2。
+- **Module 0 = coordinator** (15 cells, absolute addresses 82-96): cell0=C0, cell5=C1, cell6=TMP, cell7-10=carry masks, cell11=C2, cell12=DESTINATION (the write-target pointer), the rest are PTR.
+- **Modules 1/2/3 = value generators** (8 cells each, absolute 33-40 / 48-55 / 71-78; memory map in ref/LMAO/datamodule.txt): cell0=C0, cell1=C1, cell2=C21, cell3=VAR (constant accumulator), cell4=C2, cell5-7=PTR. Warm-start values VALUE1=126, VALUE2=58688, VALUE3=29495.
+- **Magic initial values**: INIT_A_REG=58328, INIT_POS_IN_MOD=8, INIT_DEST_VAL=68, INIT_TMP_VAL=C1 (initialize.c:224) — these are bound one-to-one with the init_datamodule prefix string; **they cannot be changed independently, only copied together with the prefix**.
+- Cell.type constrains legal operations: PTR/CONST cannot be crazy'd; C20_OR_C21 can only be crazy'd against C0/C1; Rot only ever applies to VAR or C0/C1/C2.
 
-### 归一化 opcode(denormalize 表 gen_init.c:909)
+### Normalized opcodes (denormalize table, gen_init.c:909)
 
-`o`=Nop(68), `j`=MovD(40), `p`=Opr(62), `*`=Rot(39), `i`=Jmp(4), `<`=Out, `/`=In, `v`=Hlt。注意反直觉:o 是 Nop(D 前进一格),j 是 MovD(沿 PTR 跳)。
+`o`=Nop(68), `j`=MovD(40), `p`=Opr(62), `*`=Rot(39), `i`=Jmp(4), `<`=Out, `/`=In, `v`=Hlt. Note the counter-intuitive naming: o is Nop (advances D by one cell), j is MovD (jumps following PTR).
 
-`add_to_init_code`(gen_init.c:269-512):对每个发射的归一化字符,在 State 上模拟其对 D/A/格值的影响(o:D++ 环绕、遇 82 进模块 0;j:跟随 PTR 或退出到绝对地址;p:`A=cell=crazy(A,cell)` 且 D++;*:rotate 同理)。这套镜像是生成器能静态推理的基础。
+`add_to_init_code` (gen_init.c:269-512): for each emitted normalized character, simulate its effect on D/A/cell values within State (o: D++ with wraparound, entering module 0 on hitting 82; j: follows PTR or exits to an absolute address; p: `A=cell=crazy(A,cell)` plus D++; * likewise does a rotate). This mirror is what lets the generator reason statically.
 
-`set_dreg`(gen_init.c:515-663):把 D 移到 (module, pos):同模块用 o 步进 / 遇 PTR 用 j 抄近路;跨模块必经模块 0 中转;递归实现。
+`set_dreg` (gen_init.c:515-663): moves D to (module, pos): within the same module, step with o / take a shortcut with j when hitting a PTR; crossing modules must transit through module 0; implemented recursively.
 
-### 常量/地址合成(核心数学)
+### Constant/address synthesis (the core math)
 
-- `get_register_a_value_for_crazy`(gen_init.c:136):求 A 使 `crazy(A,source)==dest`,逐 trit 优先复用当前 A 的 trit;无解返回 0xFFFF(crazy 对 A 非满射)。先特判 C0/C1/C2/C2-1/C2-2。
-- `get_best_register_a_value_for_crazy`(gen_init.c:209):在 0-9 次旋转 × 是否先 crazy C2 之间挑最省方案,代价 `cost = diff*9 + rotations*3 (+2 若先 C2)`。
-- `load_constant_to_a_reg`(gen_init.c:701):物化常量进 A。平凡常量直接取格;否则在 cell3(VAR)上逐 trit 合成(trit=0 用 Opr C20 / trit=1 用 Opr C21 / trit=2 不动 + c2_outstanding),配合 Rot 走完 10 个 trit。可复用上次常量。
-- `get_module_for_constant_generation`(gen_init.c:688):值 ≤161 用模块 3 / ≤last_preinit 用模块 1 / 否则模块 2。
-- `increment_destination_by_9`(gen_init.c:851):因按地址升序写,下一目标常在 +1..9 内,用 TMP + 进位掩码格对 DESTINATION 做三进制 +9,比重算地址便宜。
+- `get_register_a_value_for_crazy` (gen_init.c:136): finds A such that `crazy(A,source)==dest`, trit by trit, preferring to reuse the current A's trit where possible; returns 0xFFFF if unsolvable (crazy is not surjective in A). Special-cases C0/C1/C2/C2-1/C2-2 first.
+- `get_best_register_a_value_for_crazy` (gen_init.c:209): picks the cheapest scheme among 0-9 rotations × whether to crazy against C2 first, with cost `cost = diff*9 + rotations*3 (+2 if crazying against C2 first)`.
+- `load_constant_to_a_reg` (gen_init.c:701): materializes a constant into A. Trivial constants are read directly from a cell; otherwise it is synthesized trit by trit on cell3 (VAR) (trit=0 uses Opr against C20 / trit=1 uses Opr against C21 / trit=2 leaves it unchanged plus c2_outstanding), paired with Rot to work through all 10 trits. The previous constant can be reused.
+- `get_module_for_constant_generation` (gen_init.c:688): values ≤161 use module 3 / ≤last_preinit use module 1 / otherwise module 2.
+- `increment_destination_by_9` (gen_init.c:851): since writes proceed in ascending address order, the next target is usually within +1..9, so a ternary +9 is done on DESTINATION using the TMP + carry-mask cells, which is cheaper than recomputing the address.
 
-### 单格驱动 `generate_normalized_init_code_for_word`(gen_init.c:945-1075)
+### Per-cell driver `generate_normalized_init_code_for_word` (gen_init.c:945-1075)
 
-1. `old_mem_val` =(与 last_preinitialized 同奇偶 ? 81 : C1-81)——该高地址格的默认值(来自 RQ 填充图案)。等于目标值则跳过。
-2. 生成目标地址:重算 DESTINATION(把 cell12 变成 init_position-1)/ INCREMENT_BY_9 / 已够近;crazy 无解则先把 cell12 crazy 到 C1 重试。
-3. 计算写入常量;无解则先把目标格 crazy C0 清成 C1 重试。
-4. 发射:LOAD_CONSTANT 进 A → SET_DREG(0,12) 后 j(MovD 到 DEST,D=init_position-1 再 D++)→ 若干 o 走到 init_position → p(Opr 写入 `crazy(A,cell)=init_value`)。
+1. `old_mem_val` = (81 if same parity as last_preinitialized else C1-81) — the default value of that high-address cell (arising from RQ's fill pattern). If it already equals the target value, skip.
+2. Generate the target address: recompute DESTINATION (turn cell12 into init_position-1) / INCREMENT_BY_9 / already close enough; if crazy is unsolvable, first crazy cell12 to C1 and retry.
+3. Compute the constant to write; if unsolvable, first crazy the target cell to C0 to reset it to C1 and retry.
+4. Emit: LOAD_CONSTANT into A → SET_DREG(0,12), then j (MovD to DEST, D=init_position-1 then D++) → several o's to walk to init_position → p (Opr writes `crazy(A,cell)=init_value`).
 
-### 顶层组装 `generate_malbolge_initialization_code`(initialize.c:236-487)
+### Top-level assembly `generate_malbolge_initialization_code` (initialize.c:236-487)
 
-1. 缓冲区先放 **init_datamodule 字面前缀**(initialize.c:246,逐字复制、不可再生,在绝对 33-96 铺数据模块,同时决定 State 初值)。
-2. 对 last_preinitialized+1..C2 每个需写格,按**地址升序**调单格驱动。
-3. `generate_jump_to_entrypoint`(gen_init.c:1079):生成 ENTRY 地址、MovD 到 DEST、走 o 到 entry 格。
-4. 在 `59049-size_left` 处放 i(Jmp)跳入 HeLL 程序;`execution_steps = 该位置 - 98`(98 = "bP"2 格 + 96 模块区)。
-5. i 与 RQ 之间用 `"i</*jpov"` 随机 NOP 填充(不会被执行)。
-6. 重叠检查:用户格不得压 [2, init 末] 及 RQ 两格。
-7. `denormalize_malbolge`:转真实源字符 `code = (instr + 94 - c%94) % 94`,<33 则 +94。
-8. 写 'R''Q';cell0-1 强制 "bP";允许预初始化格替换填充区。
+1. The buffer first receives the **literal init_datamodule prefix** (initialize.c:246, copied verbatim, non-regenerable — it lays out the data modules across absolute 33-96 while simultaneously fixing State's initial values).
+2. For every cell needing a write in last_preinitialized+1..C2, invoke the per-cell driver, **in ascending address order**.
+3. `generate_jump_to_entrypoint` (gen_init.c:1079): generates the ENTRY address, MovD to DEST, walks o to the entry cell.
+4. At `59049-size_left`, place an i (Jmp) that jumps into the HeLL program; `execution_steps = that position - 98` (98 = the 2 "bP" cells + the 96-cell module region).
+5. Between the i and RQ, fill with random NOPs from `"i</*jpov"` (never executed).
+6. Overlap check: user cells must not encroach on [2, end of init] or on RQ's two cells.
+7. `denormalize_malbolge`: converts to real source characters via `code = (instr + 94 - c%94) % 94`, adding +94 if <33.
+8. Writes 'R''Q'; cell0-1 forced to "bP"; preinitialized cells are allowed to overwrite the padding region.
 
-**入口交接**:ENTRY 是数据格,存首条代码地址(标签引用已 -1)。启动时 D 指向 ENTRY 附近由初始化代码接管;初始化末尾的 i(Jmp)使 `C=[D]=代码地址`,控制转入 HeLL 程序。
+**Entry handoff**: ENTRY is a data cell holding the address of the first instruction (label reference already -1). At startup, D points near ENTRY, taken over by the initialization code; at the end of initialization, the i (Jmp) makes `C=[D]=code address`, transferring control into the HeLL program.
 
-## 6. 输出编码(initialize.c)
+## 6. Output encoding (initialize.c)
 
-最终源文件 = init_datamodule 字面前缀 + 反归一化自举代码 + i + 随机 NOP 填充 + RQ。高地址格纯运行时构造,不在源文件中。
+The final source file = init_datamodule literal prefix + denormalized bootstrap code + i + random NOP padding + RQ. High-address cells are constructed purely at runtime and never appear in the source file.
 
-`generate_opcodes_from_memory_layout`(initialize.c:171):CODE/PREINIT 格用 `is_xlatcycle_existent` 求出的起始字符;DATA 格用 `parse_datacell` 求值(递归表达式树);RESERVED_CODE 用安全值(81 / 最近合法 opcode 按奇偶);UNUSED/RESERVED_DATA 给 -1(don't-care,输出时填任意合法字符)。
+`generate_opcodes_from_memory_layout` (initialize.c:171): CODE/PREINIT cells use the starting character found by `is_xlatcycle_existent`; DATA cells are evaluated by `parse_datacell` (recursive expression-tree evaluation); RESERVED_CODE cells use a safe value (81 / the nearest legal opcode by parity); UNUSED/RESERVED_DATA are given -1 (don't-care, filled with any legal character at output time).
 
-## 7. Python 移植要点
+## 7. Python port notes
 
-**可以简化**:
-- 前端不用 flex/bison:手写 tokenizer + 递归下降(优先级外→内:`>> <<`、`!`、`+ -`、`* /`,带括号)。
-- BST → dict;链表块 → list + 下标;DataCell 树 → 递归求值。
-- 主循环 += 32 收敛可换二分或激进初值。
+**Can be simplified**:
+- No flex/bison for the front end: hand-write a tokenizer plus a recursive-descent parser (precedence outer→inner: `>> <<`, `!`, `+ -`, `* /`, with parentheses).
+- BST → dict; linked-list blocks → list + index; DataCell tree → recursive evaluation.
+- The `+= 32` convergence in the main loop could be replaced with binary search or a more aggressive initial value.
 
-**必须原样保留**(任何偏差都会产出错误的 Malbolge):
-- crazy 表 / rotate_right / XLAT2 表 / 8 opcode 残基 / `is_valid_initial_character` 集合 / xlat 轨道逻辑 / immutable_nops 表。
-- **init_datamodule 前缀逐字节照抄** + 绑定的 INIT_A_REG=58328 等 State 初值与模块布局(魔法常量不能重新推导,只能复制)。
-- 代价模型 / load_constant 逐 trit 合成 / set_dreg 导航 / add_to_init_code 状态机 / denormalize 公式 / put_all_memcells 对齐数学 / RQ 残基集 {16,17,35,51,52,74,80,93}。
+**Must be preserved exactly** (any deviation produces incorrect Malbolge output):
+- The crazy table / rotate_right / XLAT2 table / the 8-opcode residues / the `is_valid_initial_character` set / the xlat-track logic / the immutable_nops table.
+- **The init_datamodule prefix copied byte-for-byte**, together with the bound INIT_A_REG=58328 and other State initial values and the module layout (the magic constants cannot be re-derived, only copied).
+- The cost model / the trit-by-trit load_constant synthesis / set_dreg navigation / the add_to_init_code state machine / the denormalize formula / the put_all_memcells alignment math / the RQ residue set {16,17,35,51,52,74,80,93}.
 
-**陷阱**:
-- "-1 自增补偿"无处不在;
-- old_mem_val 的 81/(C1-81) 奇偶假设依赖 RQ 填充种子;
-- D 的 o 步进到绝对 82 会掉进模块 0,跨模块必须经模块 0;
-- execution_steps 的 98(= 2 + 96);
-- 归一化字符反直觉(o=Nop,j=MovD,i=Jmp);
-- 终极验证手段:把产物喂给 pyMalbolge 解释器与 LMAO 产物对拍。
+**Pitfalls**:
+- the "-1 auto-increment compensation" appears everywhere;
+- old_mem_val's 81/(C1-81) parity assumption depends on RQ's fill seed;
+- stepping D via o past absolute address 82 falls into module 0; crossing modules must always go through module 0;
+- execution_steps's 98 (= 2 + 96);
+- normalized-character naming is counter-intuitive (o=Nop, j=MovD, i=Jmp);
+- the ultimate verification method: feed the output to the pyMalbolge interpreter and diff it against LMAO's own output.
 
-**难度排序**(难→易):
-1. gen_init 常量/地址合成 + set_dreg + add_to_init_code 状态模拟(最难,须与模块布局逐比特吻合);
-2. put_all_memcells 对齐 + RQ 定位 + 尺寸驱动(off-by-one 陷阱密集);
-3. xlat 存在性 + possible_positions;
-4. U_/R_ 前缀 + 虚拟 NOP 合成;
-5. 解析器(上下文相关 `/`、`{}` 抑制 EMPTYLINE、require_whitespace、`? ?- @`);
-6. denormalize + 输出。
+**Difficulty ranking** (hardest → easiest):
+1. gen_init constant/address synthesis + set_dreg + add_to_init_code state simulation (hardest — must match the module layout bit-for-bit);
+2. put_all_memcells alignment + RQ placement + size-driven retry (dense with off-by-one pitfalls);
+3. xlat existence check + possible_positions;
+4. U_/R_ prefix resolution + virtual NOP synthesis;
+5. the parser (context-sensitive `/`, `{}` suppressing EMPTYLINE, require_whitespace, `? ?- @`);
+6. denormalize + output.

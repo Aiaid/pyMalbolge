@@ -1,15 +1,38 @@
-# docs 索引
+# docs index
 
-| 文档 | 内容 |
+> [中文](README.zh.md) | **English**
+
+Every document here exists in both languages: `<name>.md` (English) and
+`<name>.zh.md` (Chinese). The two are kept in sync; the Chinese version is
+the original for the reverse-engineering notes.
+
+## Compiler stack
+
+| Document | Contents |
 |---|---|
-| [findings.md](findings.md) | **研究发现与贡献清单**(论文素材,持续更新):上游发现、本项目贡献、定量数据、理论推导、bug 复现、改进 backlog、许可 |
-| [malbolge-landscape.md](malbolge-landscape.md) | 生态全景:历史脉络、工具谱系(生成器/HeLL-LMAO/名古屋)、名古屋论文全列表、调研方法 |
-| [highlevel-to-malbolge.md](highlevel-to-malbolge.md) | 路线决策:高级语言→Malbolge 可行性、推荐管线、里程碑、Python 前端 v1 说明 |
-| [toolchain-guide.md](toolchain-guide.md) | 外部工具链构建与复现指南(平台坑、确定性、验证惯例) |
-| [mg-spec.md](mg-spec.md) | .mg 伪指令语言规格(逆向自 ternary,含实验验证) |
-| [hell-spec.md](hell-spec.md) | HeLL 语言规格(逆向自 LMAO v0.6.0) |
-| [lmao-internals.md](lmao-internals.md) | LMAO 汇编器内部算法分析(布局、自举生成) |
-| [hell-assembler-design.md](hell-assembler-design.md) | Python 版 HeLL 汇编器设计(已搁置的备选路线) |
+| [highlevel-to-malbolge.md](highlevel-to-malbolge.md) | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
+| [python-subset-spec.md](python-subset-spec.md) | **Normative spec** for the accepted Python subset v1: per-AST-node acceptance whitelist, CPython divergences (D1–D17), diagnostic contract, audit appendix |
+| [py2mg-backend.md](py2mg-backend.md) | Design of the direct `py → .mg` backend (`--backend=direct`): frame strategy, recursion-cycle detection, size comparison against the C path |
+| [perf-baseline.md](perf-baseline.md) | Profiling baseline: the two hotspots, root causes, before/after measurements, superlinearity fit |
 
-运行时库文档见 [`runtime/mg/README.md`](../runtime/mg/README.md);
-测试夹具出处见 `test/fixtures/hell/README.md` 与 `test/fixtures/nagoya/README.md`。
+## Language specs (reverse-engineered)
+
+| Document | Contents |
+|---|---|
+| [mg-spec.md](mg-spec.md) | `.mg` pseudo-instruction language spec (reverse-engineered from `ternary`, with experimental verification) |
+| [hell-spec.md](hell-spec.md) | HeLL language spec (reverse-engineered from LMAO v0.6.0) |
+| [lmao-internals.md](lmao-internals.md) | Analysis of the LMAO assembler's internal algorithms (layout, bootstrap generation) |
+| [hell-assembler-design.md](hell-assembler-design.md) | Design for a Python HeLL assembler (shelved fallback route; §6 covers the GPL question) |
+
+## Research and background
+
+| Document | Contents |
+|---|---|
+| [findings.md](findings.md) | **Research findings and contribution log** (paper material, continuously updated): upstream discoveries, this project's contributions, quantitative data, theoretical derivations, bug reproductions, improvement backlog, licensing |
+| [malbolge-landscape.md](malbolge-landscape.md) | Ecosystem survey: historical timeline, tool lineage (generators / HeLL-LMAO / Nagoya), full list of Nagoya papers, survey methodology |
+| [iwagane-arrays.md](iwagane-arrays.md) | Dissection of the unpublished 2018 Nagoya array implementation: `IND_OPR` front-end sugar, stride-2 constraint, `LOADI`/`STOREI` design recommendation |
+| [toolchain-guide.md](toolchain-guide.md) | Building and reproducing the external reference toolchain (platform pitfalls, determinism, verification conventions) |
+
+Runtime library docs are in [`runtime/mg/README.md`](../runtime/mg/README.md);
+test fixture provenance is documented in `test/fixtures/hell/README.md` and
+`test/fixtures/nagoya/README.md`.

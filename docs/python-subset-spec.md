@@ -1,395 +1,487 @@
-# pyMalbolge Python 子集 v1 规范
+# pyMalbolge Python Subset v1 Specification
 
-> 规范对象:`malbolge/compiler/py2c.py`(Python 子集 → 名古屋高层 C 子集的转译
-> 前端,函数 `compile_python_to_c`)。本文档以该文件的**源码行为**为唯一事实
-> 来源,逐条对照;不满足于 `docs/highlevel-to-malbolge.md` §5 的概述性描述。
-> 版本:v1(commit `02c0b82` 时的状态,957 行)。诊断审计方法与完整结果见附录。
+> [中文](python-subset-spec.zh.md) | **English**
 
-## 0. 术语与定位
+> Object of specification: `malbolge/compiler/py2c.py` (the front-end that
+> translates the Python subset into the Nagoya high-level C subset, function
+> `compile_python_to_c`). This document treats the **source-level behaviour** of
+> that file as the single source of truth and checks every clause against it; it
+> does not settle for the overview-level description in
+> `docs/highlevel-to-malbolge.md` §5.
+> Version: v1 (state at commit `02c0b82`, 957 lines). The diagnostic audit
+> methodology and its full results are in the appendix.
 
-- "接受(accept)":`compile_python_to_c(source)` 返回字符串(C 源码),不抛异常。
-- "拒绝(reject)":抛出 `malbolge.compiler.CompileError`,携带 `lineno`/`col`/
-  可读 `message`,且不泄漏 Python 原生 traceback。
-- 本文档只覆盖 **py2c 这一级前端**。下游 `c2mg.py`(→ .mg)、`mg2mc.py`
-  (→ .mc)、`mc2mb.py`(→ .mb)有各自独立的错误类型(`C2MgError` 等),不在本
-  规范范围内,但附录的诊断审计会指出"py2c 本该拒绝、却把错误转嫁给下游"的
-  情形,因为这直接影响用户能否看懂错误。
-- "值环"指 Malbolge20 的运算环:所有整数按 `mod 3**20`(`MOD = 3486784401`)
-  归约,是非负整数环,没有负数概念。
+## 0. Terminology and scope
+
+- "accept": `compile_python_to_c(source)` returns a string (C source) without
+  raising.
+- "reject": raises `malbolge.compiler.CompileError`, carrying `lineno`/`col`
+  and a readable `message`, and leaks no native Python traceback.
+- This document covers **only the py2c front-end stage**. The downstream stages
+  `c2mg.py` (→ .mg), `mg2mc.py` (→ .mc) and `mc2mb.py` (→ .mb) have their own
+  error types (`C2MgError` etc.) and fall outside this specification. The
+  diagnostic audit in the appendix does, however, flag cases where "py2c ought
+  to have rejected the input but instead passed the error downstream", because
+  that directly determines whether the user can make sense of the error.
+- "value ring" refers to Malbolge20's arithmetic ring: every integer is reduced
+  modulo `3**20` (`MOD = 3486784401`). It is a ring of non-negative integers
+  with no notion of negative numbers.
 
 ---
 
-## 1. 接受集合
+## 1. Accepted set
 
-### 1.1 模块(Module)顶层语句
+### 1.1 Module-level (top-level) statements
 
-`compile()` (`py2c.py:860-931`) 对 `ast.parse(source).body` 的每条顶层语句分派:
+`compile()` (`py2c.py:860-931`) dispatches on each top-level statement of
+`ast.parse(source).body`:
 
-| 顶层语句形态 | 处理 |
+| Top-level statement form | Handling |
 |---|---|
-| `ast.FunctionDef` | 注册为用户函数(见 §1.3),不允许出现在合成 `main()` 里 |
-| `Expr(Constant(str))` 且是文件里**第一条**匹配的语句 | 模块文档字符串,跳过(不生成代码);但实现上是"任意顶层字符串常量表达式语句"都会被这条 `elif` 吃掉,不仅限于第一条,见 §2 偏差表 |
-| `ast.Import` / `ast.ImportFrom` | 拒绝:`"'import' is unsupported"` |
-| `ast.ClassDef` | 拒绝:`"class definitions are unsupported"` |
-| 其他任意语句 | 收集进 `module_body`,作为合成 `main()` 的函数体逐条编译(适用 §1.2 的语句子集) |
+| `ast.FunctionDef` | Registered as a user function (see §1.3); MUST NOT appear inside the synthesized `main()` |
+| `Expr(Constant(str))` that is the **first** matching statement in the file | Module docstring, skipped (no code generated); in practice, however, this `elif` swallows *any* top-level string-constant expression statement, not just the first one — see the divergence table in §2 |
+| `ast.Import` / `ast.ImportFrom` | Rejected: `"'import' is unsupported"` |
+| `ast.ClassDef` | Rejected: `"class definitions are unsupported"` |
+| Any other statement | Collected into `module_body` and compiled statement by statement as the body of the synthesized `main()` (subject to the statement subset in §1.2) |
 
-顶层不允许出现名为 `main` 的函数定义(编译器自己合成 `main()`):
-`"define top-level code directly, not a main() function ..."`。
+A top-level function named `main` is not allowed (the compiler synthesizes
+`main()` itself): `"define top-level code directly, not a main() function ..."`.
 
-### 1.2 语句(Statement)
+### 1.2 Statements
 
-`compile_stmt` (`py2c.py:531-536`) 按节点类型名查找 `_stmt_<TypeName>` 方法;
-找不到即拒绝(`"unsupported statement: {TypeName}"`)。**已实现**(即接受)的
-语句类型如下,每条附限制:
+`compile_stmt` (`py2c.py:531-536`) looks up a `_stmt_<TypeName>` method by node
+type name; if none is found the input is rejected (`"unsupported statement:
+{TypeName}"`). The **implemented** (i.e. accepted) statement types are listed
+below, each with its restrictions:
 
-| AST 节点 | 方法 | 接受形态与限制 |
+| AST node | Method | Accepted forms and restrictions |
 |---|---|---|
-| `Assign` | `_stmt_Assign` | 目标必须全部是裸 `ast.Name`(否则按目标类型名报 "unsupported assignment target: {Tuple|Attribute|Subscript|...}");支持链式 `a = b = c = expr`(算一次,复制到其余目标) |
-| `AnnAssign` | `_stmt_AnnAssign` | 目标必须是 `ast.Name`;注解本身**完全被忽略**(不做类型检查);`x: int` 无初值形式只声明不校验绑定状态(见 §2 D9 偏差) |
-| `AugAssign` | `_stmt_AugAssign` | 目标必须是裸 `ast.Name`;运算符限 `+= -= *= //= %=`(其余报 "unsupported augmented operator");`/=` 单独报 "true division ... unsupported" |
-| `Expr` | `_stmt_Expr` | 仅两种有效负载:`putchar(x)` 调用(单参数,无关键字参数)与任意能被 `lower()` 接受的表达式(计算后丢弃返回值,含裸字面量/裸变量名的纯 no-op) |
-| `If` | `_stmt_If` | `test` 走条件物化(§1.4);`elif` 是 AST 层面的嵌套 `If`,天然支持 |
-| `While` | `_stmt_While` | 不支持 `while...else`(拒绝);条件在循环入口和每轮循环体末尾各求值一次 |
-| `For` | `_stmt_For` | 仅 `for <Name> in range(...)` 形式;不支持 `for...else`;`range()` 的 `start`/`stop` 可为任意表达式,`step` 必须是**编译期正整数字面量**(`ast.Constant(int)` 且非负数、非 bool) |
-| `Return` | `_stmt_Return` | 无值 `return` 发射 `return 0;`;有值发射 `return <expr>;`;**"return 在函数外"检查是死代码,见 §2 语义偏差 D10** |
+| `Assign` | `_stmt_Assign` | Targets MUST all be bare `ast.Name` (otherwise reported by target type name: "unsupported assignment target: {Tuple|Attribute|Subscript|...}"); chained `a = b = c = expr` is supported (evaluated once, copied to the remaining targets) |
+| `AnnAssign` | `_stmt_AnnAssign` | Target MUST be an `ast.Name`; the annotation itself is **entirely ignored** (no type checking); the bare form `x: int` with no initializer only declares and does not validate binding state (see divergence D9 in §2) |
+| `AugAssign` | `_stmt_AugAssign` | Target MUST be a bare `ast.Name`; operators limited to `+= -= *= //= %=` (anything else reports "unsupported augmented operator"); `/=` gets its own "true division ... unsupported" message |
+| `Expr` | `_stmt_Expr` | Only two valid payloads: a `putchar(x)` call (single argument, no keyword arguments) and any expression `lower()` accepts (evaluated, result discarded — including the pure no-op of a bare literal or bare variable name) |
+| `If` | `_stmt_If` | `test` goes through condition materialisation (§1.4); `elif` is a nested `If` at the AST level and is therefore supported for free |
+| `While` | `_stmt_While` | `while...else` is not supported (rejected); the condition is evaluated once at loop entry and once at the end of each iteration of the body |
+| `For` | `_stmt_For` | Only the form `for <Name> in range(...)`; `for...else` is not supported; `range()`'s `start`/`stop` MAY be arbitrary expressions, but `step` MUST be a **compile-time positive integer literal** (`ast.Constant(int)`, non-negative, not a bool) |
+| `Return` | `_stmt_Return` | A valueless `return` emits `return 0;`; a `return` with a value emits `return <expr>;`; **the "return outside a function" check is dead code — see semantic divergence D10 in §2** |
 | `Pass` | `_stmt_Pass` | no-op |
-| `Global` | `_stmt_Global` | 只能出现在函数体内(合成 `main()` 里也算"函数体内",因此模块级 `global x` 语法上被接受、语义上是 no-op,见 §2);**不检查名字是否与形参同名**(§2 D12 偏差) |
-| `Break` | `_stmt_Break` | **批次一(2026-07-23)起接受**:仅限循环体内(`while`/`for`),经标志变量降级实现(每个含 break/continue 的循环分配 `skip`+`brk` 两个标志,循环体每条语句包 `if(skip==0)` 守卫);嵌套循环各自独立标志,`break` 只终止最内层循环并跳过 `for` 步进;循环外使用拒绝:`"'break' outside loop"` |
-| `Continue` | `_stmt_Continue` | 同上;`continue` 跳过本轮剩余语句,`for` 的步进**仍执行**;循环外拒绝 |
-| `FunctionDef`(嵌套) | `_stmt_FunctionDef` | 无条件拒绝:`"nested function definitions are unsupported"` |
+| `Global` | `_stmt_Global` | MAY only appear inside a function body (the synthesized `main()` also counts as "inside a function body", so a module-level `global x` is syntactically accepted and semantically a no-op — see §2); **does not check whether the name collides with a parameter** (divergence D12 in §2) |
+| `Break` | `_stmt_Break` | **Accepted since batch 1 (2026-07-23)**: only inside a loop body (`while`/`for`), implemented by flag lowering (each loop containing break/continue is given two flags, `skip` and `brk`, and every statement in the loop body is wrapped in an `if(skip==0)` guard); nested loops get independent flags, and `break` terminates only the innermost loop and skips the `for` step; use outside a loop is rejected: `"'break' outside loop"` |
+| `Continue` | `_stmt_Continue` | As above; `continue` skips the rest of the current iteration, but the `for` step **still executes**; rejected outside a loop |
+| `FunctionDef` (nested) | `_stmt_FunctionDef` | Unconditionally rejected: `"nested function definitions are unsupported"` |
 
-未在上表的语句类型(`ClassDef` 嵌套、`Import`/`ImportFrom` 嵌套、`Try`、
-`With`、`Assert`、`Delete`、`Raise`、`Match`、`AsyncFunctionDef`、`TypeAlias`
-等)一律落到 `compile_stmt` 的通用拒绝分支:`"unsupported statement:
-{TypeName}"`。
+Statement types not in the table above (nested `ClassDef`, nested
+`Import`/`ImportFrom`, `Try`, `With`, `Assert`, `Delete`, `Raise`, `Match`,
+`AsyncFunctionDef`, `TypeAlias`, etc.) all fall to `compile_stmt`'s generic
+rejection branch: `"unsupported statement: {TypeName}"`.
 
-### 1.3 函数定义(`ast.FunctionDef`,顶层)
+### 1.3 Function definitions (`ast.FunctionDef`, top level)
 
 `_register_function` (`py2c.py:933-947`) + `_compile_function`
 (`py2c.py:811-858`):
 
-- 仅接受**简单位置参数**:`node.args.vararg`(`*args`)、`kwarg`(`**kwargs`)、
-  `kwonlyargs`(`*, x`)、`posonlyargs`(`x, /`)、`defaults`/`kw_defaults`
-  (默认值)任意一项非空,一律拒绝:`"only simple positional parameters are
-  supported ..."`。
-- 函数名与参数名都要通过 `check_var_name`(§1.6 标识符规则)。
-- 函数名做**大小写不敏感的唯一性检查**:两个 Python 函数名转大写后相同即冲突
+- Only **simple positional parameters** are accepted: if any of
+  `node.args.vararg` (`*args`), `kwarg` (`**kwargs`), `kwonlyargs` (`*, x`),
+  `posonlyargs` (`x, /`), `defaults`/`kw_defaults` (default values) is
+  non-empty, the definition is rejected: `"only simple positional parameters are
+  supported ..."`.
+- Both the function name and the parameter names MUST pass `check_var_name`
+  (identifier rules, §1.6).
+- Function names undergo a **case-insensitive uniqueness check**: two Python
+  function names that are identical once upper-cased collide
   (`"function {!r} collides with {!r} (function names are case-insensitive in
-  the target backend)"`),因为下游后端统一把函数名转大写。
-- 函数名转大写后落在 `RESERVED_FUNCS = {"MAIN", "PUTCHAR", "GETCHAR",
-  "ZZMUL", "ZZDIV", "ZZMOD"}` 里即拒绝;但注意 `main`/`putchar`/`getchar` 这三个
-  **小写原形**会先被 `check_var_name`(通过 `C_KEYWORDS`)拦下,`RESERVED_FUNCS`
-  对它们只在**大小写变体**(如 `Main`、`PUTCHAR`)时才真正触发,详见附录审计
-  `sem_func_named_main_case_variant`。
-- 重复定义同一个函数名拒绝:`"function {!r} is already defined"`。
-- **不检查**:参数/返回值类型注解(直接忽略,不校验合法性也不报错)、
-  `decorator_list`(完全忽略,§2 D11 偏差)、`is_async`(`AsyncFunctionDef` 走
-  独立节点类型,不匹配 `ast.FunctionDef`,落到 §1.2 的通用语句拒绝)。
-- 函数体内的语句子集与 §1.2 相同;不允许嵌套 `def`(§1.2 已列)。
-- 所有用户函数在编译任何函数体**之前**统一注册完毕,因此互相调用不受源码中
-  定义顺序限制(含直接/间接递归);生成的 C 源码为每个用户函数发射前向原型。
+  the target backend)"`), because the downstream backend upper-cases all
+  function names.
+- A function name whose upper-cased form lands in `RESERVED_FUNCS = {"MAIN",
+  "PUTCHAR", "GETCHAR", "ZZMUL", "ZZDIV", "ZZMOD"}` is rejected; note, however,
+  that the **lower-case originals** `main`/`putchar`/`getchar` are intercepted
+  earlier by `check_var_name` (via `C_KEYWORDS`), so for those three
+  `RESERVED_FUNCS` only fires on **case variants** (e.g. `Main`, `PUTCHAR`) —
+  see the audit entry `sem_func_named_main_case_variant` in the appendix.
+- Redefining the same function name is rejected: `"function {!r} is already
+  defined"`.
+- **Not checked**: parameter/return type annotations (ignored outright, neither
+  validated nor reported), `decorator_list` (entirely ignored, divergence D11 in
+  §2), `is_async` (`AsyncFunctionDef` is a distinct node type that does not match
+  `ast.FunctionDef` and therefore falls to the generic statement rejection of
+  §1.2).
+- The statement subset inside a function body is the same as §1.2; nested `def`
+  is not allowed (already listed in §1.2).
+- All user functions are registered **before** any function body is compiled, so
+  mutual calls are not constrained by definition order in the source (including
+  direct and indirect recursion); the generated C source emits a forward
+  prototype for every user function.
 
-### 1.4 表达式(Expression)
+### 1.4 Expressions
 
-`lower()` 处理以下节点类型,每种展开如下;不在此列的节点类型(`List`、
-`Dict`、`Set`、`Tuple`、`ListComp`/`SetComp`/`DictComp`/`GeneratorExp`、
-`Lambda`、`Attribute`、`Subscript`、`Slice`、`Starred`、`NamedExpr`、
-`Yield`/`YieldFrom`、`Await` 等)一律落到通用拒绝:`"unsupported
-expression: {TypeName}"`。`JoinedStr`(f-string)例外:**仅在 `print()`
-实参位置**接受(全部部件必须编译期常量,见 §1.7),其他位置维持
-"unsupported expression: JoinedStr" 拒绝。
+`lower()` handles the following node types, expanded as described below. Node
+types not listed here (`List`, `Dict`, `Set`, `Tuple`,
+`ListComp`/`SetComp`/`DictComp`/`GeneratorExp`, `Lambda`, `Attribute`,
+`Subscript`, `Slice`, `Starred`, `NamedExpr`, `Yield`/`YieldFrom`, `Await`,
+etc.) all fall to the generic rejection: `"unsupported expression:
+{TypeName}"`. `JoinedStr` (f-string) is the one exception: it is accepted
+**only in `print()` argument position** (all parts MUST be compile-time
+constants, see §1.7); everywhere else it keeps the "unsupported expression:
+JoinedStr" rejection.
 
-| AST 节点 | 接受形态 |
+| AST node | Accepted form |
 |---|---|
-| `Constant` | 见 §1.5 常量子表 |
-| `Name`(`Load` 上下文) | 通过 `check_var_name` 即接受,**不检查是否已绑定**(§2 D6/D7/D8/D9 偏差);`Store`/`Del` 等其他上下文出现在这里会报 "unsupported name context"(理论分支,实践中赋值目标走独立的 `_stmt_Assign` 等路径,不经过这里) |
-| `BinOp` | 见 §1.5 运算符子表;编译期能折叠的常量表达式直接折成整数字面量(mod 3**20),否则降为三地址式(至多一个二元运算) |
-| `UnaryOp` | `+x` 原样返回 `lower(x)`;`not x` 走条件物化;`-x`/`~x` 拒绝(见 §1.5) |
-| `BoolOp`(`and`/`or`) | 走条件物化,短路求值,通过嵌套 `if/else` 实现 |
-| `Compare` | 走条件物化;比较符限于 `< <= > >= == !=`(见 §1.5);支持链式比较 `a < b < c`(降为 `(a<b) && (b<c)`,每个操作数只求值一次);`is`/`is not`/`in`/`not in` 在遍历 `node.ops` 时即被拒绝,**先于任何操作数求值**,不会因操作数本身非法而报出无关错误 |
-| `Call` | 见 §1.7 内建函数与 §1.3 用户函数调用 |
-| `IfExp`(`a if c else b`,批次一新增) | 物化为 temp + 真实 `if/else` 双分支,**惰性求值**:仅被选中分支的副作用(如函数调用)发生 |
+| `Constant` | See the constants sub-table in §1.5 |
+| `Name` (`Load` context) | Accepted once it passes `check_var_name`; **binding is not checked** (divergences D6/D7/D8/D9 in §2); other contexts such as `Store`/`Del` reaching this point report "unsupported name context" (a theoretical branch — in practice assignment targets take separate paths such as `_stmt_Assign` and never come through here) |
+| `BinOp` | See the operator sub-tables in §1.5; constant expressions that can be folded at compile time are folded directly into integer literals (mod 3**20), otherwise the expression is lowered to three-address form (at most one binary operation) |
+| `UnaryOp` | `+x` returns `lower(x)` unchanged; `not x` goes through condition materialisation; `-x`/`~x` are rejected (see §1.5) |
+| `BoolOp` (`and`/`or`) | Condition materialisation, short-circuit evaluation, implemented with nested `if/else` |
+| `Compare` | Condition materialisation; comparators limited to `< <= > >= == !=` (see §1.5); chained comparisons `a < b < c` are supported (lowered to `(a<b) && (b<c)`, each operand evaluated exactly once); `is`/`is not`/`in`/`not in` are rejected while iterating `node.ops`, i.e. **before any operand is lowered**, so an illegal operand cannot produce an unrelated error message |
+| `Call` | See the built-ins in §1.7 and user function calls in §1.3 |
+| `IfExp` (`a if c else b`, new in batch 1) | Materialised as a temp plus a real two-branch `if/else`, with **lazy evaluation**: only the side effects of the selected branch (e.g. function calls) occur |
 
-**条件物化(condition materialisation)**:任何布尔语义的表达式(比较、
-布尔运算、`not`、`while`/`if` 的 `test`)从不作为一个"比较结果值"存进变量,
-而是通过 `flag = 0; if(cond){ flag = 1; }` 这样的控制流,把结果物化成一个
-`int` 变量(取值 0/1)。这是为了绕开下游 C 子集 `bool`/`true`/`false` 类型
-系统的已知损坏(见 `docs/highlevel-to-malbolge.md` §5"实现要点")。
+**Condition materialisation**: any expression with boolean semantics
+(comparisons, boolean operations, `not`, the `test` of `while`/`if`) is never
+stored into a variable as a "comparison result value". Instead, control flow of
+the shape `flag = 0; if(cond){ flag = 1; }` materialises the result into an
+`int` variable taking the value 0 or 1. This works around the known breakage of
+the downstream C subset's `bool`/`true`/`false` type system (see
+`docs/highlevel-to-malbolge.md` §5, "Implementation notes").
 
-### 1.5 常量与运算符子表
+### 1.5 Constant and operator sub-tables
 
-**常量(`ast.Constant`)**,`_const()` (`py2c.py:261-278`):
+**Constants (`ast.Constant`)**, `_const()` (`py2c.py:261-278`):
 
-| Python 值类型 | 处理 |
+| Python value type | Handling |
 |---|---|
-| `bool`(`True`/`False`) | 折成整数 `1`/`0`(不发射 `bool`/`true`/`false`,见 §2) |
-| `int`,`v >= 0` | 折成 `v % MOD` |
-| `int`,`v < 0` | 拒绝(见下方"负数"行) |
-| `str` | 一般表达式位置拒绝:`"string literals are unsupported ..."`。**两个例外**(批次一):`ord('c')` 的单字符实参;`print()` 实参/`sep=`/`end=` 位置的字符串字面量(编译期展开,见 §1.7)。另见 §1.2 docstring 位置规则:模块/函数体首条裸字符串被静默忽略 |
-| `float` | 拒绝:`"floating-point values are unsupported"` |
-| 其他(`bytes`、`complex`、`Ellipsis`、`None` 等) | 拒绝,落到通用分支 `"unsupported constant: {!r}"` |
+| `bool` (`True`/`False`) | Folded to the integers `1`/`0` (no `bool`/`true`/`false` is emitted, see §2) |
+| `int`, `v >= 0` | Folded to `v % MOD` |
+| `int`, `v < 0` | Rejected (see the "negative numbers" paragraph below) |
+| `str` | Rejected in general expression position: `"string literals are unsupported ..."`. **Two exceptions** (batch 1): the single-character argument of `ord('c')`; string literals in `print()` argument / `sep=` / `end=` position (expanded at compile time, see §1.7). See also the docstring position rule in §1.2: the first bare string of a module or function body is silently ignored |
+| `float` | Rejected: `"floating-point values are unsupported"` |
+| Others (`bytes`, `complex`, `Ellipsis`, `None`, …) | Rejected, falling to the generic branch `"unsupported constant: {!r}"` |
 
-**二元运算符(`ast.BinOp.op`)**,`_binop`/`_fold`/`_binop_emit`
+**Binary operators (`ast.BinOp.op`)**, `_binop`/`_fold`/`_binop_emit`
 (`py2c.py:280-333`):
 
-| 运算符 | 接受? | 说明 |
+| Operator | Accepted? | Notes |
 |---|---|---|
-| `+` `-` | 是 | 直接发射 `+`/`-`;结果按 mod 3**20 归约(减法用 Python `%` 的非负语义,天然匹配值环) |
-| `*` | 是 | 编译期可折叠则直接算;否则按需注入 `zzmul` 辅助函数(倍增法,~32 次加法) |
-| `//` | 是 | 同上,注入 `zzdiv`(长除法);**常量折叠时**除以 0 拒绝(`"integer division or modulo by zero"`);**运行时**(非常量)除以 0 不拒绝,`zzdiv` 定义为返回 0(见 §2) |
-| `%` | 是 | 同 `//`,注入 `zzmod`;常量折叠时模 0 拒绝,运行时模 0 返回被除数本身(`zzmod` 语义) |
-| `/` | 否 | 拒绝:`"true division '/' is unsupported; use floor division '//' ..."` |
-| `**` `&` `\|` `^` `<<` `>>` | 否 | 拒绝:`"unsupported binary operator: {Pow|BitAnd|BitOr|BitXor|LShift|RShift}"` |
+| `+` `-` | Yes | Emitted directly as `+`/`-`; the result is reduced mod 3**20 (subtraction relies on Python `%`'s non-negative semantics, which matches the value ring naturally) |
+| `*` | Yes | Computed directly when compile-time foldable; otherwise the `zzmul` helper is injected on demand (doubling method, ~32 additions) |
+| `//` | Yes | As above, injecting `zzdiv` (long division); **during constant folding**, division by zero is rejected (`"integer division or modulo by zero"`); **at runtime** (non-constant), division by zero is not rejected — `zzdiv` is defined to return 0 (see §2) |
+| `%` | Yes | Same as `//`, injecting `zzmod`; modulo by zero is rejected during constant folding, and at runtime returns the dividend itself (`zzmod` semantics) |
+| `/` | No | Rejected: `"true division '/' is unsupported; use floor division '//' ..."` |
+| `**` `&` `\|` `^` `<<` `>>` | No | Rejected: `"unsupported binary operator: {Pow|BitAnd|BitOr|BitXor|LShift|RShift}"` |
 
-**一元运算符(`ast.UnaryOp.op`)**,`_unaryop` (`py2c.py:335-349`):
+**Unary operators (`ast.UnaryOp.op`)**, `_unaryop` (`py2c.py:335-349`):
 
-| 运算符 | 接受? | 说明 |
+| Operator | Accepted? | Notes |
 |---|---|---|
-| `+x` | 是 | 原样透传 |
-| `not x` | 是 | 走条件物化 |
-| `-x` | 否 | 拒绝:`"unary minus is unsupported: the value ring has no negatives ..."`;字面量 `-5` 在 AST 里同样是 `UnaryOp(USub, Constant(5))`,走同一路径,报同一条消息 |
-| `~x` | 否 | 拒绝:`"bitwise '~' is unsupported"` |
+| `+x` | Yes | Passed through unchanged |
+| `not x` | Yes | Condition materialisation |
+| `-x` | No | Rejected: `"unary minus is unsupported: the value ring has no negatives ..."`; the literal `-5` is likewise `UnaryOp(USub, Constant(5))` in the AST, takes the same path and produces the same message |
+| `~x` | No | Rejected: `"bitwise '~' is unsupported"` |
 
-**比较运算符(`ast.Compare.ops`)**,`_CMP_OP` (`py2c.py:451-454`):
+**Comparison operators (`ast.Compare.ops`)**, `_CMP_OP` (`py2c.py:451-454`):
 
-接受 `< <= > >= == !=`;拒绝 `is` `is not` `in` `not in`
-(`"comparison operator {Is|IsNot|In|NotIn} is unsupported"`)。
+`< <= > >= == !=` are accepted; `is`, `is not`, `in`, `not in` are rejected
+(`"comparison operator {Is|IsNot|In|NotIn} is unsupported"`).
 
-**负数**:v1 在字面量与一元负号两条路径上都**静态拒绝**负数(值环本就没有
-"负"这个概念,`3 - 5` 会折成一个很大的正数而不是 -2)。没有其他产生负数的
-途径(减法结果本身不受限制,只是运算符两侧的字面量输入被挡住)。
+**Negative numbers**: v1 **statically rejects** negatives on both paths —
+literals and the unary minus (the value ring has no notion of "negative" to
+begin with; `3 - 5` folds to a very large positive number rather than -2). There
+is no other route to producing a negative value (subtraction results themselves
+are unconstrained; only literal operands of an operator are blocked).
 
-### 1.6 标识符规则
+### 1.6 Identifier rules
 
-`check_var_name` (`py2c.py:190-206`),对变量名、参数名、函数名(函数名额外
-过 `check_func_name`)、`global` 声明的名字统一适用:
+`check_var_name` (`py2c.py:190-206`) applies uniformly to variable names,
+parameter names, function names (function names additionally pass through
+`check_func_name`) and names declared `global`:
 
-1. 必须非空,首字符 `isalpha()` 且**整个字符串 `isascii()`**(unicode 标识符
-   在 Python 3 语法层面合法,但这里会被拒绝:`"identifier {!r} is not a valid
-   C identifier"`)。
-2. 除首字符外,每个字符必须是 `isalnum()` 或下划线,且整体仍需 ascii(与上一
-   条有重叠,是同一份 ascii 约束的第二次校验)。
-3. 大小写不敏感的 `zz` 前缀保留给编译器内部临时变量/辅助函数(`zzt0`、
-   `zzmul` 等):任何用户标识符 `name.lower().startswith("zz")` 一律拒绝
+1. MUST be non-empty, the first character MUST satisfy `isalpha()`, and **the
+   whole string MUST satisfy `isascii()`** (unicode identifiers are legal at the
+   Python 3 syntax level but are rejected here: `"identifier {!r} is not a valid
+   C identifier"`).
+2. Apart from the first character, every character MUST be `isalnum()` or an
+   underscore, and the whole string MUST still be ascii (overlapping with the
+   previous rule — this is the same ascii constraint validated a second time).
+3. The case-insensitive `zz` prefix is reserved for the compiler's internal
+   temporaries and helper functions (`zzt0`, `zzmul`, …): any user identifier
+   with `name.lower().startswith("zz")` is rejected
    (`"identifier {!r} is reserved (names starting with 'zz' are used
-   internally by the compiler)"`)——`zz`、`ZZ`、`Zz`、`zZ` 各种大小写都命中。
-4. 精确匹配(大小写敏感)`C_KEYWORDS = {"int", "bool", "true", "false", "if",
-   "else", "while", "return", "static", "main", "putchar", "getchar"}` 中任
-   一个即拒绝(`"identifier {!r} collides with a C keyword in the target
-   backend"`)。注意这是**精确字符串匹配**,`INT`/`While_`/`Main`(大写变体)
-   不在此列——`main`/`putchar`/`getchar` 的大写变体转而由 §1.3 的
-   `RESERVED_FUNCS`(仅函数名适用)或压根不受限制(变量名场景)。
-5. 函数名额外检查:见 §1.3 的大小写唯一性与 `RESERVED_FUNCS`。
+   internally by the compiler)"`) — `zz`, `ZZ`, `Zz` and `zZ` all match.
+4. An exact (case-sensitive) match against `C_KEYWORDS = {"int", "bool", "true",
+   "false", "if", "else", "while", "return", "static", "main", "putchar",
+   "getchar"}` is rejected (`"identifier {!r} collides with a C keyword in the
+   target backend"`). Note that this is an **exact string match**: `INT`,
+   `While_` and `Main` (case variants) are not covered — case variants of
+   `main`/`putchar`/`getchar` are instead handled by `RESERVED_FUNCS` from §1.3
+   (function names only), or are not restricted at all (variable-name case).
+5. Additional checks for function names: see the case-insensitive uniqueness
+   check and `RESERVED_FUNCS` in §1.3.
 
-**不受限制**(合法)的例子:`print`、`range`、`ord`、`chr`、`while_`、
-`INT`(全大写)作为**变量名**都合法;但把这几个内建调用名字用作**函数名**
-会导致"能定义、不能正常调用"的陷阱,见 §2 与附录 `defects.md` B3-B6。
+**Unrestricted** (legal) examples: `print`, `range`, `ord`, `chr`, `while_` and
+`INT` (all caps) are all legal as **variable names**; but using these built-in
+call names as **function names** leads to the "definable but not callable" trap
+— see §2 and the appendix `defects.md` B3-B6.
 
-### 1.7 内建函数(仅在 `Call` 节点里可用)
+### 1.7 Built-in functions (available only inside `Call` nodes)
 
-`_call()` (`py2c.py:351-398`) 按被调用者名字(必须是裸 `ast.Name`,
-"only direct function calls are supported (no methods or computed
-callees)")分派:
+`_call()` (`py2c.py:351-398`) dispatches on the callee name (which MUST be a
+bare `ast.Name` — "only direct function calls are supported (no methods or
+computed callees)"):
 
-| 调用形式 | 接受? | 说明 |
+| Call form | Accepted? | Notes |
 |---|---|---|
-| `putchar(x)` | 仅作为语句 `putchar(x)`(`_stmt_Expr` 专门处理);单参数、无关键字参数 | 用作表达式值(`y = putchar(x)`)拒绝:`"putchar() returns nothing and cannot be used as a value"` |
-| `getchar()` | 是 | 零参数,无关键字参数(否则报 `"getchar() takes no arguments"`) |
-| `ord(c)` | 是,但 `c` 必须是**编译期字面量**、且是长度恰为 1 的字符串常量(`ast.Constant(str)`),在编译期直接折成 `ord(c) % MOD` | 非字面量参数报 "... (evaluated at compile time)";长度 ≠ 1 报 "expects a single character" |
-| `chr(x)` | 否 | 拒绝:`"chr() is unsupported; emit characters with putchar(codepoint)"` |
-| `print(...)` | **批次一(2026-07-23)起部分接受**:仅编译期常量实参 | 接受:字符串字面量、可常量折叠的 int 表达式、全常量部件的 f-string(部件含文本/可折叠 int/字符串字面量;有 conversion 或 format_spec 拒绝);`sep=`/`end=` 仅常量字符串(默认 `" "`/`"\n"`);空参只发 `end`。渲染:参数渲染值以 sep 连接加 end,逐字符 putchar;int 渲染为折叠后 mod 3**20 值的十进制(见 §2 D17);字符 codepoint >255 拒绝。**运行时(非常量)实参拒绝**,消息指引 putchar 并注明 future version 支持;`print()` 用作表达式值拒绝 |
-| `range(...)` | 仅作为 `for` 循环头 | 在其他任何表达式位置调用 `range(...)` 一律拒绝:`"range() is only valid in a 'for' loop header"` |
-| 用户函数名 | 是 | 需已在 `self.functions` 里注册;不允许关键字参数;参数个数必须与形参个数完全一致(否则报 "{}() takes {} argument(s) but {} given") |
-| 其他任意名字(未注册的用户函数) | 否 | `"call to undefined function {!r}"` |
+| `putchar(x)` | Only as the statement `putchar(x)` (handled specially by `_stmt_Expr`); single argument, no keyword arguments | Using it as an expression value (`y = putchar(x)`) is rejected: `"putchar() returns nothing and cannot be used as a value"` |
+| `getchar()` | Yes | Zero arguments, no keyword arguments (otherwise `"getchar() takes no arguments"`) |
+| `ord(c)` | Yes, but `c` MUST be a **compile-time literal** and a string constant of length exactly 1 (`ast.Constant(str)`); folded to `ord(c) % MOD` at compile time | A non-literal argument reports "... (evaluated at compile time)"; length ≠ 1 reports "expects a single character" |
+| `chr(x)` | No | Rejected: `"chr() is unsupported; emit characters with putchar(codepoint)"` |
+| `print(...)` | **Partially accepted since batch 1 (2026-07-23)**: compile-time constant arguments only | Accepted: string literals, constant-foldable int expressions, f-strings whose parts are all constant (parts may be text, foldable ints, or string literals; a part with a conversion or `format_spec` is rejected); `sep=`/`end=` accept constant strings only (defaults `" "`/`"\n"`); with no arguments only `end` is emitted. Rendering: the rendered arguments are joined with `sep`, `end` is appended, and the result is emitted character by character with putchar; an int renders as the decimal form of its folded mod-3**20 value (see D17 in §2); a character codepoint > 255 is rejected. **Runtime (non-constant) arguments are rejected**, with a message pointing to putchar and noting support in a future version; `print()` used as an expression value is rejected |
+| `range(...)` | Only as a `for` loop header | Calling `range(...)` in any other expression position is rejected: `"range() is only valid in a 'for' loop header"` |
+| User function name | Yes | MUST already be registered in `self.functions`; keyword arguments are not allowed; the argument count MUST match the parameter count exactly (otherwise "{}() takes {} argument(s) but {} given") |
+| Any other name (unregistered user function) | No | `"call to undefined function {!r}"` |
 
-**陷阱**(§2/附录详述):`putchar`/`getchar`/`ord`/`chr`/`print`/`range`
-这六个名字在 `_call()` 里的匹配**先于**"是否是已注册用户函数"的检查。如果
-用户把自己的函数命名为 `print`/`range`/`ord`/`chr`(`putchar`/`getchar` 会
-被 `RESERVED_FUNCS` 提前挡在注册阶段),函数定义本身会成功,但**任何**对它
-的调用都会被内建特判分支拦截,报出一条与"函数名冲突"无关的误导性错误。
+**Trap** (detailed in §2 and the appendix): the six names
+`putchar`/`getchar`/`ord`/`chr`/`print`/`range` are matched in `_call()`
+**before** the check for "is this a registered user function". If a user names
+their own function `print`/`range`/`ord`/`chr` (`putchar`/`getchar` are stopped
+earlier, at registration, by `RESERVED_FUNCS`), the definition itself succeeds,
+but **every** call to it is intercepted by the built-in special case and
+produces a misleading error that has nothing to do with the name collision.
 
 ---
 
-## 2. 语义偏差表(与 CPython 对比)
+## 2. Semantic divergence table (versus CPython)
 
-> 编号说明:本节 `D1`-`D16` 是本文档自用的偏差编号,与 `defects.md` 里独立
-> 编号的 `C1`-`C5`(静默接受类缺陷)、`B1`-`B6`(诊断质量差类缺陷)是两套不同
-> 的编号体系——`defects.md` 按严重度排列缺陷,本表按 CPython 语义主题排列
-> 偏差(含"设计性偏差"与"缺陷"两种,后者才对应 `defects.md` 的条目)。带
-> "缺陷"标记的行在备注列给出了对应的 `defects.md` 编号。
+> Numbering note: `D1`-`D16` in this section is this document's own divergence
+> numbering; it is a separate scheme from `defects.md`'s independently numbered
+> `C1`-`C5` (silently-accepted defects) and `B1`-`B6` (poor-diagnostic-quality
+> defects) — `defects.md` orders defects by severity, whereas this table orders
+> divergences by CPython semantic topic (covering both "design divergences" and
+> "defects", only the latter corresponding to `defects.md` entries). Rows marked
+> as defects give the corresponding `defects.md` number in the notes column.
 
-| # | 主题 | CPython 语义 | py2c v1 语义 | 分类 |
+| # | Topic | CPython semantics | py2c v1 semantics | Classification |
 |---|---|---|---|---|
-| D1 | 整数环 | 任意精度有符号整数 | 所有整数在 `mod 3**20` 的非负环里;`+ - *` 结果、字面量、`ord()` 结果均归约 | 设计性偏差(已文档化) |
-| D2 | 负数 | 支持 | **静态拒绝**一元负号与负字面量;没有产生负数的合法途径 | 设计性偏差(已文档化) |
-| D3 | `/` vs `//`/`%` | `/` 真除法返回 float,`//`/`%` 对负数做"向下取整"语义 | 只有 `//`/`%`,对非负整数做长除法;`/` 直接拒绝 | 设计性偏差(已文档化) |
-| D4 | `bool` 类型 | 独立类型,`True`/`False` 是单例 | 从不发射 `bool`/`true`/`false`(下游类型系统已知损坏);布尔字面量折成 `1`/`0`;比较/布尔运算结果只以"物化到 int 变量"的形式存在,不能作为独立类型使用 | 设计性偏差(规避下游 bug,已文档化) |
-| D5 | `getchar`/`putchar` 与 EOF | 无对应内建;需要 `sys.stdin`/`sys.stdout` | `getchar()` 读一个字符编码,`putchar(x)` 按 `x` 的编码写一个字符;**EOF 返回值未在 py2c 层规定**——`getchar()` 只是发射对下游 `getchar()` C 函数的调用,具体 EOF 语义由运行时(Malbolge20 参考实现:`A=59049`,见 `docs/findings.md` B1)决定,py2c 本身不做任何 EOF 相关折算或校验 | 设计性偏差 + 文档缺口(v1 说明文档未提及 EOF 值,见"版本节"待办) |
-| D6 | 未绑定变量读取(函数作用域) | `NameError`/`UnboundLocalError`(运行时) | **已修复(2026-07-22)**:`lower(Name)` 的 `Name`(Load)分支现在会查询一个按实际编译顺序推进的"已确定赋值"集合(`self.bound`,函数级读取额外放行任何模块级已赋值名字,见 `_is_bound`),未命中则以准确的原始 Python 行号、使用用户书写的原始标识符拼写抛出 `CompileError`("name {!r} is used before it is assigned")——见 `defects.md` B1/B2(已修复) | 已修复(2026-07-22,原 B 类缺陷) |
-| D7 | 未绑定变量读取(模块作用域) | 同上 | **已修复(2026-07-22)**:同 D6 的机制;合成 `main()` 内不享有"模块级已赋值名字"的兜底放行(因为 `main()` 本身就是模块级代码的顺序执行),严格按声明顺序检查 | 已修复(2026-07-22,原 B 类缺陷) |
-| D8 | 增量赋值目标须已绑定 | `x += 1`(`x` 未定义)是 `NameError` | **已修复(2026-07-22)**:`_stmt_AugAssign` 在生成 `x += ...;` 之前先查询"已确定赋值"集合,未绑定则拒绝(见 `defects.md` C3,已修复) | 已修复(2026-07-22,原 C 类缺陷) |
-| D9 | 裸类型注解 `x: int` | 不绑定名字(只写 `__annotations__`);后续读取是 `NameError` | **已修复(2026-07-22)**:裸注解分支不再调用 `_bind_target`,只做标识符合法性校验,不建立绑定;后续读取落入 D6/D7 同一条检查路径(见 `defects.md` C2,已修复) | 已修复(2026-07-22,原 C 类缺陷) |
-| D10 | 模块外 `return` | `SyntaxError: 'return' outside function`(编译期,由字节码编译器而非 `ast.parse` 检查) | **已修复(2026-07-22)**:`_stmt_Return` 改为判断 `self.in_main`(此前判断恒假的死代码 `self.locals is None`),顶层 `return` 现在会被准确拒绝(见 `defects.md` C1,已修复) | 已修复(2026-07-22,原 C 类缺陷,曾是最严重一条) |
-| D11 | 装饰器 | 对函数对象做实际变换 | **已修复(2026-07-22)**:`_register_function` 现在检查 `decorator_list`,任何非空装饰器列表都会被拒绝(见 `defects.md` C4,已修复) | 已修复(2026-07-22,原 C 类缺陷) |
-| D12 | `global x` 与形参 `x` 同名 | `SyntaxError: name 'x' is parameter and global` | **已修复(2026-07-22)**:`_stmt_Global` 现在会与 `self.params` 比对,命中则拒绝(见 `defects.md` C5,已修复) | 已修复(2026-07-22,原 C 类缺陷) |
-| D13 | `range(...)`/`print(...)`/`ord(...)`/`chr(...)` 作为用户函数名 | 合法,遮蔽内建;调用走用户函数 | **已修复(2026-07-22)**:`check_func_name` 新增 `BUILTIN_CALL_NAMES` 保留字检查,在函数**注册**阶段就以准确行号拒绝,不再放行到调用点才报出文不对题的错误(见 `defects.md` B3-B6,已修复) | 已修复(2026-07-22,原 B 类缺陷) |
-| D14 | 函数末尾缺少 `return` | 隐式 `return None`;若调用方把结果当整数用会在运行时 `TypeError` | C 函数体末尾没有 `return` 语句,C 语义下是未定义行为(若返回值被使用);py2c 既不静态检测"是否所有路径都有 return",也不注入兜底 `return 0;` | 已知设计留白(非 CompileError 也非静默错译,是一个 C 语言未定义行为的传递,建议 v1.x 澄清或注入兜底 `return`,见"版本节") |
-| D15 | 标识符:非 ASCII / 前导下划线 | 合法(Python 3 标识符规则) | 拒绝(仅接受 `[a-zA-Z][0-9a-zA-Z_]*` 且整体 ASCII) | 设计性偏差(下游 C 词法限制,已文档化) |
-| D16 | 模块文档字符串跳过规则 | 仅**首条**语句是字符串常量时才是文档字符串(其余位置的裸字符串语句只是被求值后丢弃,语义等价但概念不同) | **已收紧(2026-07-23,批次一)**:模块与函数体仅**首条**裸字符串按 docstring 静默忽略,与 CPython 的 docstring 概念对齐;其余位置的裸字符串语句现在**拒绝**(CPython 是求值后丢弃)——从"过宽接受"变为"显式拒绝",属设计性偏差(裸字符串在本子集中无任何可产生的效果,拒绝优于沉默) | 设计性偏差(2026-07-23 起,已文档化) |
-| D17 | `print()` 常量整数渲染 | `print(3-5)` 输出 `-2`(有符号十进制) | 常量折叠在 mod 3**20 非负环上进行,`print(3-5)` 输出 `3486784398`(D1 偏差在 print 渲染上的显现);正常非负常量与 CPython 一致 | 设计性偏差(D1 的推论,已文档化;带符号整数落地后随 D2 一并消除) |
+| D1 | Integer ring | Arbitrary-precision signed integers | All integers live in the non-negative ring `mod 3**20`; the results of `+ - *`, literals and `ord()` results are all reduced | Design divergence (documented) |
+| D2 | Negative numbers | Supported | Unary minus and negative literals are **statically rejected**; there is no legal route to producing a negative value | Design divergence (documented) |
+| D3 | `/` vs `//`/`%` | `/` is true division returning a float; `//`/`%` use floor semantics for negatives | Only `//`/`%` exist, performing long division on non-negative integers; `/` is rejected outright | Design divergence (documented) |
+| D4 | `bool` type | A distinct type; `True`/`False` are singletons | `bool`/`true`/`false` are never emitted (the downstream type system is known to be broken); boolean literals fold to `1`/`0`; the results of comparisons and boolean operations exist only in "materialised into an int variable" form and cannot be used as a standalone type | Design divergence (works around a downstream bug, documented) |
+| D5 | `getchar`/`putchar` and EOF | No corresponding built-ins; requires `sys.stdin`/`sys.stdout` | `getchar()` reads one character encoding, `putchar(x)` writes one character according to the encoding of `x`; **the EOF return value is not specified at the py2c level** — `getchar()` merely emits a call to the downstream `getchar()` C function, and the concrete EOF semantics are decided by the runtime (Malbolge20 reference implementation: `A=59049`, see `docs/findings.md` B1); py2c itself performs no EOF-related conversion or validation | Design divergence + documentation gap (the v1 documentation does not mention the EOF value, see the TODO in the "Version notes" section) |
+| D6 | Reading an unbound variable (function scope) | `NameError`/`UnboundLocalError` (at runtime) | **Fixed (2026-07-22)**: the `Name` (Load) branch of `lower(Name)` now queries a "definitely assigned" set advanced in actual compilation order (`self.bound`; reads inside functions additionally admit any name already assigned at module level, see `_is_bound`); on a miss it raises `CompileError` ("name {!r} is used before it is assigned") with the accurate original Python line number and the identifier spelled exactly as the user wrote it — see `defects.md` B1/B2 (fixed) | Fixed (2026-07-22, formerly a class-B defect) |
+| D7 | Reading an unbound variable (module scope) | Same as above | **Fixed (2026-07-22)**: same mechanism as D6; inside the synthesized `main()` there is no fallback admission of "names already assigned at module level" (because `main()` *is* the sequential execution of module-level code), so the check is strictly in declaration order | Fixed (2026-07-22, formerly a class-B defect) |
+| D8 | Augmented-assignment target MUST be bound | `x += 1` with `x` undefined is a `NameError` | **Fixed (2026-07-22)**: `_stmt_AugAssign` queries the "definitely assigned" set before generating `x += ...;` and rejects an unbound target (see `defects.md` C3, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
+| D9 | Bare type annotation `x: int` | Does not bind the name (only writes `__annotations__`); a subsequent read is a `NameError` | **Fixed (2026-07-22)**: the bare-annotation branch no longer calls `_bind_target`; it only validates identifier legality and establishes no binding, so subsequent reads fall into the same check path as D6/D7 (see `defects.md` C2, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
+| D10 | `return` outside a function | `SyntaxError: 'return' outside function` (at compile time, raised by the bytecode compiler rather than `ast.parse`) | **Fixed (2026-07-22)**: `_stmt_Return` now tests `self.in_main` (previously the always-false dead code `self.locals is None`), so a top-level `return` is now accurately rejected (see `defects.md` C1, fixed) | Fixed (2026-07-22, formerly a class-C defect and once the most severe one) |
+| D11 | Decorators | Actually transform the function object | **Fixed (2026-07-22)**: `_register_function` now inspects `decorator_list` and rejects any non-empty decorator list (see `defects.md` C4, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
+| D12 | `global x` where `x` is also a parameter | `SyntaxError: name 'x' is parameter and global` | **Fixed (2026-07-22)**: `_stmt_Global` now compares against `self.params` and rejects on a match (see `defects.md` C5, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
+| D13 | `range(...)`/`print(...)`/`ord(...)`/`chr(...)` as user function names | Legal, shadowing the built-in; calls go to the user function | **Fixed (2026-07-22)**: `check_func_name` gained a `BUILTIN_CALL_NAMES` reserved-word check that rejects at the function **registration** stage with an accurate line number, instead of letting it through to the call site where an off-topic error would be reported (see `defects.md` B3-B6, fixed) | Fixed (2026-07-22, formerly a class-B defect) |
+| D14 | Missing `return` at the end of a function | Implicit `return None`; if the caller uses the result as an integer, a runtime `TypeError` follows | The C function body has no trailing `return` statement, which under C semantics is undefined behaviour (if the return value is used); py2c neither statically checks "does every path return" nor injects a fallback `return 0;` | Known design gap (neither a CompileError nor a silent mistranslation, but a pass-through of C undefined behaviour; clarifying it or injecting a fallback `return` is recommended for v1.x, see the "Version notes" section) |
+| D15 | Identifiers: non-ASCII / leading underscore | Legal (Python 3 identifier rules) | Rejected (only `[a-zA-Z][0-9a-zA-Z_]*`, entirely ASCII, is accepted) | Design divergence (downstream C lexical restriction, documented) |
+| D16 | Module docstring skipping rule | A string constant is a docstring only as the **first** statement (bare string statements elsewhere are merely evaluated and discarded — semantically equivalent but conceptually different) | **Tightened (2026-07-23, batch 1)**: only the **first** bare string of a module or function body is silently ignored as a docstring, aligning with CPython's docstring concept; bare string statements anywhere else are now **rejected** (CPython evaluates and discards them) — this moves from "over-broad acceptance" to "explicit rejection" and counts as a design divergence (a bare string has no producible effect in this subset, so rejecting beats staying silent) | Design divergence (since 2026-07-23, documented) |
+| D17 | `print()` rendering of constant integers | `print(3-5)` outputs `-2` (signed decimal) | Constant folding happens in the non-negative ring mod 3**20, so `print(3-5)` outputs `3486784398` (divergence D1 surfacing in print rendering); ordinary non-negative constants match CPython | Design divergence (a corollary of D1, documented; will disappear together with D2 once signed integers land) |
 
-**已验证的"看似偏差、实测无偏差"反例**(方法论记录):函数名与模块级同名
-全局变量共存(`def foo(): ...` 之后 `foo = 5`)在生成的 C 源码里表面重复声明,
-但下游 `c2mg` 会分别发射为 `FOO`(函数)与 `u_foo`(变量),互不冲突,全管线
-运行结果与 CPython 实际输出一致。**不要**仅凭中间 C 代码的表面形态判断行为
-是否正确,必须验证到下游或跑通全管线 / 对拍 CPython。
+**A verified "looks like a divergence, measurably isn't" counter-example**
+(methodology record): a function coexisting with a module-level global variable
+of the same name (`def foo(): ...` followed by `foo = 5`) appears to be a
+duplicate declaration in the generated C source, but the downstream `c2mg`
+emits them separately as `FOO` (function) and `u_foo` (variable), which do not
+conflict; the full-pipeline result matches CPython's actual output. **Do not**
+judge correctness from the surface shape of the intermediate C code alone —
+always verify downstream, or run the full pipeline and diff against CPython.
 
 ---
 
-## 3. 诊断契约
+## 3. Diagnostic contract
 
-本节是对 py2c v1 现状的**规范性要求**。附录审计发现的 D6/D7/D8/D9/D10/D11/
-D12/D13(`defects.md` 的 C1-C5、B1-B6)此前不满足下述第 1 条,已于
-2026-07-22 全部修复(见 §2 偏差表各行"已修复"备注与 `defects.md`);当前
-`test/test_py2c_diagnostics.py` 的 `TestKnownDefects` 类已把对应的 xfail 全部
-翻转为真实断言作为回归锁。
+This section states **normative requirements** on the current state of py2c v1.
+D6/D7/D8/D9/D10/D11/D12/D13 found by the appendix audit (`defects.md`'s C1-C5
+and B1-B6) formerly violated requirement 1 below; all of them were fixed on
+2026-07-22 (see the "Fixed" notes on the corresponding rows of the §2 divergence
+table and `defects.md`). The `TestKnownDefects` class in
+`test/test_py2c_diagnostics.py` has since flipped all the corresponding xfails
+into real assertions that act as a regression lock.
 
-1. **任何不在 §1 接受集合内的输入,必须以 `CompileError` 拒绝,并携带能定位
-   到原始 Python 源码的准确 `lineno`**(通过 `node.lineno`,继承自触发拒绝的
-   那个 AST 节点)。"准确"指:该行号指向用户能读懂、且确实是问题所在的
-   Python 源码行,而不是生成的中间 C/`.mg`/`.mc` 文件里的行号。
-2. **禁止 Python 原生 traceback 泄漏**:除了 `ast.parse` 抛出的 `SyntaxError`
-   会被 `compile()` 显式捕获并包装成 `CompileError`(见 `py2c.py:860-868`)
-   外,编译过程中不应该有任何未捕获的 `AttributeError`/`KeyError`/
-   `IndexError`/`TypeError` 等原生异常穿透到调用方——这类异常一旦出现即被
-   本审计计为 B 类缺陷("裸异常泄漏")。
-3. **禁止静默错译**:一个不在接受集合内的输入,不允许被 `compile_python_to_c`
-   无异常地接受并产出结构合法但行为错误的 C 代码(即本文档反复引用的 C 类
-   缺陷);也不允许一个**在**接受集合内、语义良好定义的输入产出与本规范 §2
-   偏差表不一致的代码。
-4. **错误消息格式约定**(`CompileError._render()`,`py2c.py:130-143`):
+1. **Any input outside the accepted set of §1 MUST be rejected with a
+   `CompileError` carrying an accurate `lineno` that locates the original Python
+   source** (via `node.lineno`, inherited from the AST node that triggered the
+   rejection). "Accurate" means: the line number points at a line of Python
+   source the user can read and that is genuinely where the problem is — not a
+   line number in a generated intermediate C/`.mg`/`.mc` file.
+2. **No native Python traceback may leak**: apart from the `SyntaxError` raised
+   by `ast.parse`, which `compile()` explicitly catches and wraps into a
+   `CompileError` (see `py2c.py:860-868`), no uncaught native exception
+   (`AttributeError`/`KeyError`/`IndexError`/`TypeError`, …) may escape to the
+   caller during compilation — any such exception is counted as a class-B defect
+   ("bare exception leak") by this audit.
+3. **No silent mistranslation**: an input outside the accepted set MUST NOT be
+   accepted by `compile_python_to_c` without an exception and turned into C code
+   that is structurally valid but behaviourally wrong (the class-C defects this
+   document repeatedly refers to); likewise, an input that *is* in the accepted
+   set with well-defined semantics MUST NOT produce code inconsistent with the
+   §2 divergence table of this specification.
+4. **Error message format convention** (`CompileError._render()`,
+   `py2c.py:130-143`):
    ```
    compile error (line <N>): <message>
-       <源码那一行,已 strip>
-       <col 对齐的插入符 ^ ,若 col_offset 可得>
+       <the source line, stripped>
+       <a caret ^ aligned to col, if col_offset is available>
    ```
-   `<message>` 应当:(a) 明确指出违反接受集合的**哪一条**规则;(b) 尽量给出
-   替代写法(例如"用 `//` 代替 `/`");(c) 使用用户在源码中实际写下的标识符
-   拼写,不使用编译器内部改名(如 `u_foo`、`zzt0`)——D6/D7 此前违反这一条,
-   已于 2026-07-22 修复(`CompileError` 消息与行号均取自原始 `ast.Name`
-   节点,不经过任何内部改名)。
-5. **诊断的作用域边界**:本契约只约束 `compile_python_to_c` 一级前端。若一个
-   非法输入被 py2c 错误地放行、只能由下游阶段(`c2mg`/`mg2mc`/`mc2mb`)拒绝,
-   即便下游给出的也是一个结构化异常(`C2MgError` 等)而不是裸 traceback,
-   仍然违反第 1 条("必须由 py2c 自身、以准确的 Python 源码行号拒绝"),计为
-   B 类缺陷而非 A 类。
+   `<message>` SHOULD: (a) state exactly **which** rule of the accepted set was
+   violated; (b) suggest an alternative spelling where possible (e.g. "use `//`
+   instead of `/`"); (c) use the identifier as the user actually wrote it in the
+   source, never a compiler-internal rename (such as `u_foo` or `zzt0`) — D6/D7
+   formerly violated this and were fixed on 2026-07-22 (both the `CompileError`
+   message and the line number are now taken from the original `ast.Name` node,
+   with no internal renaming in between).
+5. **Scope boundary of the diagnostics**: this contract constrains only the
+   `compile_python_to_c` front-end stage. If an illegal input is wrongly let
+   through by py2c and can only be rejected by a downstream stage
+   (`c2mg`/`mg2mc`/`mc2mb`), then even if the downstream stage also gives a
+   structured exception (`C2MgError` etc.) rather than a bare traceback, this
+   still violates requirement 1 ("MUST be rejected by py2c itself, with an
+   accurate Python source line number") and counts as a class-B, not class-A,
+   defect.
 
 ---
 
-## 4. 版本节
+## 4. Version notes
 
-### v1(当前实现,`py2c.py`)现状
+### v1 (current implementation, `py2c.py`) status
 
-- 见 §1 完整接受集合与 §2 偏差表。
-- 2026-07-22:D6/D7/D8/D9/D10/D11/D12/D13(`defects.md` C1-C5、B1-B6)全部
-  修复。修复方式:
-  - `_Compiler` 新增一个按**实际编译顺序**推进的"已确定赋值"名字集合
-    (`self.bound`,`_is_bound()`),在 `lower()` 的 `Name`(Load)读取点、
-    `_stmt_AugAssign` 的目标预检里统一查询,未命中即拒绝
-    (`"name {!r} is used before it is assigned"`)。用户函数额外放行任何
-    模块级已赋值名字(`self.module_globals`,`compile()` 里对
-    `module_body` 的一次性预扫描),因为读取一个未经 `global` 声明的模块级
-    全局在 CPython 里合法;合成的 `main()` 本身就是模块级代码,不享有这条
-    放行,必须严格按赋值顺序检查(即 D6/D7/D8/D9 的修复口径)。这是
-    `defects.md` 建议的"定值分析"方案的一个简化(近似)版本:按真实编译
-    顺序线性推进,不做 `if`/`while`/`for` 分支的交集运算(即仍不能捕获
-    "只在某个分支里赋值、之后无条件读取"这类更细的条件绑定错误)——这是
-    `defects.md` 根因提要里明确认可的降级选项,换来的是与 py2c 现有"顺序
-    编译即在遇到的第一个问题处报错"的行为完全兼容,不改变任何既有 A 类
-    诊断测试的报错位置/文案。
-  - 裸类型注解(`x: int`)分支不再调用 `_bind_target`(D9)。
-  - `_stmt_Return` 判断 `self.in_main` 而非恒假的 `self.locals is None`
-    (D10)。
-  - `_register_function` 拒绝非空 `decorator_list`(D11)。
-  - `_stmt_Global` 与 `self.params` 比对形参同名冲突(D12)。
-  - `check_func_name` 新增 `BUILTIN_CALL_NAMES = {"putchar", "getchar",
-    "ord", "chr", "print", "range"}` 保留字检查,在函数注册阶段就拒绝
-    (D13)。
-  - 回归测试:`test/test_py2c_diagnostics.py` 的 `TestKnownDefects` 类,
-    原 6 条 `xfail(strict)` 全部翻转为真实断言;`test/test_py2c.py`、
-    `test/test_c2mg.py` 现有合法程序用例全部保持不变(不依赖这几类此前
-    被静默接受的输入)。
-- D14(缺失 return 路径)与 D5(EOF 语义未在 py2c 层文档化)仍属于"留白"而
-  非已确认的错译,建议在 v1.x 补充说明或加轻量检查,不在本轮修复范围内。
-- 2026-07-23:**批次一语法糖**在 `py2c.py`('c' 后端)与 `py2mg.py`
-  ('direct' 后端)按同一语义契约同步实现,两后端对同一源码产生相同程序
-  输出(双后端 e2e 对拍验证):
-  1. `print()` 常量实参(字符串/可折叠 int/全常量 f-string,`sep=`/`end=`,
-     详见 §1.7 与 §2 D17);
-  2. f-string(仅 print 实参位置,全常量部件);
-  3. `ord('x')`(核实原有实现已符合契约,补测试锁定);
-  4. 条件表达式 `a if c else b`(temp + if/else 物化,惰性求值);
-  5. `*= //= %=`(核实 py2c 原有实现已支持,补测试;py2mg 侧同步);
-  6. `break`/`continue`(标志变量降级,嵌套独立,循环外拒绝);
-  7. docstring 位置规则(仅模块/函数体首条,见 §2 D16 收紧)。
-  本批次为**纯前端展开**,未新增任何运行时原语;`py2mg` 侧另受
-  `docs/findings.md` A3 约束(标志走无分支累积 + 单次 SWITCH 模式)。
+- See §1 for the complete accepted set and §2 for the divergence table.
+- 2026-07-22: D6/D7/D8/D9/D10/D11/D12/D13 (`defects.md` C1-C5, B1-B6) were all
+  fixed. How:
+  - `_Compiler` gained a set of "definitely assigned" names advanced in
+    **actual compilation order** (`self.bound`, `_is_bound()`), queried
+    uniformly at the `Name` (Load) read points in `lower()` and in
+    `_stmt_AugAssign`'s target pre-check; a miss is rejected
+    (`"name {!r} is used before it is assigned"`). User functions additionally
+    admit any name already assigned at module level (`self.module_globals`, a
+    one-shot pre-scan of `module_body` inside `compile()`), because reading a
+    module-level global without a `global` declaration is legal in CPython; the
+    synthesized `main()` *is* the module-level code and does not get this
+    admission, so it MUST be checked strictly in assignment order (this is the
+    fix criterion for D6/D7/D8/D9). This is a simplified (approximate) version
+    of the definite-assignment analysis proposed in `defects.md`: it advances
+    linearly in real compilation order and performs no intersection across
+    `if`/`while`/`for` branches (so it still cannot catch finer conditional
+    binding errors such as "assigned only in one branch, then read
+    unconditionally") — a downgrade explicitly endorsed in `defects.md`'s
+    root-cause summary, bought in exchange for full compatibility with py2c's
+    existing "compile sequentially and report at the first problem encountered"
+    behaviour, changing neither the position nor the wording of any existing
+    class-A diagnostic test.
+  - The bare type annotation (`x: int`) branch no longer calls `_bind_target`
+    (D9).
+  - `_stmt_Return` tests `self.in_main` instead of the always-false
+    `self.locals is None` (D10).
+  - `_register_function` rejects a non-empty `decorator_list` (D11).
+  - `_stmt_Global` compares against `self.params` to catch parameter-name
+    collisions (D12).
+  - `check_func_name` gained a `BUILTIN_CALL_NAMES = {"putchar", "getchar",
+    "ord", "chr", "print", "range"}` reserved-word check that rejects at the
+    function registration stage (D13).
+  - Regression tests: in the `TestKnownDefects` class of
+    `test/test_py2c_diagnostics.py`, all 6 former `xfail(strict)` cases were
+    flipped into real assertions; the existing legal-program cases in
+    `test/test_py2c.py` and `test/test_c2mg.py` are all unchanged (none of them
+    relied on these formerly silently-accepted inputs).
+- D14 (missing return path) and D5 (EOF semantics undocumented at the py2c
+  level) remain "gaps" rather than confirmed mistranslations; adding a note or a
+  lightweight check in v1.x is recommended, and neither is in scope for this
+  round of fixes.
+- 2026-07-23: **batch-1 syntactic sugar** was implemented in `py2c.py` (the 'c'
+  backend) and `py2mg.py` (the 'direct' backend) in lock-step under the same
+  semantic contract; both backends produce identical program output for the same
+  source (verified by a dual-backend e2e diff):
+  1. `print()` with constant arguments (strings / foldable ints / all-constant
+     f-strings, `sep=`/`end=`; see §1.7 and D17 in §2);
+  2. f-strings (in print argument position only, all-constant parts);
+  3. `ord('x')` (verified that the existing implementation already met the
+     contract; tests added to lock it down);
+  4. the conditional expression `a if c else b` (temp + if/else
+     materialisation, lazy evaluation);
+  5. `*= //= %=` (verified that py2c already supported them, tests added; py2mg
+     brought in line);
+  6. `break`/`continue` (flag lowering, independent per nesting level, rejected
+     outside a loop);
+  7. the docstring position rule (module/function body first statement only, see
+     the D16 tightening in §2).
+  This batch is **pure front-end expansion**; no new runtime primitive was
+  added. The `py2mg` side is additionally constrained by `docs/findings.md` A3
+  (branch-free flag accumulation + single-SWITCH pattern).
 
-### v2 计划项(**保留字段** —— 以下能力当前一律不在接受集合内,任何试图使用
-它们的输入**必须继续被 §3 诊断契约拒绝**,直到对应特性真正实现为止;实现前
-私自放宽某一项检查而不同步更新本文档与 §1 接受集合表,视为引入新的 C 类缺陷)
+### v2 planned items (**reserved fields** — none of the capabilities below are
+currently in the accepted set; any input attempting to use them **MUST continue
+to be rejected under the §3 diagnostic contract** until the corresponding
+feature is actually implemented. Relaxing one of these checks before
+implementation without updating this document and the §1 accepted-set tables in
+the same change counts as introducing a new class-C defect.)
 
-- **带符号整数语义**:引入显式的补码约定或符号位表示,解除 §1.5"负数"行与
-  §2 D2 的静态拒绝。
-- **运行时十进制 `print`/`input`**:批次一(2026-07-23)已支持**常量**
-  print;**运行时值**的十进制输出(divmod-10 循环)与 `input()` 解析仍
-  保留,需要新的运行时支持。
-- ~~**`break`/`continue`**~~ 批次一(2026-07-23)已实现,见 §1.2。
-- **数组/运行时字符串**:`Subscript`/`Slice`/字符串**变量**仍全部拒绝
-  (§1.4、§1.5;字符串**字面量**在 print/ord 位置已按批次一放开);数组
-  机制解剖与 LOADI/STOREI 设计建议见 `docs/iwagane-arrays.md`。
-- 本表任何一项从"保留、必须拒绝"变为"已实现、加入接受集合"时,必须同步:
-  更新本文档 §1 对应小节、在 §2 补充/移除相应偏差表行、在 `defects.md` 里
-  确认不会引入新的 D6-D13 式定值分析漏洞(尤其是数组/字符串,一旦引入
-  `Subscript` 读写,原本"未绑定变量读取"的定值分析范围需要相应扩大到
-  "数组元素/切片是否已初始化",否则会重演 D6-D9 同类问题)。
+- **Signed integer semantics**: introduce an explicit two's-complement
+  convention or a sign-bit representation, lifting the static rejection in the
+  "negative numbers" paragraph of §1.5 and in D2 of §2.
+- **Runtime decimal `print`/`input`**: batch 1 (2026-07-23) already supports
+  **constant** print; decimal output of **runtime values** (a divmod-10 loop)
+  and `input()` parsing are still reserved and need new runtime support.
+- ~~**`break`/`continue`**~~ implemented in batch 1 (2026-07-23), see §1.2.
+- **Arrays / runtime strings**: `Subscript`/`Slice` and string **variables** are
+  all still rejected (§1.4, §1.5; string **literals** were opened up in print/ord
+  position by batch 1); the dissection of the array mechanism and the
+  LOADI/STOREI design proposal are in `docs/iwagane-arrays.md`.
+- Whenever an item in this list moves from "reserved, MUST be rejected" to
+  "implemented, part of the accepted set", the same change MUST: update the
+  corresponding subsection of §1 in this document, add or remove the
+  corresponding row in §2, and confirm in `defects.md` that no new D6-D13-style
+  definite-assignment-analysis hole is introduced (especially for arrays and strings: once
+  `Subscript` reads and writes exist, the scope of the definite-assignment
+  analysis for "reading an unbound variable" MUST be widened accordingly to
+  "is this array element / slice initialised", or the D6-D9 class of problems
+  will simply recur).
 
 ---
 
-## 附录:诊断审计结果表
+## Appendix: diagnostic audit results table
 
-审计方法:构造 137 个探测用例(覆盖 §1 每一类不支持的 AST 节点、§2 每一类
-已确认或疑似的语义偏差、以及边界值),逐个喂给 `compile_python_to_c`;对
-"静默接受但疑似语义错误"的用例,额外喂给 `compile_c_to_mg`/全管线
-`compile_python_to_mb` 并在 pyMalbolge 上运行,与直接用 CPython `exec()`
-执行等价/近似源码的结果对拍,以确定是否真的存在行为分叉(方法论参考
-`docs/findings.md` A4 的教训:不能只看中间产物"形态可疑"就下结论)。
+Audit method: 137 probe cases were constructed (covering every category of
+unsupported AST node in §1, every confirmed or suspected semantic divergence in
+§2, and boundary values) and fed one by one to `compile_python_to_c`. Cases that
+were "silently accepted but semantically suspect" were additionally fed to
+`compile_c_to_mg` and to the full pipeline `compile_python_to_mb`, run on
+pyMalbolge, and diffed against the result of executing an equivalent or
+near-equivalent source directly with CPython `exec()`, in order to establish
+whether a behavioural fork really exists (methodology reference: the lesson of
+`docs/findings.md` A4 — you cannot draw a conclusion merely because an
+intermediate artifact "looks suspicious").
 
-分类:A=正确拒绝;B=拒绝但质量差(见 §3 契约第 4/5 条);C=静默接受但语义
-错误;D=正确接受。
+Classification: A = correctly rejected; B = rejected but with poor quality (see
+requirements 4/5 of the §3 contract); C = silently accepted but semantically
+wrong; D = correctly accepted.
 
-**总计 137 个用例:A=101,B=6,C=6,D=24。**
+**Total 137 cases: A=101, B=6, C=6, D=24.**
 
-脚本与语料:`/Users/anend/.claude/jobs/1d5df563/tmp/subset-spec/probe.py`
-(可重跑:`python3 probe.py --summary` 看汇总,`python3 probe.py` 看逐用例
-明细,`python3 probe.py --export-md <path>` 重新导出下表)。6 条 B 类 + 6 条
-C 类缺陷的详细复现与修复建议见同目录 `defects.md`(已在 §2/§3 交叉引用)。
+Script and corpus: `/Users/anend/.claude/jobs/1d5df563/tmp/subset-spec/probe.py`
+(re-runnable: `python3 probe.py --summary` for the summary, `python3 probe.py`
+for per-case detail, `python3 probe.py --export-md <path>` to re-export the
+table below). Detailed reproductions and fix proposals for the 6 class-B and 6
+class-C defects are in `defects.md` in the same directory (cross-referenced from
+§2 and §3).
 
-> **已修复(2026-07-22)**:下表是 `py2c.py` 修复前的历史快照(未重新用
-> `probe.py --export-md` 刷新,以保留审计过程的原始记录)。以下 12 个用例
-> ID 对应的缺陷已全部修复,当前重新运行 `compile_python_to_c` 会得到
-> `CompileError`(而非表中记录的"OK (编译通过)"或错误行号/文案),详见 §2
-> 偏差表 D6-D13 各行与 `defects.md`:`ast_decorator_property`、
-> `ast_decorator_staticmethod`(C4)、`sem_undefined_var_read_toplevel`、
-> `sem_undefined_var_read_func`(B1/B2)、`sem_stray_return_toplevel`
-> (C1)、`sem_unbound_augassign`(C3)、`sem_bare_annassign_then_read`
-> (C2)、`sem_func_named_range_shadow`、`sem_func_named_print_shadow`、
-> `sem_func_named_ord_shadow`、`sem_func_named_chr_shadow`(B3-B6)、
-> `sem_global_shadows_param`(C5)。回归测试见
-> `test/test_py2c_diagnostics.py::TestKnownDefects`。
+> **Fixed (2026-07-22)**: the table below is a historical snapshot of `py2c.py`
+> from *before* the fixes (deliberately not refreshed with
+> `probe.py --export-md`, so as to preserve the original record of the audit
+> process). The defects behind the following 12 case IDs have all been fixed;
+> re-running `compile_python_to_c` today yields a `CompileError` (rather than the
+> "OK (compiled)" or the wrong line number/wording recorded in the table). See
+> rows D6-D13 of the §2 divergence table and `defects.md`:
+> `ast_decorator_property`, `ast_decorator_staticmethod` (C4),
+> `sem_undefined_var_read_toplevel`, `sem_undefined_var_read_func` (B1/B2),
+> `sem_stray_return_toplevel` (C1), `sem_unbound_augassign` (C3),
+> `sem_bare_annassign_then_read` (C2), `sem_func_named_range_shadow`,
+> `sem_func_named_print_shadow`, `sem_func_named_ord_shadow`,
+> `sem_func_named_chr_shadow` (B3-B6), `sem_global_shadows_param` (C5).
+> Regression tests: `test/test_py2c_diagnostics.py::TestKnownDefects`.
 
 <!-- AUDIT_TABLE_START -->
-| ID | 输入摘要 | 期望 | 实际 | 备注 |
+| ID | Input summary | Expected | Actual | Notes |
 |---|---|---|---|---|
 | `ast_class_toplevel` | `class C: ⏎     pass` | A | CompileError@L1 | ClassDef at module level -> explicit rejection. |
 | `ast_class_nested` | `def f(): ⏎     class C: ⏎         pass ⏎     return 1 ⏎ p...` | A | CompileError@L2 | ClassDef inside a function body -> generic 'unsupported statement'. |
@@ -405,8 +497,8 @@ C 类缺陷的详细复现与修复建议见同目录 `defects.md`(已在 §2/§
 | `ast_assert` | `x = 1 ⏎ assert x == 1 ⏎ putchar(65)` | A | CompileError@L2 | Assert -> generic 'unsupported statement'. |
 | `ast_del` | `x = 1 ⏎ del x ⏎ putchar(65)` | A | CompileError@L2 | Delete -> generic 'unsupported statement'. |
 | `ast_nonlocal` | `def outer(): ⏎     x = 1 ⏎     def inner(): ⏎         non...` | A | CompileError@L3 | nested def is hit first (nonlocal only legal inside nested scope anyway). |
-| `ast_decorator_property` | `@property ⏎ def foo(x): ⏎     return x ⏎ putchar(foo(65))` | C | OK (编译通过) | decorator_list on a top-level FunctionDef is never inspected by _register_function/_compile_function -- silently dropped. Real CPython: '... |
-| `ast_decorator_staticmethod` | `@staticmethod ⏎ def foo(x): ⏎     return x ⏎ putchar(foo(...` | C | OK (编译通过) | Same root cause as ast_decorator_property; staticmethod happens to stay directly-callable on CPython >=3.10 so this particular decorator ... |
+| `ast_decorator_property` | `@property ⏎ def foo(x): ⏎     return x ⏎ putchar(foo(65))` | C | OK (compiled) | decorator_list on a top-level FunctionDef is never inspected by _register_function/_compile_function -- silently dropped. Real CPython: '... |
+| `ast_decorator_staticmethod` | `@staticmethod ⏎ def foo(x): ⏎     return x ⏎ putchar(foo(...` | C | OK (compiled) | Same root cause as ast_decorator_property; staticmethod happens to stay directly-callable on CPython >=3.10 so this particular decorator ... |
 | `ast_starargs_def` | `def f(*args): ⏎     return 1 ⏎ putchar(f(1, 2))` | A | CompileError@L1 | vararg -> explicit rejection. |
 | `ast_kwargs_def` | `def f(**kw): ⏎     return 1 ⏎ putchar(f())` | A | CompileError@L1 | kwarg -> explicit rejection. |
 | `ast_default_arg` | `def f(x=1): ⏎     return x ⏎ putchar(f())` | A | CompileError@L1 | defaults -> explicit rejection. |
@@ -453,17 +545,17 @@ C 类缺陷的详细复现与修复建议见同目录 `defects.md`(已在 §2/§
 | `ast_ellipsis` | `x = ... ⏎ putchar(65)` | A | CompileError@L1 | Ellipsis is ast.Constant(value=Ellipsis) in modern ast; falls through _const()'s bool/int/str/float checks to the generic 'unsupported co... |
 | `ast_complex_literal` | `x = 3j ⏎ putchar(65)` | A | CompileError@L1 | complex Constant -> same generic 'unsupported constant' fallback. |
 | `ast_type_alias` | `type IntList = int ⏎ putchar(65)` | A | CompileError@L1 | PEP 695 'type' statement (3.12+) -> TypeAlias node has no _stmt_ handler -> generic 'unsupported statement' (skipped automatically on int... |
-| `ast_docstring_module` | `"""doc""" ⏎ putchar(65)` | D | OK (编译通过) | Module docstring -> explicitly skipped in compile(). |
-| `ast_docstring_func` | `def f(): ⏎     '''doc''' ⏎     return 1 ⏎ putchar(f())` | D | OK (编译通过) | Function-level bare string Expr -> _stmt_Expr's Constant branch is a no-op, same as CPython (docstring, no side effect). |
-| `ast_bare_int_stmt` | `5 ⏎ putchar(65)` | D | OK (编译通过) | Bare int literal statement -> _stmt_Expr's Constant branch, no-op, matches CPython (expression statement evaluated and discarded). |
-| `ast_bare_name_stmt` | `x = 5 ⏎ x ⏎ putchar(65)` | D | OK (编译通过) | Bare Name expression statement -> lower(Name) returns the name, no code emitted, discarded; matches CPython's no-op semantics for a defin... |
-| `sem_undefined_var_read_toplevel` | `putchar(never_assigned)` | B | OK (编译通过) | lower(Name) only calls check_var_name (identifier *shape* validation); it never checks the name is actually bound anywhere -- same root c... |
-| `sem_undefined_var_read_func` | `def foo(): ⏎     return undefined_var ⏎ putchar(foo())` | B | OK (编译通过) | Same missing check as above, but py2c ITSELF silently accepts this (compile_python_to_c returns C source with no CompileError -- see actu... |
-| `sem_stray_return_toplevel` | `return 5 ⏎ putchar(65)` | C | OK (编译通过) | 'return' outside a function is a SyntaxError in real CPython (raised by the bytecode compiler, not by ast.parse -- ast.parse('return 5') ... |
-| `sem_unbound_augassign` | `x += 1 ⏎ putchar(x)` | C | OK (编译通过) | _stmt_AugAssign never checks that the target was previously bound -- _bind_target just declares it. Real CPython: NameError: name 'x' is ... |
-| `sem_bare_annassign_then_read` | `x: int ⏎ putchar(x)` | C | OK (编译通过) | Bare annotation (`x: int`, no value) only *declares intent* in real Python -- it does not bind x. _stmt_AnnAssign's `node.value is None` ... |
+| `ast_docstring_module` | `"""doc""" ⏎ putchar(65)` | D | OK (compiled) | Module docstring -> explicitly skipped in compile(). |
+| `ast_docstring_func` | `def f(): ⏎     '''doc''' ⏎     return 1 ⏎ putchar(f())` | D | OK (compiled) | Function-level bare string Expr -> _stmt_Expr's Constant branch is a no-op, same as CPython (docstring, no side effect). |
+| `ast_bare_int_stmt` | `5 ⏎ putchar(65)` | D | OK (compiled) | Bare int literal statement -> _stmt_Expr's Constant branch, no-op, matches CPython (expression statement evaluated and discarded). |
+| `ast_bare_name_stmt` | `x = 5 ⏎ x ⏎ putchar(65)` | D | OK (compiled) | Bare Name expression statement -> lower(Name) returns the name, no code emitted, discarded; matches CPython's no-op semantics for a defin... |
+| `sem_undefined_var_read_toplevel` | `putchar(never_assigned)` | B | OK (compiled) | lower(Name) only calls check_var_name (identifier *shape* validation); it never checks the name is actually bound anywhere -- same root c... |
+| `sem_undefined_var_read_func` | `def foo(): ⏎     return undefined_var ⏎ putchar(foo())` | B | OK (compiled) | Same missing check as above, but py2c ITSELF silently accepts this (compile_python_to_c returns C source with no CompileError -- see actu... |
+| `sem_stray_return_toplevel` | `return 5 ⏎ putchar(65)` | C | OK (compiled) | 'return' outside a function is a SyntaxError in real CPython (raised by the bytecode compiler, not by ast.parse -- ast.parse('return 5') ... |
+| `sem_unbound_augassign` | `x += 1 ⏎ putchar(x)` | C | OK (compiled) | _stmt_AugAssign never checks that the target was previously bound -- _bind_target just declares it. Real CPython: NameError: name 'x' is ... |
+| `sem_bare_annassign_then_read` | `x: int ⏎ putchar(x)` | C | OK (compiled) | Bare annotation (`x: int`, no value) only *declares intent* in real Python -- it does not bind x. _stmt_AnnAssign's `node.value is None` ... |
 | `sem_call_undefined_function` | `putchar(bar(1))` | A | CompileError@L1 | Call to a name not in self.functions -> explicit rejection. |
-| `sem_call_undefined_function_no_call_paren` | `bar ⏎ putchar(65)` | D | OK (编译通过) | Bare Name 'bar' (not a call) -- same as ast_bare_name_stmt: no check, no emitted code, silently a no-op. Included to show the asymmetry: ... |
+| `sem_call_undefined_function_no_call_paren` | `bar ⏎ putchar(65)` | D | OK (compiled) | Bare Name 'bar' (not a call) -- same as ast_bare_name_stmt: no check, no emitted code, silently a no-op. Included to show the asymmetry: ... |
 | `sem_wrong_argcount_too_few` | `def f(a, b): ⏎     return a + b ⏎ putchar(f(1))` | A | CompileError@L3 | Argument count mismatch -> explicit rejection with counts in the message. |
 | `sem_wrong_argcount_too_many` | `def f(a, b): ⏎     return a + b ⏎ putchar(f(1, 2, 3))` | A | CompileError@L3 | Same check, too many. |
 | `sem_duplicate_function` | `def f(): ⏎     return 1 ⏎ def f(): ⏎     return 2 ⏎ putch...` | A | CompileError@L3 | Second registration of the same name -> explicit rejection. |
@@ -483,8 +575,8 @@ C 类缺陷的详细复现与修复建议见同目录 `defects.md`(已在 §2/§
 | `sem_func_named_print_shadow` | `def print(x): ⏎     return x ⏎ putchar(print(65))` | B | CompileError@L3 | Same shadowing defect for 'print' (also not reserved at registration time). |
 | `sem_func_named_ord_shadow` | `def ord(x): ⏎     return x ⏎ putchar(ord(65))` | B | CompileError@L3 | Same shadowing defect for 'ord': the user function registers fine, but every call is intercepted by the builtin ord() dispatch and fails ... |
 | `sem_func_named_chr_shadow` | `def chr(x): ⏎     return x ⏎ putchar(chr(65))` | B | CompileError@L3 | Same shadowing defect for 'chr'. |
-| `sem_func_global_name_collision` | `def foo(): ⏎     return 1 ⏎ foo = 5 ⏎ putchar(foo)` | D | OK (编译通过) | Function 'foo' and a later module-level variable 'foo' are both accepted; empirically verified this is a FALSE ALARM for a defect -- c2mg... |
-| `sem_return_missing_path` | `def f(x): ⏎     if x > 0: ⏎         return 1 ⏎ putchar(f(5))` | D | OK (编译通过) | Function with a conditional return and no fallthrough return -- compiles; C leaves the return value of the fallthrough path unspecified (... |
+| `sem_func_global_name_collision` | `def foo(): ⏎     return 1 ⏎ foo = 5 ⏎ putchar(foo)` | D | OK (compiled) | Function 'foo' and a later module-level variable 'foo' are both accepted; empirically verified this is a FALSE ALARM for a defect -- c2mg... |
+| `sem_return_missing_path` | `def f(x): ⏎     if x > 0: ⏎         return 1 ⏎ putchar(f(5))` | D | OK (compiled) | Function with a conditional return and no fallthrough return -- compiles; C leaves the return value of the fallthrough path unspecified (... |
 | `sem_keyword_arg_call` | `def f(a, b): ⏎     return a + b ⏎ putchar(f(a=1, b=2))` | A | CompileError@L3 | keywords on a user call -> explicit rejection. |
 | `sem_range_zero_args` | `for i in range(): ⏎     putchar(65)` | A | CompileError@L1 | range() arg count check. |
 | `sem_range_four_args` | `for i in range(1, 2, 3, 4): ⏎     putchar(65)` | A | CompileError@L1 | range() arg count check. |
@@ -505,27 +597,27 @@ C 类缺陷的详细复现与修复建议见同目录 `defects.md`(已在 §2/§
 | `sem_true_division_augassign` | `x = 10 ⏎ x /= 2 ⏎ putchar(65)` | A | CompileError@L2 | '/=' -> explicit rejection. |
 | `sem_division_by_zero_const` | `putchar(5 // 0)` | A | CompileError@L1 | Constant-folded division by zero -> explicit rejection (distinct from the runtime zzdiv/zzmod helper, which returns 0 instead of trapping). |
 | `sem_modulo_by_zero_const` | `putchar(5 % 0)` | A | CompileError@L1 | Same for modulo. |
-| `sem_global_outside_function` | `global x ⏎ x = 1 ⏎ putchar(x)` | D | OK (编译通过) | 'global' at true module level: CPython treats this as a syntactically legal (if pointless) no-op, not a SyntaxError -- ast.parse and comp... |
-| `sem_global_shadows_param` | `x = 1 ⏎ def foo(x): ⏎     global x ⏎     return x ⏎ putch...` | C | OK (编译通过) | In real CPython, `global x` naming a parameter is a SyntaxError at compile time ("name 'x' is parameter and global"). py2c's _stmt_Global... |
-| `bnd_mod_minus_1` | `putchar(3486784400)` | D | OK (编译通过) | 3**20 - 1 is the largest representable ring value; folds unchanged. |
-| `bnd_mod_exact` | `x = 3486784401 ⏎ putchar(x % 100 + 30)` | D | OK (编译通过) | 3**20 exactly wraps to 0 under the mod-3**20 fold (v % MOD in _const). |
-| `bnd_mod_plus_1` | `x = 3486784402 ⏎ putchar(x % 100 + 30)` | D | OK (编译通过) | 3**20 + 1 wraps to 1. |
-| `bnd_huge_literal` | `x = 10000000000000000000000000000000000000000000000000000...` | D | OK (编译通过) | A 100-digit literal -- Python ints are bignums so this is just an expensive-looking but correct '% MOD' fold; no overflow anywhere in the... |
-| `bnd_empty_function_body_pass` | `def f(): ⏎     pass ⏎ putchar(f())` | D | OK (编译通过) | Empty body via explicit 'pass'; f() implicitly returns 0 (see sem_return_missing_path note) -- accepted either way. |
-| `bnd_empty_source` | `` | D | OK (编译通过) | Empty file -> module_body is [] -> synthesized main() body becomes [ast.Pass()] (the 'or [ast.Pass()]' fallback) -> compiles to a no-op m... |
-| `bnd_only_comment` | `# just a comment` | D | OK (编译通过) | Comment-only file -> tree.body is empty after parsing -> same Pass-fallback path as bnd_empty_source. |
-| `bnd_only_whitespace` | `` | D | OK (编译通过) | Whitespace-only file -> same as above. |
-| `bnd_only_docstring` | `"""just a docstring, no code"""` | D | OK (编译通过) | Sole statement is the module docstring, explicitly skipped in compile() -> module_body stays empty -> Pass fallback. |
+| `sem_global_outside_function` | `global x ⏎ x = 1 ⏎ putchar(x)` | D | OK (compiled) | 'global' at true module level: CPython treats this as a syntactically legal (if pointless) no-op, not a SyntaxError -- ast.parse and comp... |
+| `sem_global_shadows_param` | `x = 1 ⏎ def foo(x): ⏎     global x ⏎     return x ⏎ putch...` | C | OK (compiled) | In real CPython, `global x` naming a parameter is a SyntaxError at compile time ("name 'x' is parameter and global"). py2c's _stmt_Global... |
+| `bnd_mod_minus_1` | `putchar(3486784400)` | D | OK (compiled) | 3**20 - 1 is the largest representable ring value; folds unchanged. |
+| `bnd_mod_exact` | `x = 3486784401 ⏎ putchar(x % 100 + 30)` | D | OK (compiled) | 3**20 exactly wraps to 0 under the mod-3**20 fold (v % MOD in _const). |
+| `bnd_mod_plus_1` | `x = 3486784402 ⏎ putchar(x % 100 + 30)` | D | OK (compiled) | 3**20 + 1 wraps to 1. |
+| `bnd_huge_literal` | `x = 10000000000000000000000000000000000000000000000000000...` | D | OK (compiled) | A 100-digit literal -- Python ints are bignums so this is just an expensive-looking but correct '% MOD' fold; no overflow anywhere in the... |
+| `bnd_empty_function_body_pass` | `def f(): ⏎     pass ⏎ putchar(f())` | D | OK (compiled) | Empty body via explicit 'pass'; f() implicitly returns 0 (see sem_return_missing_path note) -- accepted either way. |
+| `bnd_empty_source` | `` | D | OK (compiled) | Empty file -> module_body is [] -> synthesized main() body becomes [ast.Pass()] (the 'or [ast.Pass()]' fallback) -> compiles to a no-op m... |
+| `bnd_only_comment` | `# just a comment` | D | OK (compiled) | Comment-only file -> tree.body is empty after parsing -> same Pass-fallback path as bnd_empty_source. |
+| `bnd_only_whitespace` | `` | D | OK (compiled) | Whitespace-only file -> same as above. |
+| `bnd_only_docstring` | `"""just a docstring, no code"""` | D | OK (compiled) | Sole statement is the module docstring, explicitly skipped in compile() -> module_body stays empty -> Pass fallback. |
 | `id_nonascii` | `変数 = 5 ⏎ putchar(変数)` | A | CompileError@L1 | Unicode identifier is valid Python 3 syntax but fails the ascii() check in check_var_name. |
 | `id_leading_underscore` | `_x = 5 ⏎ putchar(_x)` | A | CompileError@L1 | Leading underscore fails name[0].isalpha(). |
 | `id_single_underscore` | `_ = 5 ⏎ putchar(_)` | A | CompileError@L1 | Single underscore, same isalpha() check on the first (only) char. |
 | `id_python_keyword_class` | `class = 5 ⏎ putchar(65)` | A | CompileError@L1 | 'class' is a Python keyword -> SyntaxError at ast.parse, wrapped as a CompileError with 'Python syntax error' message. |
-| `id_print_as_varname` | `print = 5 ⏎ putchar(print)` | D | OK (编译通过) | 'print' is not in C_KEYWORDS -- legal as a plain variable name as long as it's never *called* (calling it hits the builtin dispatch, see ... |
+| `id_print_as_varname` | `print = 5 ⏎ putchar(print)` | D | OK (compiled) | 'print' is not in C_KEYWORDS -- legal as a plain variable name as long as it's never *called* (calling it hits the builtin dispatch, see ... |
 | `id_c_keyword_int` | `int = 5 ⏎ putchar(int)` | A | CompileError@L1 | 'int' is in C_KEYWORDS. |
-| `id_c_keyword_while` | `while_ = 5 ⏎ putchar(while_)` | D | OK (编译通过) | Trailing underscore avoids the exact-match C_KEYWORDS check ('while_' != 'while') -- legal. |
-| `ctrl_chained_comparison` | `x = 5 ⏎ if 0 < x < 10: ⏎     putchar(65)` | D | OK (编译通过) | Chained comparison desugars to (0<x) && (x<10); documented behaviour. |
-| `ctrl_and_or_shortcircuit` | `x = 5 ⏎ if x > 0 and x < 10: ⏎     putchar(65) ⏎ if x < 0...` | D | OK (编译通过) | and/or -> nested if/else short-circuit lowering; documented. |
-| `ctrl_not_operator` | `x = 0 ⏎ if not x: ⏎     putchar(65)` | D | OK (编译通过) | 'not' on a condition -> _materialize_cond handles UnaryOp(Not). |
-| `ctrl_augassign_all_ops` | `x = 10 ⏎ x += 1 ⏎ x -= 1 ⏎ x *= 2 ⏎ x //= 2 ⏎ x %= 3 ⏎ pu...` | D | OK (编译通过) | All five supported augmented-assignment operators on a properly-initialised variable. |
-| `ctrl_multi_target_assign` | `a = b = c = 65 ⏎ putchar(a) ⏎ putchar(b) ⏎ putchar(c)` | D | OK (编译通过) | a = b = c = expr -> computed once into 'a', copied to 'b'/'c'; documented multi-target assignment support. |
+| `id_c_keyword_while` | `while_ = 5 ⏎ putchar(while_)` | D | OK (compiled) | Trailing underscore avoids the exact-match C_KEYWORDS check ('while_' != 'while') -- legal. |
+| `ctrl_chained_comparison` | `x = 5 ⏎ if 0 < x < 10: ⏎     putchar(65)` | D | OK (compiled) | Chained comparison desugars to (0<x) && (x<10); documented behaviour. |
+| `ctrl_and_or_shortcircuit` | `x = 5 ⏎ if x > 0 and x < 10: ⏎     putchar(65) ⏎ if x < 0...` | D | OK (compiled) | and/or -> nested if/else short-circuit lowering; documented. |
+| `ctrl_not_operator` | `x = 0 ⏎ if not x: ⏎     putchar(65)` | D | OK (compiled) | 'not' on a condition -> _materialize_cond handles UnaryOp(Not). |
+| `ctrl_augassign_all_ops` | `x = 10 ⏎ x += 1 ⏎ x -= 1 ⏎ x *= 2 ⏎ x //= 2 ⏎ x %= 3 ⏎ pu...` | D | OK (compiled) | All five supported augmented-assignment operators on a properly-initialised variable. |
+| `ctrl_multi_target_assign` | `a = b = c = 65 ⏎ putchar(a) ⏎ putchar(b) ⏎ putchar(c)` | D | OK (compiled) | a = b = c = expr -> computed once into 'a', copied to 'b'/'c'; documented multi-target assignment support. |
 <!-- AUDIT_TABLE_END -->

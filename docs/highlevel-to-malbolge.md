@@ -1,217 +1,166 @@
-# 高级语言 → Malbolge 可行性调研
+# High-Level Language → Malbolge Feasibility Study
 
-> 调研"把高级语言(如 Python)编译到 HeLL/Malbolge"的已有工作与落地路线。
-> 2026-07-20。结论:可行,且名古屋大学已有先例栈可复用,推荐目标为 Malbolge20。
+> [中文](highlevel-to-malbolge.zh.md) | **English**
 
-## 1. 已有工作全景(按抽象层)
+> A survey of prior work and a practical path for compiling a high-level language (e.g. Python) to HeLL/Malbolge.
+> 2026-07-20. Conclusion: feasible, and Nagoya University already has a prior-art stack that can be reused; the recommended target is Malbolge20.
 
-### 名古屋大学栈(目标:Malbolge20,MIT 许可)
+## 1. Landscape of Prior Work (by Abstraction Layer)
 
-Iizawa 2005 年 99-bottles 论文的后继工作,持续到 2017 年,是**唯一做到
-"C 风格语言 → Malbolge"的公开工作**:
+### The Nagoya University Stack (Target: Malbolge20, MIT License)
 
-| 层 | 语言/工具 | 状态 |
+Follow-on work to Iizawa's 2005 99-bottles paper, continuing through 2017, this is **the only public work that achieves "C-style language → Malbolge"**:
+
+| Layer | Language/Tool | Status |
 |---|---|---|
-| C 子集(含递归调用) | `highlevel`(C 子集 → 伪指令) | **源码公开,MIT**(2026-07 经 GitLab API 发现的未链接仓库,见 §1.1);能力超出 2017 论文:+/-、全部比较、布尔、++/--、+=/-=、递归、数组;缺乘除 |
-| 伪指令语言(.mg) | `ternary`(伪指令 → LAL 翻译器) | **源码公开,MIT**;支持 DEF/CALL/RETURN、IF/ELSE、SWITCH/CASE、REPEAT/BREAK/INF、GOTO、VAR、数组(IND_OPR)、INPUT/OUTPUT |
-| LAL(低级汇编,.mc) | `lowass`(LAL → Malbolge20) | **源码公开,MIT**(perl 两阶段 + C++ init) |
-| Malbolge20 运行时 | 参考解释器(C,分块懒初始化) | **源码公开,MIT**;pyMalbolge 已对齐并通过 conformance(hello20.mb) |
+| C subset (with recursive calls) | `highlevel` (C subset → pseudo-instructions) | **Source public, MIT** (an unlinked repo discovered via the GitLab API in 2026-07, see §1.1); capabilities exceed the 2017 paper: +/-, all comparisons, booleans, ++/--, +=/-=, recursion, arrays; multiplication/division still missing |
+| Pseudo-instruction language (.mg) | `ternary` (pseudo-instructions → LAL translator) | **Source public, MIT**; supports DEF/CALL/RETURN, IF/ELSE, SWITCH/CASE, REPEAT/BREAK/INF, GOTO, VAR, arrays (IND_OPR), INPUT/OUTPUT |
+| LAL (low-level assembly, .mc) | `lowass` (LAL → Malbolge20) | **Source public, MIT** (Perl two-pass + C++ init) |
+| Malbolge20 runtime | reference interpreter (C, chunked lazy initialization) | **Source public, MIT**; pyMalbolge has been aligned with it and passes conformance (hello20.mb) |
 
-仓库:`git.trs.css.i.nagoya-u.ac.jp/malbolge/{highlevel,highlevel-examples,ternary,lowass,malbolge20-interpreter}`
-(本地克隆在 `ref/nagoya-*/`,已 gitignore)。
+Repositories: `git.trs.css.i.nagoya-u.ac.jp/malbolge/{highlevel,highlevel-examples,ternary,lowass,malbolge20-interpreter}`
+(local clones live under `ref/nagoya-*/`, gitignored).
 
-### 1.1 修正与后续调查结论(2026-07-20)
+### 1.1 Correction and Follow-Up Findings (2026-07-20)
 
-- **C 前端源码其实是公开的**:GitLab group `malbolge` 下共 5 个仓库,其中
-  `highlevel`(C 子集 → .mg)与 `highlevel-examples` 未被项目主页链接,
-  仅能通过 GitLab API 发现。本文此前"前端源码未公开"的结论作废。
-- `highlevel` 在 2017 论文之后继续演进:减法、全套比较运算符、布尔运算、
-  复合赋值均已实现(论文"今後の課題"被部分做掉),2018-03 岩金(Iwagane)
-  加入数组实现(无对应论文)。仅乘法/除法仍缺。
-- **端到端实证**:`highlevel-examples/while.c`(while + 比较 + ++)经
-  highlevel → ternary → lowass 编译为 5.8MB 的 .mb,pyMalbolge 3.6 秒输出
-  `abcde`,与参考 C 解释器逐字节一致——四级管线今天即可用。
-- 研究线活跃度:代码活动止于 2021-01,论文止于 2017-08,主页长期
-  "under construction";酒井本人仍活跃但研究方向已转移。判定为休眠,
-  无接棒团队。
-项目页:https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/
-(2010–2017 年间有约 8 篇 IEICE 技术报告,日文,PDF 可下载)。
+- **The C front end's source is in fact public**: the GitLab group `malbolge` holds 5 repositories in total; `highlevel` (C subset → .mg) and `highlevel-examples` are not linked from the project homepage and can only be discovered via the GitLab API. This document's earlier conclusion that "the front-end source is not public" is retracted.
+- `highlevel` kept evolving after the 2017 paper: subtraction, the full set of comparison operators, boolean operations, and compound assignment are all implemented (partially clearing the paper's "今後の課題" / future-work section); in 2018-03 Iwagane (岩金) added array support (with no accompanying paper). Only multiplication/division are still missing.
+- **End-to-end verification**: `highlevel-examples/while.c` (while + comparison + ++) compiles through highlevel → ternary → lowass into a 5.8MB .mb; pyMalbolge outputs `abcde` in 3.6 seconds, byte-exact with the reference C interpreter — the four-stage pipeline is usable today.
+- Research-line activity: code activity stops in 2021-01, papers stop in 2017-08, and the homepage has long read "under construction"; Sakai (酒井) himself is still active but has moved to other research directions. Judged dormant, with no team carrying it forward.
+Project page: https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/
+(roughly 8 IEICE technical reports between 2010–2017, in Japanese, PDFs downloadable).
 
-### HeLL/LMAO 谱系(目标:原版 Malbolge + Unshackled,GPL-3)
+### The HeLL/LMAO Lineage (Target: Original Malbolge + Unshackled, GPL-3)
 
-- HeLL + LMAO(原版)、LMFAO(Unshackled):汇编器层,无高级语言前端。
-- MalbolgeLISP(Kamila Szewczyk,2020-21):350MB 的 LISP 解释器,**手写**
-  HeLL 方言(密码分析式方法),不是编译器产物。
-- 详见 `docs/hell-spec.md`、`docs/lmao-internals.md`、`docs/hell-assembler-design.md`。
+- HeLL + LMAO (original), LMFAO (Unshackled): assembler-level tooling, no high-level language front end.
+- MalbolgeLISP (Kamila Szewczyk, 2020-21): a 350MB LISP interpreter, **hand-written** in a HeLL dialect (a cryptanalysis-style method), not the output of a compiler.
+- See `docs/hell-spec.md`, `docs/lmao-internals.md`, `docs/hell-assembler-design.md` for details.
 
-### 结论修正
+### Revised Conclusion
 
-此前判断"高级语言前端是空白"不准确:名古屋做过 C 子集编译器。真正的空白是:
-**(a)** C 前端源码未公开(只有论文);**(b)** 没有任何 Python 前端;
-**(c)** 名古屋栈缺少现代、活跃的运行时配套——这恰是 pyMalbolge 的位置。
+The earlier judgment that "the high-level-language front end is a blank spot" was inaccurate: Nagoya did build a C-subset compiler. The real gaps are: **(a)** the C front end's source was not public (only the paper was); **(b)** there is no Python front end at all; **(c)** the Nagoya stack lacks a modern, actively maintained runtime — which is exactly where pyMalbolge fits.
 
-## 2. 本次实证(pyMalbolge 已可作为名古屋栈的运行时)
+## 2. This Round's Verification (pyMalbolge Can Now Serve as the Nagoya Stack's Runtime)
 
-- `hello20.mb`(名古屋 LAL 工具链产物)在 pyMalbolge 上运行:输出
-  `HelloWorld`,46,417 步,0.6 秒,与参考 C 解释器一致(commit 57b7f10)。
-- 为此修正了两处与参考实现的偏差:EOF 时 A=59049(非 3^20-1);
-  SparseMemory 改为参考实现同款的分块懒初始化(逐 trit 种子跳跃表,
-  我们从 crazy 表独立推导的跳跃表与其硬编码 num0/num1 表完全一致)。
+- `hello20.mb` (an artifact of the Nagoya LAL toolchain) runs on pyMalbolge: it outputs `HelloWorld` in 46,417 steps and 0.6 seconds, matching the reference C interpreter (commit 57b7f10).
+- Two deviations from the reference implementation were fixed along the way: A=59049 on EOF (not 3^20-1); SparseMemory was changed to the same chunked lazy-initialization scheme as the reference implementation (a per-trit seed jump table — the jump table we derived independently from the crazy table matches its hard-coded num0/num1 tables exactly).
 
-## 3. 可行性判断
+## 3. Feasibility Assessment
 
-- **原版 Malbolge(59049 格)不适合作编译目标**:实测 LMAO 的 adder
-  示例(仅十进制加法)已占 55.7K 格 ≈ 94% 内存。只够文本生成器玩。
-- **Malbolge20 是正确的目标**:地址空间 3^20,名古屋栈证明了 C 子集
-  (含递归)可编译落地;pyMalbolge 现在能跑其产物。
-- **"真 Python"不可行,Python 子集可行**:对象/闭包/异常/bignum 超出
-  合理工程量;整数变量、while/if、函数(递归)、一维数组、字符 I/O
-  与伪指令层能力一一对应。
-- **许可干净**:名古屋三仓库全部 MIT,无 LMAO 的 GPL 传染问题。
+- **Original Malbolge (59,049 cells) is not a suitable compilation target**: measured, LMAO's adder example (decimal addition only) already occupies 55.7K cells ≈ 94% of memory. It's only good enough for toy text generators.
+- **Malbolge20 is the right target**: with a 3^20 address space, the Nagoya stack proves that a C subset (with recursion) can be compiled and deployed; pyMalbolge can now run its output.
+- **"Real Python" is infeasible, but a Python subset is feasible**: objects/closures/exceptions/bignums are beyond reasonable engineering effort; integer variables, while/if, functions (recursion), one-dimensional arrays, and character I/O map one-to-one onto the pseudo-instruction layer's capabilities.
+- **License is clean**: all three Nagoya repositories are MIT, with none of LMAO's GPL-contagion concerns.
 
-## 4. 推荐路线
+## 4. Recommended Path
 
 ```
-Python 子集 (.py)
-   │  ← 我们要写的唯一新组件(纯 Python)
+Python subset (.py)
+   │  ← the only new component we need to write (pure Python)
    ▼
-伪指令语言 (.mg)
-   │  ternary(现成,MIT;后续可 Python 化)
+Pseudo-instruction language (.mg)
+   │  ternary (off-the-shelf, MIT; can be Pythonized later)
    ▼
 LAL (.mc)
-   │  lowass(现成,MIT;后续可 Python 化)
+   │  lowass (off-the-shelf, MIT; can be Pythonized later)
    ▼
 Malbolge20 (.mb)
-   │  pyMalbolge(已就绪)
+   │  pyMalbolge (already ready)
    ▼
-运行 / 调试(TUI debugger 支持 --variant=malbolge20)
+Run / debug (TUI debugger supports --variant=malbolge20)
 ```
 
-### 里程碑
+### Milestones
 
-- **P1 管线打通**:构建 ternary + lowass,跑通 `.mg → .mc → .mb → pyMalbolge`,
-  样例进 `test/fixtures/`(伪指令层 conformance)。
-- **P2 语言学习 + 前端**:精读 ternary 的语法文件与 2016/2017 论文(日文,
-  需翻译),定义 Python 子集,写 `python → .mg` 编译器。
-- **P3 端到端**:hello / 循环 / 递归 fib 从 Python 源码编译到 Malbolge20
-  并在测试套里运行验证。
-- **P4 全栈 Python 化(已完成)**:highlevel/ternary/lowass 三级全部
-  移植为纯 Python(`malbolge/compiler/{c2mg,mg2mc,mc2mb}.py`),与
-  C/C++/Perl 原版逐字节(或行为)对拍验收;`compile_python_to_mb()`
-  一个调用走完全链,无外部构建依赖,全链确定性。ref/ 工具降级为
-  conformance 测试专用。详见 `docs/findings.md` B6。
+- **P1 Get the pipeline working**: build ternary + lowass, get `.mg → .mc → .mb → pyMalbolge` running end to end, and land examples in `test/fixtures/` (pseudo-instruction-layer conformance).
+- **P2 Learn the language + build the front end**: study ternary's grammar files and the 2016/2017 papers closely (Japanese, needs translation), define the Python subset, write the `python → .mg` compiler.
+- **P3 End to end**: compile hello / loops / recursive fib from Python source to Malbolge20 and verify by running them in the test suite.
+- **P4 Full pure-Python toolchain (complete)**: all three of highlevel/ternary/lowass ported to pure Python (`malbolge/compiler/{c2mg,mg2mc,mc2mb}.py`), verified against the C/C++/Perl originals via byte-exact (or behavioral) differential comparison; `compile_python_to_mb()` runs the entire chain in a single call, with no external build dependency and full determinism end to end. The `ref/` tools are downgraded to conformance-testing use only. See `docs/findings.md` B6 for details.
 
-### 与 HeLL 汇编器计划的关系
+### Relationship to the HeLL Assembler Plan
 
-`docs/hell-assembler-design.md` 的 LMAO 移植计划**保留但降级为备选**
-(服务于原版 Malbolge 的研究价值);主线转向名古屋栈,理由:目标
-(Malbolge20)内存充裕、许可干净、高层组件现成、且 pyMalbolge 在该
-生态里有明确的独特定位(唯一的现代运行时 + 调试器)。
+The LMAO porting plan in `docs/hell-assembler-design.md` **is retained but downgraded to a backup option** (serving original Malbolge's research value); the main line shifts to the Nagoya stack, for these reasons: the target (Malbolge20) has ample memory, a clean license, ready-made high-level components, and pyMalbolge has a clear, unique position in that ecosystem (the only modern runtime + debugger).
 
-## 5. Python 前端(已实现 v1)
+## 5. Python Front End (v1 Implemented)
 
-`malbolge/compiler/` 实现了本路线的最后一块:**Python 子集 → 名古屋高层
-C 子集**的转译器。P4 之后,下游三级也全部是本包内的纯 Python 移植
-(与参考实现逐字节对拍验收,见 `docs/findings.md` B6),完整管线
-自包含、确定性、无外部依赖:
+`malbolge/compiler/` implements the last piece of this path: a transpiler from the **Python subset → the Nagoya high-level C subset**. After P4, the three downstream stages are also all pure-Python ports within this package (verified against the reference implementation via byte-exact differential comparison, see `docs/findings.md` B6); the complete pipeline is self-contained, deterministic, and free of external dependencies:
 
 ```
-Python 子集 (.py)
-   │  py2c.py(标准库 ast)
-   ▼
-名古屋高层 C 子集 (.c)
-   │  c2mg.py(highlevel 的纯 Python 移植)
-   ▼
-伪指令 (.mg)
-   │  mg2mc.py(ternary 移植)
+Python subset (.py)
+   │  py2c.py (stdlib ast)                     ┐
+   ▼                                           │ py2mg.py (direct backend,
+Nagoya high-level C subset (.c)                │ skips the C layer, see §5.1)
+   │  c2mg.py (pure-Python port of highlevel)  │
+   ▼                                           ┘
+Pseudo-instructions (.mg) ◄────────────────────┘
+   │  mg2mc.py (ternary port)
    ▼
 LAL (.mc)
-   │  mc2mb.py(lowass 移植,确定性 padding)
+   │  mc2mb.py (lowass port, deterministic padding)
    ▼
-Malbolge20 (.mb) → pyMalbolge 运行 / 调试
+Malbolge20 (.mb) → run / debug with pyMalbolge
 ```
 
-### 用法
+### Usage
 
 ```bash
-# 只转译成 C(默认输出到 stdout;--emit-mg/--emit-mc 可导出中间层)
+# Transpile to C only (defaults to stdout; --emit-mg/--emit-mc can export intermediate layers)
 python3 -m malbolge compile prog.py --emit-c prog.c
 
-# 完整管线生成可运行的 .mb(纯 Python,无需 ref/ 工具)
+# Full pipeline producing a runnable .mb (pure Python, no ref/ tools needed)
 python3 -m malbolge compile prog.py -o prog.mb
 python3 -m malbolge --variant=malbolge20 prog.mb
+
+# Direct backend: skips the C layer, output is typically 46-75% smaller, natively supports double recursion
+python3 -m malbolge compile prog.py --backend=direct -o prog.mb
 ```
 
 ```python
-from malbolge.compiler import compile_python_to_c
+from malbolge.compiler import compile_python_to_c, compile_python_to_mb
 c_source = compile_python_to_c("putchar(72)\nputchar(105)\n")
+mb = compile_python_to_mb(source, backend="direct")   # direct backend
 ```
 
-### 支持的 Python 子集
+### 5.1 Direct Backend (py2mg, v0 Implemented)
 
-- 整数变量、赋值、`a = b = expr` 多目标赋值;增强赋值 `+= -= *= //= %=`。
-- `if / elif / else`;`while`(含 `while x:` 真值判断);
-  `for i in range(n) / range(a,b) / range(a,b,step)`(step 为正整数字面量,
-  desugar 成 while)。
-- 函数 `def`(位置参数、`return`、递归);`global` 声明写全局变量。
-- 算术 `+ - * // %`;比较 `== != < > <= >=`(含链式 `a < b < c`);
-  布尔 `and / or / not`(短路)。
-- 内建:`putchar(x)`、`getchar()`、`ord('c')`(编译期折叠)。
-- 常量表达式在编译期按 mod 3^20 折叠(如 `9 * 7 + 2` → `65`)。
+`py2mg.py` generates `.mg` directly from the Python AST, reusing c2mg's already-validated code-generation primitives, but swaps out the stack-frame strategy: each function's temporaries are declared inside its own `DEF`, real recursion-cycle detection is performed (c2mg treats all recursion as worst-case), and only temporaries that survive across a call are protected. As a result, **double recursion `fib(n-1) + fib(n-2)` is correct by construction** — it eliminates upstream bug A2 at the root, rather than sidestepping it via three-address form. On programs with control flow/functions, the output is 46-75% smaller than the `c` backend, and never larger. See `docs/py2mg-backend.md` for the design document; the two backends' language subsets are strictly identical, and e2e testing does a byte-exact differential comparison of program output.
 
-### 明确的能力边界(友好报错,带行号与源码片段)
+### Supported Python Subset
 
-- **无负数**:一元负号 / 负字面量拒绝(值环 mod 3^20 无负数,`3 - 5` 折叠
-  成大正数,`x < 0` 恒假)。
-- **无真除法**:`/` 与 `/=` 拒绝,提示改用 `//`。
-- **无 break / continue**(目标 C 子集没有;需改写循环条件)。
-- 不支持:`chr`、`print`、字符串 / f-string、浮点、列表 / 字典 / 集合、
-  类、`import`、`lambda`、推导式、嵌套函数、tuple 解包赋值、关键字实参。
-- 标识符须以字母开头且非 ASCII 会拒绝;`zz` 前缀保留给编译器内部;
-  与 C 关键字(`int`/`while`/`main`/`putchar`/…)同名的变量拒绝;函数名
-  在后端会被转大写,同名(忽略大小写)冲突会拒绝。
+- Integer variables, assignment, multi-target assignment `a = b = expr`; augmented assignment `+= -= *= //= %=`.
+- `if / elif / else`; `while` (including truthiness testing `while x:`); `for i in range(n) / range(a,b) / range(a,b,step)` (step must be a positive integer literal, desugared to while).
+- Function `def` (positional parameters, `return`, recursion, mutual recursion); `global` declares a write to a global variable.
+- `break` / `continue` (flag lowering: each loop level gets a `skip`/`brk` flag pair, statements are guarded by `if(skip==0)`, nested loops don't interfere with each other, and a for loop's step still executes on `continue`).
+- Conditional expression `a if c else b` (lowered to a temporary + a real if/else, lazily: only the selected branch's side effects occur).
+- Arithmetic `+ - * // %`; comparisons `== != < > <= >=` (including chained `a < b < c`); booleans `and / or / not` (short-circuiting).
+- Builtins: `putchar(x)`, `getchar()`, `ord('c')` (constant-folded at compile time); `print()` — arguments must be compile-time constants (string literals, foldable integer expressions, f-strings whose every part is constant; `sep=`/`end=` must be constant strings), lowered to a chain of putchar calls.
+- Constant expressions are folded at compile time mod 3^20 (e.g. `9 * 7 + 2` → `65`).
+- Docstrings are tolerated (only as the **first** statement of a module / function body).
 
-### 实现要点(为何这样设计)
+### Explicit Capability Boundaries (friendly errors, with line numbers and source snippets)
 
-后端 C 子集有几个经实测确认的坑,转译器据此规避:
+- **No negative numbers**: unary minus / negative literals are rejected (the value ring mod 3^20 has no negatives; `3 - 5` folds to a large positive number, and `x < 0` is always false).
+- **No true division**: `/` and `/=` are rejected, with a hint to use `//` instead.
+- **`print()` only accepts constants**: arguments whose value is only known at runtime (variables, function return values) are always rejected, with the error pointing to `putchar`; integers are rendered as decimal using their folded mod-3^20 value.
+- Not supported: `chr`, runtime strings / f-strings, floats, lists / dicts / sets, classes, `import`, `lambda`, comprehensions, nested functions, tuple-unpacking assignment, keyword arguments.
+- Identifiers must start with a letter, and non-ASCII identifiers are rejected; the `zz` prefix is reserved for compiler internals; variables sharing a name with a C keyword (`int`/`while`/`main`/`putchar`/…) are rejected; function names get upper-cased in the backend, and same-name (case-insensitive) collisions are rejected.
 
-- **无运算符优先级**:`a < b && c` 会解析成 `a < (b && c)`。因此所有表达式
-  一律降为三地址式(每条语句至多一个二元运算,操作数是裸变量或字面量)。
-- **`bool` / `true` / `false` 损坏**:内部常量与 `TRUE_VAL/FALSE_VAL` 同值
-  且被登记为 `INT`,常量缓存按值命名,导致布尔字面量类型错乱、向 bool
-  变量赋值报 "Type mismatch"。因此**从不发射 `bool`/`true`/`false`**,布尔
-  值一律用 `int` 0/1 经控制流物化(`flag = 0; if(cond){ flag = 1; }`,
-  再 `while(flag != 0)` / `if(flag != 0)`)。
-- **无 `* / %` 运算符**:按需注入 C 子集库函数 `zzmul`(倍增 double-and-add,
-  约 32 次加法)、`zzdiv` / `zzmod`(长除),仅在真正用到时发射;除零返回 0
-  以避免死循环。这些库函数的算法已用纯 Python 移植做穷举回归验证
-  (见 `test/test_py2c.py::TestHelperAlgorithms`)。
-- **标识符须字母开头**、**局部声明须在语句之前**、**声明只能用字面量初始化**:
-  故所有局部 / 临时变量提前声明,初始化全部用运行期赋值;模块级变量声明成
-  顶层全局(便于函数读取),其初值在生成的 `main()` 里赋。
+### Implementation Notes (Why It's Designed This Way)
 
-### 测试
+The backend C subset has several confirmed pitfalls (found through testing); the transpiler is designed around them:
 
-- `test/test_py2c.py`:纯转译单测(不依赖 ref 工具)——发射结构、常量折叠、
-  临时变量展开、库函数注入、报错用例、库函数算法回归。
-- `test/test_py2c_e2e.py`:两层,均在 ref 工具缺失时自动 skip——
-  parser 接受层(生成的 C 通过 `ref/nagoya-highlevel/parser`)与全管线端到端
-  层(Python → `.mb` 后运行并断言输出)。端到端断言优先用 **C 参考解释器**
-  (`ref/nagoya-malbolge20-interpreter/malbolge20`,比 pyMalbolge 快 15–100 倍),
-  并在 hi / echo 两个小用例上额外用 pyMalbolge 交叉验证输出一致。
+- **No operator precedence**: `a < b && c` parses as `a < (b && c)`. So every expression is unconditionally lowered to three-address form (each statement has at most one binary operation, with operands that are bare variables or literals).
+- **`bool` / `true` / `false` are broken**: internal constants have the same value as `TRUE_VAL`/`FALSE_VAL` and are registered as `INT`; the constant cache is named by value, which causes boolean literals to get the wrong type and assigning to a bool variable to raise "Type mismatch". So the transpiler **never emits `bool`/`true`/`false`**; booleans are always materialized as `int` 0/1 through control flow (`flag = 0; if(cond){ flag = 1; }`, then `while(flag != 0)` / `if(flag != 0)`).
+- **No `* / %` operators**: the C-subset library functions `zzmul` (double-and-add, ~32 additions), `zzdiv` / `zzmod` (long division) are injected on demand and emitted only when actually used; division by zero returns 0 to avoid infinite loops. These library functions' algorithms have been exhaustively regression-tested via a pure-Python port (see `test/test_py2c.py::TestHelperAlgorithms`).
+- **Identifiers must start with a letter**, **local declarations must precede statements**, and **declarations can only be initialized with literals**: so all local / temporary variables are declared up front, with all initialization done via runtime assignment; module-level variables are declared as top-level globals (so functions can read them), with their initial values assigned inside the generated `main()`.
 
-### 已知取舍
+### Tests
 
-- 运行时 `zzmul` / `zzdiv` / `zzmod` 正确但在 Malbolge20 上代价高(单个乘法
-  的 `.mb` 可达 ~100MB、运行数分钟)。**能编译期折叠的常量乘除模不产生运行时
-  开销**;因此 e2e 的乘法用例走常量折叠,运行时库函数的正确性由上述纯 Python
-  穷举回归保证。含用户函数的程序在该工具链里体积明显放大(单函数即可达
-  ~50MB)。
-- **上游递归代码生成 bug 及本前端如何规避**:手写 C 里同一表达式**内联两次
-  递归 CALL**(经典 `return fib(n-1) + fib(n-2)`)时,highlevel 生成的代码从
-  fib(4) 起结果错误(fib(4) 得 2 应为 3;第二次 CALL 未保住栈上第一次的中间
-  结果);pyMalbolge 与官方 C 参考解释器结果一致,确认是**上游编译器**问题。
-  **本前端不受影响**:由于"无运算符优先级"本就要求把每个表达式降为三地址式,
-  转译器绝不生成内联的双 CALL,而是发射 `t0 = f(a); t1 = f(b); r = t0 + t1;`。
-  实测(C 参考解释器)该形式结果**正确**:Python 经典双递归 `fib(n-1)+fib(n-2)`
-  编译后 fib(4)=3、fib(5)=5 均正确。即三地址拆分顺带绕开了上游这个 bug。
+- `test/test_py2c.py`: pure transpilation unit tests (no dependency on ref tools) — emission structure, constant folding, temporary-variable expansion, library-function injection, error cases, library-function algorithm regression.
+- `test/test_py2c_e2e.py`: two layers, both auto-skipped when the ref tools are absent — a parser-acceptance layer (the generated C passes `ref/nagoya-highlevel/parser`) and a full-pipeline end-to-end layer (Python → `.mb`, then run and assert on the output). End-to-end assertions prefer the **C reference interpreter** (`ref/nagoya-malbolge20-interpreter/malbolge20`, 15-100x faster than pyMalbolge), with pyMalbolge additionally cross-checked for matching output on two small cases, hi / echo.
+
+### Known Trade-offs
+
+- The runtime `zzmul` / `zzdiv` / `zzmod` are correct but expensive on Malbolge20 (a single multiplication's `.mb` can reach ~100MB and take minutes to run). **Constants that fold at compile time incur no runtime cost for multiplication/division/modulo**; so the e2e multiplication test cases go through constant folding, with the runtime library functions' correctness guaranteed by the pure-Python exhaustive regression described above. Programs with user-defined functions blow up noticeably in size on this toolchain (a single function alone can reach ~50MB).
+- **An upstream recursive-code-generation bug, and how this front end sidesteps it**: when hand-written C **inlines two recursive CALLs in the same expression** (the classic `return fib(n-1) + fib(n-2)`), the code highlevel generates gives wrong results starting at fib(4) (fib(4) comes out 2 instead of 3; the second CALL fails to preserve the first call's intermediate result on the stack); pyMalbolge agrees with the official C reference interpreter, confirming this is an **upstream compiler** bug. **This front end is unaffected**: since "no operator precedence" already requires lowering every expression to three-address form, the transpiler never generates an inlined double CALL — it emits `t0 = f(a); t1 = f(b); r = t0 + t1;` instead. Testing (with the C reference interpreter) confirms this form gives **correct** results: the classic Python double recursion `fib(n-1)+fib(n-2)` compiles to fib(4)=3, fib(5)=5, both correct. In other words, the three-address decomposition happens to sidestep this upstream bug as a side effect. **The direct backend (§5.1) doesn't produce this bug in the first place**: it does its own recursion-cycle detection and cross-call liveness protection, and doesn't rely on the accidental sidestep from three-address form.
+- **Size**: programs with user-defined functions blow up noticeably on the `c` backend; switching to `--backend=direct` is typically 46-75% smaller. See `docs/findings.md` §I for the `.mb`-size cost model and optimization investigation.

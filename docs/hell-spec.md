@@ -1,72 +1,74 @@
-# HeLL 语言规格(基于 LMAO v0.6.0 逆向整理)
+# HeLL Language Specification (Reverse-Engineered from LMAO v0.6.0)
 
-> 本文档依据 `ref/LMAO/src/lmao.l`、`lmao.y`、`label.c`、`prefix.c`、`xlat.c`、
-> `layout.c`、`initialize.c`、`malbolge.h/.c` 及 LMAO README 逐行核对整理,
-> 并与 `test/fixtures/hell/` 六个示例逐条对照。
-> 作为 pyMalbolge 的 Python 版 HeLL 汇编器的实现依据。
-> 整理日期:2026-07-20;LMAO 版本:v0.6.0(commit 3ea747e)。
+> [中文](hell-spec.zh.md) | **English**
+
+> This document was compiled by cross-checking `ref/LMAO/src/lmao.l`, `lmao.y`, `label.c`, `prefix.c`, `xlat.c`,
+> `layout.c`, `initialize.c`, `malbolge.h/.c`, and the LMAO README line by line,
+> and by comparing it point-by-point against the six examples under `test/fixtures/hell/`.
+> It serves as the implementation reference for pyMalbolge's Python HeLL assembler.
+> Compiled: 2026-07-20; LMAO version: v0.6.0 (commit 3ea747e).
 
 ---
 
-## 一、词法(来自 `lmao.l`)
+## I. Lexical Analysis (from `lmao.l`)
 
-### 1.1 空白与注释
+### 1.1 Whitespace and Comments
 
-- 空白:`[ \t\r]`,以及裸换行 `\n`;两者都会把内部标志 `require_whitespace` 清零(见 1.4)。
-- 注释(会被整段丢弃,不产生 token):
-  - 行注释:`;`、`%`、`#`、`//` 开头到行尾;
-  - 块注释:`/*...*/`,允许块内出现单独的 `*` 或 `/`,只要不是紧邻的 `*/` 就不会提前结束。
+- Whitespace: `[ \t\r]`, plus a bare newline `\n`; both clear the internal `require_whitespace` flag (see 1.4).
+- Comments (discarded entirely, produce no token):
+  - Line comments: start with `;`, `%`, `#`, or `//` and run to end of line;
+  - Block comments: `/*...*/`; a lone `*` or `/` may appear inside, as long as it is not immediately followed by `*/` it does not end early.
 
-### 1.2 块分隔(EMPTYLINE 的三种来源)
+### 1.2 Block Separation (Three Sources of EMPTYLINE)
 
-- **空行**:"换行—可选空白—再换行"。连续空行只产生一个 `EMPTYLINE`,且只有在**不处于花括号内**时才产生;花括号内的空行被静默丢弃。
-- **`{`**:置位 suppress 标志并返回 `EMPTYLINE`;花括号已打开时再遇 `{` 报错。
-- **`}`**:清除 suppress 标志并返回 `EMPTYLINE`;无对应 `{` 时报错。
-- **关键事实**:`{`、`}`、空行三者在语法层面都归约成**同一个 EMPTYLINE token**,花括号只是空行的"显式拼写"。`}{` 连写 = 结束上一块并立即开启下一块(等价于中间一个空行)。
-- 文件末尾若仍在花括号内(未闭合)是致命错误。
+- **Blank line**: "newline — optional whitespace — another newline". Consecutive blank lines produce only a single `EMPTYLINE`, and only when **not inside braces**; blank lines inside braces are silently discarded.
+- **`{`**: sets the suppress flag and returns `EMPTYLINE`; encountering another `{` while braces are already open is an error.
+- **`}`**: clears the suppress flag and returns `EMPTYLINE`; an error if there is no matching `{`.
+- **Key fact**: `{`, `}`, and blank lines all reduce to the **same EMPTYLINE token** at the grammar level — braces are just an "explicit spelling" of a blank line. A `}{` sequence closes the previous block and immediately opens the next one (equivalent to a blank line in between).
+- It is a fatal error if braces are still open (unclosed) at end of file.
 
-### 1.3 段头 `.CODE` / `.DATA`
+### 1.3 Section Headers `.CODE` / `.DATA`
 
-- 段头不能出现在 `{ }` 块内部(报错)。
-- `.DATA` 置位 `in_data_section` 标志,`.CODE` 清零。该标志决定 `/` 的词法归属(见 1.7)。
+- Section headers MUST NOT appear inside a `{ }` block (error).
+- `.DATA` sets the `in_data_section` flag; `.CODE` clears it. This flag determines the lexical role of `/` (see 1.7).
 
-### 1.4 标识符类 token 与"必须有分隔符"规则
+### 1.4 Identifier-class Tokens and the "Separator Required" Rule
 
-- `identifier = [A-Za-z_][0-9A-Za-z_]{0,99}`(最长 100 字符);`label = identifier ':'`。
-- `U_{identifier}` → U_ 前缀 token(值为去前缀后的名字);`R_{identifier}` 同理。
-- **禁止把 Malbolge 命令关键字、`U_...`、`R_...` 用作标签名**(词法级报错)。但 `U_x`、`R_x` 作为普通标识符(非标签定义)允许,专用于 `.DATA` 表达式里的前缀引用。
-- **`require_whitespace` 机制**:字符串、字符字面量、数值常量、`C0/C1/C2/C20/C21/EOF`、`RNop`、命令助记符、前缀标识符、普通标识符这些"类单词"token 匹配成功后置位标志;下一个 token 若同样是"类单词"token 则报错 "Misformed identifier"。即 **`42abc`、`'a'C1`、`InOut` 这类紧贴写法非法**,必须用空白或标点隔开。逗号、花括号、运算符、空白、换行清零该标志;`(` `)` 不清零。
+- `identifier = [A-Za-z_][0-9A-Za-z_]{0,99}` (100 characters max); `label = identifier ':'`.
+- `U_{identifier}` → a U_-prefixed token (value is the name with the prefix stripped); `R_{identifier}` likewise.
+- **Malbolge command keywords, `U_...`, and `R_...` MUST NOT be used as label names** (a lexical-level error). However, `U_x` and `R_x` as plain identifiers (not label definitions) are allowed, dedicated to prefix references inside `.DATA` expressions.
+- **The `require_whitespace` mechanism**: after a "word-like" token — string, character literal, numeric constant, `C0/C1/C2/C20/C21/EOF`, `RNop`, command mnemonic, prefixed identifier, or plain identifier — matches successfully, the flag is set; if the next token is also a "word-like" token, it is an error ("Misformed identifier"). That is, **forms like `42abc`, `'a'C1`, `InOut` written back-to-back are illegal** and must be separated by whitespace or punctuation. Comma, braces, operators, whitespace, and newline clear this flag; `(` and `)` do not.
 
-### 1.5 数值字面量
+### 1.5 Numeric Literals
 
-| 语法 | 值 | 备注 |
+| Syntax | Value | Notes |
 |---|---|---|
-| `0*[0-9]{1,5}` | 十进制,允许前导 0 | > 59048 报错 "Integer too big" |
-| `0t[0-2]{1,10}` | 三进制,最左位最高 | 位数上限 10,天然 ≤ 59048;六个示例中未实际使用 |
-| `'c'` | 单字符 ASCII 值 | 裸字符排除 `'` 与 `\`;转义仅 `\' \n \r \t \\`(**无 `\0`**,`'\0'` 会得到字符 `'0'` 的值) |
-| `C0/C1/C2/C20/C21/EOF` | 0 / 29524 / 59048 / 59046 / 59047 / 59048 | `EOF` 是 `C2` 同义词 |
+| `0*[0-9]{1,5}` | Decimal, leading zeros allowed | > 59048 is an error ("Integer too big") |
+| `0t[0-2]{1,10}` | Ternary, most significant digit first | Up to 10 digits, naturally ≤ 59048; not actually used in the six examples |
+| `'c'` | Single-character ASCII value | A bare character excludes `'` and `\`; the only escapes are `\' \n \r \t \\` (**no `\0`** — `'\0'` yields the value of the character `'0'`) |
+| `C0/C1/C2/C20/C21/EOF` | 0 / 29524 / 59048 / 59046 / 59047 / 59048 | `EOF` is a synonym for `C2` |
 
-### 1.6 字符串字面量
+### 1.6 String Literals
 
-双引号包裹,允许反斜杠转义,不允许裸换行/未转义引号。转义解码在语法动作层(见 3.2),支持 `\n \r \t \\ \0`(**字符串支持 `\0`**,与字符字面量不同)。
+Enclosed in double quotes, backslash escapes allowed; bare newlines and unescaped quotes are not allowed. Escape decoding happens at the grammar-action layer (see 3.2), supporting `\n \r \t \\ \0` (**strings DO support `\0`**, unlike character literals).
 
-### 1.7 特殊符号
+### 1.7 Special Symbols
 
-| 符号 | 语义 |
+| Symbol | Meaning |
 |---|---|
-| `,` | 仅用于 `STRING , Dataexpression`(字符串字符间分隔符) |
-| `{` `}` | 均产生 EMPTYLINE(见 1.2) |
-| `.OFFSET` / `@` | 等价;`@` 不需要空白分隔 |
-| `?` | DONTCARE:占用地址但值不保证 |
-| `?-` | NOTUSED:完全不占地址 |
-| `+ - * / >> << !` | 运算符;**`/` 上下文相关**:`.DATA` 段是除法,`.CODE` 段是 xlat2 循环分隔符 |
-| `( )` | 分组 |
+| `,` | Used only in `STRING , Dataexpression` (separator between string characters) |
+| `{` `}` | Both produce EMPTYLINE (see 1.2) |
+| `.OFFSET` / `@` | Equivalent; `@` does not require a separating whitespace |
+| `?` | DONTCARE: occupies an address but its value is not guaranteed |
+| `?-` | NOTUSED: occupies no address at all |
+| `+ - * / >> << !` | Operators; **`/` is context-dependent**: division in the `.DATA` section, xlat2 cycle separator in the `.CODE` section |
+| `( )` | Grouping |
 
-其余字符 → 词法报错。
+Any other character → lexical error.
 
 ---
 
-## 二、语法(近似 EBNF,依据 `lmao.y`)
+## II. Grammar (Approximate EBNF, based on `lmao.y`)
 
 ```ebnf
 Start            ::= EMPTYLINE* Program
@@ -90,10 +92,10 @@ XlatCycle        ::= COMMAND ( "/" COMMAND )*
 Dataexpressions  ::= ( LABEL | Dataexpression
                      | STRING | STRING "," Dataexpression )*
 
-Dataexpression   ::= Dataexpression (">>"|"<<") Crazied   /* 左结合,优先级最低 */
+Dataexpression   ::= Dataexpression (">>"|"<<") Crazied   /* left-associative, lowest precedence */
                     | Crazied | "?" | "?-"
-Crazied          ::= Crazied "!" Sum | Sum                 /* 左结合 */
-Sum              ::= Sum ("+"|"-") Product | Product       /* 左结合 */
+Crazied          ::= Crazied "!" Sum | Sum                 /* left-associative */
+Sum              ::= Sum ("+"|"-") Product | Product       /* left-associative */
 Product          ::= Product ("*"|"/") Dataatom
                     | Product ("*"|"/") "(" Dataexpression ")"
                     | Dataatom | "(" Dataexpression ")"
@@ -102,102 +104,102 @@ Dataatom         ::= CONSTANT | IDENTIFIER
                     | U_PREFIXED_IDENTIFIER IDENTIFIER     /* U_TARGET ANCHOR */
 ```
 
-**运算符优先级**(从低到高,与常见直觉不同):`>> <<` < `!` < `+ -` < `* /`。
+**Operator precedence** (low to high, counter to common intuition): `>> <<` < `!` < `+ -` < `* /`.
 
-**每个 Dataexpression / Codeexpression(以及字符串展开的每个字符)恰好对应一个连续内存单元**——块内空白分隔的多个表达式依次填入相邻地址。
+**Each Dataexpression / Codeexpression (as well as each character produced by string expansion) corresponds to exactly one consecutive memory cell** — the whitespace-separated expressions within a block are filled into adjacent addresses in order.
 
-**多标签可共享同一单元**(标签别名):`LABEL` 可在表达式序列中反复出现。
+**Multiple labels can share the same cell** (label aliasing): a `LABEL` may appear repeatedly within an expression sequence.
 
-**空块归约为空并被丢弃**,因此 `}{` 连写合法。
+**An empty block reduces to nothing and is discarded**, so a `}{` sequence is legal.
 
 ---
 
-## 三、语义
+## III. Semantics
 
-### 3.1 `.CODE` 段:xlat2 循环与 8 条命令
+### 3.1 `.CODE` Section: xlat2 Cycles and the 8 Commands
 
-| 助记符 | 操作码 | 语义 |
+| Mnemonic | Opcode | Semantics |
 |---|---|---|
-| Nop | 68 | 无操作(所有不落在其余 7 个操作码上的值都是 Nop) |
-| MovD | 40 | `D = [D]`;C、D 自增 |
-| Opr | 62 | `A,[D] = crazy(A,[D])`;C、D 自增 |
-| Jmp | 4 | `C = [D]`;仅 D 自增 |
-| Rot | 39 | `A,[D] = rotate_right([D])`;C、D 自增 |
-| Out | 5 | 输出 `A mod 256`;C、D 自增 |
-| In | 23 | 读一字符到 A;EOF 时 `A = C2`;C、D 自增 |
-| Hlt | 81 | 终止 |
+| Nop | 68 | No-op (every value that does not fall on one of the other 7 opcodes is Nop) |
+| MovD | 40 | `D = [D]`; C and D increment |
+| Opr | 62 | `A,[D] = crazy(A,[D])`; C and D increment |
+| Jmp | 4 | `C = [D]`; only D increments |
+| Rot | 39 | `A,[D] = rotate_right([D])`; C and D increment |
+| Out | 5 | Output `A mod 256`; C and D increment |
+| In | 23 | Read one character into A; on EOF, `A = C2`; C and D increment |
+| Hlt | 81 | Halt |
 
-- **单命令**(如 `Jmp`):仅首次执行保证是该操作码,执行后的自修改结果不做约束,可放在任意合法地址。
-- **xlat2 循环 `Cmd1/.../CmdN`**:该单元连续执行 N 次依次表现出的操作码,循环闭合。合法性静态验证(`xlat.c: is_xlatcycle_existent`):对候选起始字符反复套用 XLAT2 表推导,非 Nop 操作码必须精确匹配,Nop 位置只需"是 Nop"。某些循环组合数学上不存在 → 报错。
-- **`RNop`**:自环 Nop 的语法糖。每个地址 mod 94 都存在至少一个"永远是 Nop"的字符(`xlat.c` 硬编码 94 字符 `immutable_nops` 表),因此 `RNop` 在任意地址都能放置。
-- **位置约束**:起始字符须为可打印 ASCII(33–126)且 `(地址 mod 94 + 字符值) mod 94` ∈ 8 操作码集合。由布局阶段求解。
+- **Single command** (e.g. `Jmp`): only the first execution is guaranteed to be that opcode; the self-modified result after execution is unconstrained and may be placed at any legal address.
+- **xlat2 cycle `Cmd1/.../CmdN`**: the sequence of opcodes the cell exhibits over N consecutive executions, cycling back to the start. Validity is checked statically (`xlat.c: is_xlatcycle_existent`): for a candidate starting character, the XLAT2 table is repeatedly applied; non-Nop opcodes must match exactly, Nop positions only need to "be Nop". Some cycle combinations are mathematically impossible → error.
+- **`RNop`**: syntactic sugar for a self-looping Nop. For every address mod 94, at least one character exists that is "always Nop" (the `xlat.c`-hardcoded 94-character `immutable_nops` table), so `RNop` can be placed at any address.
+- **Placement constraint**: the starting character MUST be printable ASCII (33–126) and satisfy `(address mod 94 + character value) mod 94` ∈ the set of 8 opcodes. Solved by the layout phase.
 
-### 3.2 `.DATA` 段:表达式求值(`initialize.c`)
+### 3.2 `.DATA` Section: Expression Evaluation (`initialize.c`)
 
-- 算术在 **mod 59049** 下进行;负值(减法)回绕至非负。注意 C 源码里用 `%= C2`(59048)而非 `%= 59049` 做溢出削减,仅 `+`/`*` 可能触发——移植时需逐行对照该边界行为。
-- **`/` 是整数除法**;除零在 LMAO 中未检查(UB),Python 实现应显式报错。
-- **`>> <<` 是三进制旋转**(非移位):`>> n` = 右旋 n 位,`<< n` = 右旋 `10-n` 位,由单步 `rotate_right` 复合。**n ≥ 10 时取模 + 警告,不报错**(README 说 0≤n<10,以源码行为为准)。
-- **`!` 是 crazy 运算**(与 `malbolge/core.py` 的 `crazy()` 同表)。
-- **标签引用求值**:
-  - 普通 `LABEL`:目标地址经"减 1、结果为 0 回绕成 C2"调整(适配 Jmp 后 C 自增/MovD 后 D 自增的语义)。
-  - `R_LABEL`:净效果为目标地址本身(不减 1)。约束:目标必须是 `.CODE` 标签,且不能是所在代码块最后一格。
-  - `U_TARGET ANCHOR`:在**同一连续数据块**内从当前格向后找 `ANCHOR`(DATA 标签)得负偏移;`TARGET`(CODE 标签)前须有等量 Nop 前缀链——已有单元必须全是 Nop,若 `TARGET` 是块首则自动合成 RNop 补足;否则报错。
-- **`?`**:占地址,不生成初始化,值不保证。
-- **`?-`**:不占地址;**标签不得指向 `?-`**(LMAO 仅警告 + 未定义行为;Python 实现应直接报错)。
-- **字符串展开**:`"abc"` → `'a' 'b' 'c'` 三个单元;`"abc", SEP` → `'a' SEP 'b' SEP 'c'`(字符间插入,`2n-1` 个单元)。
+- Arithmetic is performed **mod 59049**; negative values (from subtraction) wrap around to non-negative. Note the C source reduces overflow with `%= C2` (59048) rather than `%= 59049` — this fires only for `+`/`*` — so a port must reproduce this boundary behavior line-for-line.
+- **`/` is integer division**; division by zero is unchecked (UB) in LMAO — a Python implementation SHOULD raise an explicit error.
+- **`>> <<` are ternary rotations** (not shifts): `>> n` = rotate right by n digits, `<< n` = rotate right by `10-n` digits, composed from single-step `rotate_right`. **For n ≥ 10, the value is taken mod plus a warning is issued, not an error** (the README states 0≤n<10; source behavior takes precedence).
+- **`!` is the crazy operation** (the same table as `crazy()` in `malbolge/core.py`).
+- **Label reference evaluation**:
+  - Plain `LABEL`: the target address is adjusted by "subtract 1, wrap 0 to C2" (to match the semantics of C incrementing after Jmp / D incrementing after MovD).
+  - `R_LABEL`: the net effect is the target address itself (no subtraction). Constraint: the target MUST be a `.CODE` label, and MUST NOT be the last cell of its code block.
+  - `U_TARGET ANCHOR`: within the **same contiguous data block**, search forward from the current cell for `ANCHOR` (a DATA label) to obtain a negative offset; `TARGET` (a CODE label) MUST be preceded by an equal-length chain of Nop cells — existing cells must all be Nop, and if `TARGET` is at the start of the block, RNop is auto-synthesized to fill the gap; otherwise it is an error.
+- **`?`**: occupies an address, generates no initialization, value not guaranteed.
+- **`?-`**: occupies no address; **a label MUST NOT point at `?-`** (LMAO only warns — undefined behavior; a Python implementation SHOULD raise an error directly).
+- **String expansion**: `"abc"` → three cells `'a' 'b' 'c'`; `"abc", SEP` → `'a' SEP 'b' SEP 'c'` (inserted between characters, `2n-1` cells).
 
-### 3.3 `ENTRY` 标签
+### 3.3 The `ENTRY` Label
 
-`.DATA` 段必须定义 `ENTRY` 标签,否则报错。程序启动时 D 指向 `ENTRY` 单元,C 指向一条 Jmp,A 初值未定义。`ENTRY` 定义在 `.CODE` 段无效(会被当作找不到入口)。
+The `.DATA` section MUST define an `ENTRY` label, or it is an error. At program start, D points at the `ENTRY` cell, C points at a Jmp instruction, and A's initial value is undefined. Defining `ENTRY` in the `.CODE` section has no effect (it will be treated as "entry point not found").
 
 ### 3.4 `.OFFSET` / `@`
 
-把块首单元固定到绝对地址(`[0, C2]`,越界报错)。`.CODE` 块会在目标地址前一格额外预留一个占位(`.DATA` 块无此预留,两者不对称)。`Offset` 与其后的 `LABEL` 之间允许空行(不拆块)。
+Pins a block's first cell to an absolute address (`[0, C2]`, out-of-range is an error). A `.CODE` block reserves one extra placeholder cell immediately before the target address (`.DATA` blocks have no such reservation — the two are asymmetric). A blank line is allowed between `Offset` and the following `LABEL` (it does not split the block).
 
-### 3.5 非法程序判定(错误来源汇总)
+### 3.5 Invalid-Program Determination (Summary of Error Sources)
 
-1. **词法级**:缺分隔符("Misformed identifier")、整数越界、非法标签名、花括号不匹配、段头出现在花括号内、未知字符。
-2. **语法级**:LALR 语法错误。
-3. **语义级**:标签重定义;孤立标签(后无数据/代码字);未定义标签引用;`R_` 用于块尾;`U_` 的 ANCHOR 不在同一数据块 / Nop 链构造失败;缺 `ENTRY`;xlat2 循环不可实现;`.OFFSET` 越界或冲突;布局无解(地址空间放不下)。
+1. **Lexical level**: missing separator ("Misformed identifier"), integer out of range, illegal label name, mismatched braces, section header inside braces, unknown character.
+2. **Grammar level**: LALR syntax error.
+3. **Semantic level**: label redefinition; orphaned label (nothing following with a data/code word); reference to an undefined label; `R_` used at the end of a block; `U_`'s ANCHOR not in the same data block, or Nop-chain construction failure; missing `ENTRY`; xlat2 cycle not realizable; `.OFFSET` out of range or conflicting; layout unsolvable (address space cannot fit).
 
 ---
 
-## 四、示例特性对照表(六个 fixture)
+## IV. Feature-to-Example Cross-Reference Table (Six Fixtures)
 
-| 特性 | 出现位置(文件:行) |
+| Feature | Location (file:line) |
 |---|---|
-| 两段以上 `.DATA`/`.CODE` | hello_world(35/136;32/43 起) |
-| `{ }` / `}{` 连写 | simple_cat:38-57;cat_halt_on_eof:205/221/236/250/268 等 |
-| 行注释 `;` | hello_world:214;digital_root:442-443 |
-| 多别名标签 | hello_world:312;adder:100-101 |
-| 全部 8 助记符 | cat_halt_on_eof、digital_root |
-| 5-循环 / 9-循环 | hello_world:73;hello_world:110/114 |
-| `RNop` | hello_world:111-112/126-129;cat_halt_on_eof:126-127;digital_root:197-198;adder:80-81 |
-| `.OFFSET` 关键字 | cat_halt_on_eof:124 |
-| `@` 简写 | hello_world:121;digital_root:196;adder:79 |
-| 裸十进制常量 | cat_halt_on_eof:434(唯一) |
-| `0t` 三进制 | 无实际使用 |
-| 字符字面量 | simple_hello_world:67-83;digital_root:456/512 |
-| 字符串 + 分隔符 | hello_world:40(唯一) |
+| Two or more `.DATA`/`.CODE` sections | hello_world (35/136; 32/43 onward) |
+| `{ }` / `}{` written back-to-back | simple_cat:38-57; cat_halt_on_eof:205/221/236/250/268 etc. |
+| Line comment `;` | hello_world:214; digital_root:442-443 |
+| Multiple label aliases | hello_world:312; adder:100-101 |
+| All 8 mnemonics | cat_halt_on_eof, digital_root |
+| 5-cycle / 9-cycle | hello_world:73; hello_world:110/114 |
+| `RNop` | hello_world:111-112/126-129; cat_halt_on_eof:126-127; digital_root:197-198; adder:80-81 |
+| `.OFFSET` keyword | cat_halt_on_eof:124 |
+| `@` shorthand | hello_world:121; digital_root:196; adder:79 |
+| Bare decimal constant | cat_halt_on_eof:434 (only occurrence) |
+| `0t` ternary | not actually used |
+| Character literal | simple_hello_world:67-83; digital_root:456/512 |
+| String + separator | hello_world:40 (only occurrence) |
 | `!` crazy | simple_hello_world:68/73 |
-| `<< >>` | simple_hello_world:70/76/78/80;digital_root:456/512;adder:719/981/1075/1078 |
-| `+ - *` | 六个示例均未使用(仅 README) |
-| 括号 | digital_root:456 |
-| `U_` 前缀 | hello_world:147/149/151;cat_halt_on_eof:139/146/148/158/164/168-170;digital_root:211/213/247/252-253/271;adder 多处 |
-| `R_` 前缀 | 全部示例大量使用(adder 214 处) |
+| `<< >>` | simple_hello_world:70/76/78/80; digital_root:456/512; adder:719/981/1075/1078 |
+| `+ - *` | not used in any of the six examples (README only) |
+| Parentheses | digital_root:456 |
+| `U_` prefix | hello_world:147/149/151; cat_halt_on_eof:139/146/148/158/164/168-170; digital_root:211/213/247/252-253/271; adder, many places |
+| `R_` prefix | used extensively across all examples (adder: 214 occurrences) |
 | `?` | cat_halt_on_eof:141/150/160/167 |
-| `?-` | simple_cat:48/52;hello_world:69 等;digital_root:510/513;adder:412/719/1061 |
-| `ENTRY` | 六个文件各一处 |
+| `?-` | simple_cat:48/52; hello_world:69 etc.; digital_root:510/513; adder:412/719/1061 |
+| `ENTRY` | one occurrence in each of the six files |
 
 ---
 
-## 五、Python 实现注意事项
+## V. Notes for the Python Implementation
 
-1. `/` 的词法含义随当前段切换,词法器需带段状态。
-2. `require_whitespace` 分隔规则必须实现,否则与 LMAO 行为不一致。
-3. 运算符优先级 `>> <<` < `!` < `+ -` < `* /`,与直觉相反,勿凭常识排序。
-4. `R_`/`U_` 前缀:不能作标签名,可作表达式引用——定义位置与引用位置两套规则。
-5. `{ }` 与空行统一为同一"块结束"事件处理。
-6. 标签"减一/回绕"、`R_` 不减一、`U_` 的块内向后找 ANCHOR + RNop 链校验/合成,是最易出 bug 的部分,须对照 `prefix.c`/`initialize.c` 原文逐行复刻。
-7. 旋转量越界是"取模 + 警告"而非报错(以源码为准)。
-8. 标签指向 `?-`:LMAO 仅警告(未定义行为),Python 实现改为直接报错(比原版更严格)。
+1. The lexical meaning of `/` switches with the current section; the lexer needs section state.
+2. The `require_whitespace` separator rule MUST be implemented, or behavior will diverge from LMAO.
+3. Operator precedence `>> <<` < `!` < `+ -` < `* /` is counter to intuition — do not order it by common sense.
+4. `R_`/`U_` prefixes: MUST NOT be used as label names, but MAY be used as expression references — two separate rule sets apply at definition sites versus reference sites.
+5. `{ }` and blank lines are handled as the same unified "block end" event.
+6. Label "minus-one/wraparound", `R_` not subtracting one, and `U_`'s within-block backward ANCHOR search plus RNop-chain validation/synthesis are the most bug-prone parts — must be reproduced line-for-line against the `prefix.c`/`initialize.c` source.
+7. Rotation amount out of range is "mod plus warning", not an error (per source behavior).
+8. A label pointing at `?-`: LMAO only warns (undefined behavior); the Python implementation instead raises an error directly (stricter than the original).

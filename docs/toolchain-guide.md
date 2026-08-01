@@ -1,74 +1,79 @@
-# 工具链构建与复现指南
+# Toolchain Build & Reproduction Guide
 
-> **注(P4 之后)**:编译 Python/C/.mg 程序已**不需要**本文档的任何
-> 外部工具——`malbolge/compiler/` 的纯 Python 移植覆盖了全链
-> (`python3 -m malbolge compile prog.py -o prog.mb`)。本文档保留给
-> **conformance 对拍**(与参考实现比对)与上游考古场景。
+> [中文](toolchain-guide.zh.md) | **English**
+
+> **Note (post-P4)**: Compiling Python/C/.mg programs no longer requires
+> any of the external tools described in this document — the pure-Python
+> port in `malbolge/compiler/` covers the whole chain
+> (`python3 -m malbolge compile prog.py -o prog.mb`). This document is kept
+> for **conformance byte-exact differential comparison** (checking against
+> the reference implementations) and upstream-archaeology scenarios.
 >
-> 外部参考工具的获取、构建与使用,含全部已踩过的平台坑
->(macOS/Darwin 实测)。工具本体均在 gitignore 的 `ref/` 下,不入库。
+> Acquisition, build, and usage of the external reference tools, including
+> every platform pitfall we've hit (verified on macOS/Darwin). The tools
+> themselves live under the gitignored `ref/` and are not checked in.
 
-## 1. 获取
+## 1. Acquisition
 
 ```bash
-# 名古屋五仓库(MIT;站点证书链不完整,需跳过验证)
+# The five Nagoya repos (MIT; the site's cert chain is incomplete, so verification must be skipped)
 for r in highlevel highlevel-examples ternary lowass malbolge20-interpreter; do
   GIT_SSL_NO_VERIFY=1 git clone --depth 1 \
     "https://git.trs.css.i.nagoya-u.ac.jp/malbolge/$r" "ref/nagoya-$r"
 done
 
-# LMAO(GPL-3,HeLL → 原版 Malbolge)
+# LMAO (GPL-3, HeLL -> original Malbolge)
 git clone https://github.com/esoteric-programmer/LMAO ref/LMAO
 ```
 
-网页资料同理:`curl -sk https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/`。
+Web resources follow the same pattern: `curl -sk https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/`.
 
-## 2. 构建(macOS 实测)
+## 2. Build (verified on macOS)
 
-| 工具 | 命令 | 坑 |
+| Tool | Command | Pitfall |
 |---|---|---|
-| LMAO | `cd ref/LMAO && PATH="/opt/homebrew/opt/bison/bin:$PATH" make` | 系统 bison 2.3 太旧(不支持 `%define parse.lac`),需 `brew install bison`(3.8,keg-only 不进 PATH) |
-| nagoya-ternary | 同上加 PATH make | 同 bison 问题;大量 POSIX Yacc 警告可忽略 |
-| nagoya-highlevel | 同上加 PATH make | 同上 |
-| nagoya-lowass | `cd ref/nagoya-lowass/init && make` | 无;perl 阶段免构建 |
-| nagoya-malbolge20-interpreter | `make -C ref/nagoya-malbolge20-interpreter` | Makefile 里 `-L/usr/local/opt/llvm/lib` 路径不存在仅告警 |
-| ref/mbi.c(原版参考解释器,仓库自带) | `gcc -O2 ref/mbi.c -o ref/mbi` | 需删除 glibc 专有的 `#include <malloc.h>`(已修,已提交) |
+| LMAO | `cd ref/LMAO && PATH="/opt/homebrew/opt/bison/bin:$PATH" make` | System bison 2.3 is too old (doesn't support `%define parse.lac`); needs `brew install bison` (3.8, keg-only, not on PATH by default) |
+| nagoya-ternary | Same as above — `make` with the PATH prefix | Same bison issue; the many POSIX Yacc warnings can be ignored |
+| nagoya-highlevel | Same as above — `make` with the PATH prefix | Same as above |
+| nagoya-lowass | `cd ref/nagoya-lowass/init && make` | None; the perl stage needs no build |
+| nagoya-malbolge20-interpreter | `make -C ref/nagoya-malbolge20-interpreter` | The `-L/usr/local/opt/llvm/lib` path in the Makefile doesn't exist — just a warning |
+| ref/mbi.c (original-Malbolge reference interpreter, bundled in the repo) | `gcc -O2 ref/mbi.c -o ref/mbi` | Needed removing the glibc-specific `#include <malloc.h>` (already fixed and committed) |
 
-通用平台坑:
-- macOS 无 `timeout` 命令——脚本里用 Python `subprocess.run(..., timeout=)` 包装。
-- LMAO 官方 README 写 `parse_mc.pl`,lowass 实际文件是 `parse_mc2.pl`。
+General platform pitfalls:
+- macOS has no `timeout` command — scripts wrap calls with Python's `subprocess.run(..., timeout=)` instead.
+- The official LMAO README says `parse_mc.pl`, but the actual file in lowass is `parse_mc2.pl`.
 
-## 3. 管线用法
+## 3. Pipeline Usage
 
 ```bash
-# .mg → .mb(推荐入口;固定 seed 与风格,检错见下)
+# .mg -> .mb (recommended entry point; fixed seed and style, error-checking below)
 scripts/mg2mb.sh -s 1 prog.mg prog.mb
 
-# C 子集 → .mg(highlevel;注意它出错也退出 0,必须检查 stderr)
+# C subset -> .mg (highlevel; note it exits 0 even on error — must check stderr)
 ref/nagoya-highlevel/parser prog.c > prog.mg 2>err.txt; [ -s err.txt ] && echo FAILED
 
-# Python 子集 → .mb(本项目前端,内部处理上述检错)
+# Python subset -> .mb (this project's front-end; handles the above error-checking internally)
 python3 -m malbolge compile prog.py -o prog.mb
 
-# 运行与交叉验证
+# Run and cross-validate
 python3 -m malbolge --variant=malbolge20 prog.mb
-ref/nagoya-malbolge20-interpreter/malbolge20 prog.mb   # C 参考,快 15-100x
+ref/nagoya-malbolge20-interpreter/malbolge20 prog.mb   # C reference, 15-100x faster
 
-# HeLL → 原版 Malbolge(LMAO)
+# HeLL -> original Malbolge (LMAO)
 ref/LMAO/lmao program.hell -o program.mal
 python3 -m malbolge program.mal
 ```
 
-## 4. 确定性与可复现
+## 4. Determinism and Reproducibility
 
-- `ternary`:不给 `-s` 会随机化代码风格;固定 `-m -c -s 1`(mg2mb.sh 默认)。
-- `parse_mc2.pl`:Perl 哈希序随机化 → `PERL_HASH_SEED=0`(mg2mb.sh 已做);会在 cwd 落 `info` 副产物(mg2mb.sh 已隔离到临时目录)。
-- `lowass init`:对 padding 单元逐格 `srand(time(NULL))`,.mb **不可字节复现**(不影响行为)。字节稳定的夹具 = 生成一次后入库。
-- `ternary`/`highlevel` 两个 parser **错误时退出码均为 0**,只能靠 stderr 判错。
+- `ternary`: without `-s`, it randomizes code style; pin `-m -c -s 1` (the mg2mb.sh default).
+- `parse_mc2.pl`: Perl hash-order randomization -> `PERL_HASH_SEED=0` (already handled by mg2mb.sh); it drops an `info` byproduct in the cwd (mg2mb.sh already isolates this to a temp directory).
+- `lowass init`: calls `srand(time(NULL))` per padding cell, so the .mb is **not byte-reproducible** (behavior is unaffected). Byte-stable fixtures = generate once and check them in.
+- Both the `ternary` and `highlevel` parsers **exit 0 even on error** — the only way to detect failure is checking stderr.
 
-## 5. 验证惯例
+## 5. Verification Conventions
 
-- 双解释器逐字节对拍(pyMalbolge vs 参考 C 解释器)是所有 fixture 的准入标准。
-- 批量验证用 C 参考(快),pyMalbolge 抽样交叉。
-- 运行时库自检:`python3 runtime/mg/tests/run.py`(19 项;`--py` 同时跑 pyMalbolge)。
-- 全量测试:`python3 -m unittest discover test/`(不依赖 ref/ 工具,fixtures 已入库;e2e 测试在工具缺失时自动 skip)。
+- Byte-exact differential comparison between the two interpreters (pyMalbolge vs. the reference C interpreter) is the admission bar for every fixture.
+- Bulk verification uses the C reference (fast); pyMalbolge cross-checks a sample.
+- Runtime library self-test: `python3 runtime/mg/tests/run.py` (19 checks; `--py` also runs pyMalbolge).
+- Full test suite: `python3 -m unittest discover test/` (doesn't depend on the ref/ tools — fixtures are checked in; e2e tests auto-skip when tools are missing).
