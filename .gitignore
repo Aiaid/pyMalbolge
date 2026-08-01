@@ -23,6 +23,10 @@ foo.c
 # Research notes kept in a private companion repository
 docs/research/
 
+# Claude Code per-developer state (settings.json is the shared one)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
 # Reference tools (built locally, not tracked)
 ref/LMAO/
 ref/LMAO-out/
