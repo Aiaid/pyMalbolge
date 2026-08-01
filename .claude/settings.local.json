@@ -26,7 +26,8 @@
       "WebFetch(domain:www.trs.cm.is.nagoya-u.ac.jp)",
       "WebFetch(domain:pypi.org)",
       "WebFetch(domain:lutter.cc)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(git filter-repo:*)"
     ]
   }
 }
