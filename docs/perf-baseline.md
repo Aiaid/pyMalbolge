@@ -26,10 +26,11 @@
 | hello20.mb | 188,207 B | 46,417 | 0.8885 s |
 | mg_e_call.mb | 799,471 B | not counted separately, larger order of magnitude | 1.1992 s |
 
-Compared against the hello20 "0.6 s" recorded in `docs/findings.md` §C: this
-subprocess run's overall time is 0.89 s; the difference is mainly the Python
-3.14 interpreter's own startup + import overhead (this measurement times the
-whole subprocess, whereas findings.md doesn't specify its measurement method)
+Compared against the hello20 "0.6 s" recorded in the internal research log
+(private, not in this repo), §C: this subprocess run's overall time is 0.89 s;
+the difference is mainly the Python 3.14 interpreter's own startup + import
+overhead (this measurement times the whole subprocess, whereas that log
+doesn't specify its measurement method)
 — the order of magnitude matches and there is no regression.
 
 ## 2. Interpreter cProfile profiling (in-process call to `malbolge20.eval()`, excludes subprocess/CLI overhead)
@@ -102,8 +103,9 @@ H1, and deserves to be tracked as its own item.
 
 **Power-law fit** (log-log least-squares fit of `.mb` size vs. time):
 exponent ≈ **1.36** (≈1.50 computed directly from the first and last points).
-In other words, the "near-linear, ~40s/MB" description in `docs/findings.md`
-§C **needs correction** — time grows noticeably faster than linearly (size
+In other words, the "near-linear, ~40s/MB" description in the internal
+research log (private, not in this repo), §C, **needs correction** — time
+grows noticeably faster than linearly (size
 4.54× → time 9.68×). Extrapolating with O(n^1.36), for a 20 MB end-to-end
 smoke-test case (15.5 minutes), each doubling of size costs about ×2.6 in
 time rather than ×2, and the underestimate gets worse at larger scale.
@@ -211,7 +213,7 @@ optimization and any mypyc/Cython investment.
 
 ---
 
-## Draft entries proposed for findings.md (findings.md not edited; for review and manual merge)
+## Draft entries proposed for the internal research log (private, not in this repo; that log is not edited here — for review and manual merge)
 
 **§C addendum/correction** (the existing sentence "pure-Python assembly
 (mc2mb) time... near-linear with `.mb` size, ~40s/MB" needs correction):
@@ -249,5 +251,5 @@ H1/H7, or merge directly into H7 and rewrite):
 > compute individual cells on demand, avoiding whole-block pre-materialization.
 
 *(The two entries above are draft text; whether and how to merge them into
-findings.md is left to manual review — this report itself does not modify
-findings.md.)*
+the internal research log is left to manual review — this report itself does
+not modify that log.)*

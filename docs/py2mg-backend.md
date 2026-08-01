@@ -11,7 +11,8 @@
 
 The existing pipeline is two stages: Python --`py2c`--> Nagoya C subset --`c2mg`--> `.mg`. The C
 layer exists to reuse the Nagoya reference compiler, but it imposes a batch of overhead that
-**exists only to work around defects in the C subset** (see `docs/findings.md`):
+**exists only to work around defects in the C subset** (see the internal research log, private,
+not in this repo):
 
 - **Three-address expansion**: because the C subset has no operator-precedence handling of its own
   and the upstream bool type is broken, py2c splits every expression into three-address form and
@@ -162,8 +163,9 @@ falsely rejected.
 evaluates naturally nested — the return value of `fib(n-1)` is held in temp `t`, and `_live` keeps
 `t` live while evaluating `fib(n-2)`, so the second `CALL FIB` site registers `t` into `FIB`'s
 cross-call protection set. Running the direct-backend output for `fib(5)` produces output `A`
-(fib(5)=5, +60), matching expectations — double recursion is correct. Compare
-`docs/findings.md` §A2: the hand-written C inline double recursion was mistranslated upstream
+(fib(5)=5, +60), matching expectations — double recursion is correct. Compare the internal
+research log (private, not in this repo), §A2: the hand-written C inline double recursion was
+mistranslated upstream
 (fib(4)=2), whereas the direct backend eliminates this bug at the mechanism level, with no
 dependence on py2c's three-address guard.
 

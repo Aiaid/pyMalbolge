@@ -198,14 +198,13 @@ Output is fully deterministic (unlike the upstream toolchain's
 
 ## Documentation
 
-Design notes, reverse-engineered language specs and the research log live in
+Design notes and reverse-engineered language specs live in
 [`docs/`](docs/README.md). Every document is available in both English
 (`<name>.md`) and Chinese (`<name>.zh.md`). Highlights:
 
 - [docs/python-subset-spec.md](docs/python-subset-spec.md) — normative spec for the accepted Python subset
 - [docs/py2mg-backend.md](docs/py2mg-backend.md) — design of the direct `py → .mg` backend
 - [docs/mg-spec.md](docs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered
-- [docs/findings.md](docs/findings.md) — research findings and contribution log
 
 ## Malbolge Variants
 

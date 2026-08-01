@@ -107,7 +107,7 @@ python3 -m build
 ### Completed
 - [x] Support Malbolge20
 - [x] Add debug mode (CLI + TUI)
-- [x] Python -> Malbolge20 compiler: pure-Python toolchain ports (c2mg/mg2mc/mc2mb) + py2c front-end + py2mg direct backend (see `docs/findings.md` B5/B6/B8)
+- [x] Python -> Malbolge20 compiler: pure-Python toolchain ports (c2mg/mg2mc/mc2mb) + py2c front-end + py2mg direct backend (see `docs/research/findings.md` B5/B6/B8 — private, not in the public repo)
 
 ### Pending: Malbolge Unshackled
 
@@ -137,7 +137,7 @@ Malbolge Unshackled is a Turing-complete variant with unbounded memory. Implemen
 ### Pending: Compiler v2
 
 - Signed integers, decimal `print()`/`input()`, `break`/`continue`
-- Arrays/strings via `IND_OPR` (design: `docs/iwagane-arrays.md`)
+- Arrays/strings via `IND_OPR` (design: `docs/research/iwagane-arrays.md` — private, not in the public repo)
 - (Original-Malbolge generator via LMAO port remains shelved — GPL question, see `docs/hell-assembler-design.md` §6)
 
 ## References

@@ -24,14 +24,15 @@ the original for the reverse-engineering notes.
 | [lmao-internals.md](lmao-internals.md) | Analysis of the LMAO assembler's internal algorithms (layout, bootstrap generation) |
 | [hell-assembler-design.md](hell-assembler-design.md) | Design for a Python HeLL assembler (shelved fallback route; §6 covers the GPL question) |
 
-## Research and background
+## Reference toolchain
 
 | Document | Contents |
 |---|---|
-| [findings.md](findings.md) | **Research findings and contribution log** (paper material, continuously updated): upstream discoveries, this project's contributions, quantitative data, theoretical derivations, bug reproductions, improvement backlog, licensing |
-| [malbolge-landscape.md](malbolge-landscape.md) | Ecosystem survey: historical timeline, tool lineage (generators / HeLL-LMAO / Nagoya), full list of Nagoya papers, survey methodology |
-| [iwagane-arrays.md](iwagane-arrays.md) | Dissection of the unpublished 2018 Nagoya array implementation: `IND_OPR` front-end sugar, stride-2 constraint, `LOADI`/`STOREI` design recommendation |
 | [toolchain-guide.md](toolchain-guide.md) | Building and reproducing the external reference toolchain (platform pitfalls, determinism, verification conventions) |
+
+Some research notes (the findings log, the Nagoya array dissection and the
+ecosystem survey) are kept in a private companion repository and are not part
+of this repo. Other documents here occasionally cite them by entry number.
 
 Runtime library docs are in [`runtime/mg/README.md`](../runtime/mg/README.md);
 test fixture provenance is documented in `test/fixtures/hell/README.md` and

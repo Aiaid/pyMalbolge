@@ -264,7 +264,7 @@ produces a misleading error that has nothing to do with the name collision.
 | D2 | Negative numbers | Supported | Unary minus and negative literals are **statically rejected**; there is no legal route to producing a negative value | Design divergence (documented) |
 | D3 | `/` vs `//`/`%` | `/` is true division returning a float; `//`/`%` use floor semantics for negatives | Only `//`/`%` exist, performing long division on non-negative integers; `/` is rejected outright | Design divergence (documented) |
 | D4 | `bool` type | A distinct type; `True`/`False` are singletons | `bool`/`true`/`false` are never emitted (the downstream type system is known to be broken); boolean literals fold to `1`/`0`; the results of comparisons and boolean operations exist only in "materialised into an int variable" form and cannot be used as a standalone type | Design divergence (works around a downstream bug, documented) |
-| D5 | `getchar`/`putchar` and EOF | No corresponding built-ins; requires `sys.stdin`/`sys.stdout` | `getchar()` reads one character encoding, `putchar(x)` writes one character according to the encoding of `x`; **the EOF return value is not specified at the py2c level** — `getchar()` merely emits a call to the downstream `getchar()` C function, and the concrete EOF semantics are decided by the runtime (Malbolge20 reference implementation: `A=59049`, see `docs/findings.md` B1); py2c itself performs no EOF-related conversion or validation | Design divergence + documentation gap (the v1 documentation does not mention the EOF value, see the TODO in the "Version notes" section) |
+| D5 | `getchar`/`putchar` and EOF | No corresponding built-ins; requires `sys.stdin`/`sys.stdout` | `getchar()` reads one character encoding, `putchar(x)` writes one character according to the encoding of `x`; **the EOF return value is not specified at the py2c level** — `getchar()` merely emits a call to the downstream `getchar()` C function, and the concrete EOF semantics are decided by the runtime (Malbolge20 reference implementation: `A=59049`, per the internal research log — private, not in this repo — B1); py2c itself performs no EOF-related conversion or validation | Design divergence + documentation gap (the v1 documentation does not mention the EOF value, see the TODO in the "Version notes" section) |
 | D6 | Reading an unbound variable (function scope) | `NameError`/`UnboundLocalError` (at runtime) | **Fixed (2026-07-22)**: the `Name` (Load) branch of `lower(Name)` now queries a "definitely assigned" set advanced in actual compilation order (`self.bound`; reads inside functions additionally admit any name already assigned at module level, see `_is_bound`); on a miss it raises `CompileError` ("name {!r} is used before it is assigned") with the accurate original Python line number and the identifier spelled exactly as the user wrote it — see `defects.md` B1/B2 (fixed) | Fixed (2026-07-22, formerly a class-B defect) |
 | D7 | Reading an unbound variable (module scope) | Same as above | **Fixed (2026-07-22)**: same mechanism as D6; inside the synthesized `main()` there is no fallback admission of "names already assigned at module level" (because `main()` *is* the sequential execution of module-level code), so the check is strictly in declaration order | Fixed (2026-07-22, formerly a class-B defect) |
 | D8 | Augmented-assignment target MUST be bound | `x += 1` with `x` undefined is a `NameError` | **Fixed (2026-07-22)**: `_stmt_AugAssign` queries the "definitely assigned" set before generating `x += ...;` and rejects an unbound target (see `defects.md` C3, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
@@ -406,8 +406,9 @@ into real assertions that act as a regression lock.
   7. the docstring position rule (module/function body first statement only, see
      the D16 tightening in §2).
   This batch is **pure front-end expansion**; no new runtime primitive was
-  added. The `py2mg` side is additionally constrained by `docs/findings.md` A3
-  (branch-free flag accumulation + single-SWITCH pattern).
+  added. The `py2mg` side is additionally constrained by the SWITCH
+  self-modification trap recorded in the internal research log (private, not in
+  this repo), A3: flags must use branch-free accumulation plus a single SWITCH.
 
 ### v2 planned items (**reserved fields** — none of the capabilities below are
 currently in the accepted set; any input attempting to use them **MUST continue
@@ -426,7 +427,8 @@ the same change counts as introducing a new class-C defect.)
 - **Arrays / runtime strings**: `Subscript`/`Slice` and string **variables** are
   all still rejected (§1.4, §1.5; string **literals** were opened up in print/ord
   position by batch 1); the dissection of the array mechanism and the
-  LOADI/STOREI design proposal are in `docs/iwagane-arrays.md`.
+  LOADI/STOREI design proposal are in the internal Nagoya array dissection
+  notes (private, not in this repo).
 - Whenever an item in this list moves from "reserved, MUST be rejected" to
   "implemented, part of the accepted set", the same change MUST: update the
   corresponding subsection of §1 in this document, add or remove the
@@ -449,8 +451,8 @@ were "silently accepted but semantically suspect" were additionally fed to
 pyMalbolge, and diffed against the result of executing an equivalent or
 near-equivalent source directly with CPython `exec()`, in order to establish
 whether a behavioural fork really exists (methodology reference: the lesson of
-`docs/findings.md` A4 — you cannot draw a conclusion merely because an
-intermediate artifact "looks suspicious").
+the internal research log (private, not in this repo), A4 — you cannot draw a
+conclusion merely because an intermediate artifact "looks suspicious").
 
 Classification: A = correctly rejected; B = rejected but with poor quality (see
 requirements 4/5 of the §3 contract); C = silently accepted but semantically

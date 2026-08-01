@@ -101,7 +101,7 @@ Malbolge20 (.mb)
   移植为纯 Python(`malbolge/compiler/{c2mg,mg2mc,mc2mb}.py`),与
   C/C++/Perl 原版逐字节(或行为)对拍验收;`compile_python_to_mb()`
   一个调用走完全链,无外部构建依赖,全链确定性。ref/ 工具降级为
-  conformance 测试专用。详见 `docs/findings.zh.md` B6。
+  conformance 测试专用。详见内部研究日志(private,非本仓库)B6 条。
 
 ### 与 HeLL 汇编器计划的关系
 
@@ -114,7 +114,7 @@ Malbolge20 (.mb)
 
 `malbolge/compiler/` 实现了本路线的最后一块:**Python 子集 → 名古屋高层
 C 子集**的转译器。P4 之后,下游三级也全部是本包内的纯 Python 移植
-(与参考实现逐字节对拍验收,见 `docs/findings.zh.md` B6),完整管线
+(与参考实现逐字节对拍验收,见内部研究日志(private,非本仓库)B6 条),完整管线
 自包含、确定性、无外部依赖:
 
 ```
@@ -242,4 +242,5 @@ mb = compile_python_to_mb(source, backend="direct")   # 直连后端
   **直连后端(§5.1)则从根上不产生这个 bug**:它自己做递归环检测与跨调用
   存活量保护,不依赖三地址式的偶然规避。
 - **体积**:含用户函数的程序在 `c` 后端明显放大,改用 `--backend=direct`
-  通常小 46-75%。`.mb` 体积的成本模型与优化调查见 `docs/findings.zh.md` §I。
+  通常小 46-75%。`.mb` 体积的成本模型与优化调查见内部研究日志
+  (private,非本仓库)§I 节。
