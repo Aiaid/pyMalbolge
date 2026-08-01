@@ -192,6 +192,44 @@ and the sparse memory materializes blocks lazily as it goes.
 Practically: small programs are fine, and anything with real recursion is a
 patience exercise. Both are expected.
 
+### Against the reference toolchain
+
+Compiling the same `print("Hello, world!")` — identical C input, identical
+`.mg` and `.mc` intermediates — through the Nagoya tools and through this port:
+
+| Stage | Nagoya (C++ / bison / Perl) | pyMalbolge (pure Python) |
+|---|---|---|
+| C subset → `.mg` | 0.028 s | <0.001 s |
+| `.mg` → `.mc` | 0.030 s | 0.003 s |
+| `.mc` → `.mb` | 3.49 s | 1.72 s |
+| **Total** | **3.55 s** | **1.72 s** |
+
+The Python port is about **2x faster end to end**, which is not a statement
+about Python. Assembly dominates the pipeline, and its inner address search is
+memoized here and is not upstream — the same change that took this stage from
+roughly 40 s/MB to 0.5 s/MB. Everything else is fast enough that the language
+gap never shows up.
+
+Both toolchains emit **exactly 3,467,473 bytes**. About 69% of those bytes
+differ, and all of them are padding: cells the program never executes, which
+upstream fills from `srand(time(NULL))` and this port fills deterministically.
+The two binaries behave identically, and each one runs correctly on the other
+project's interpreter.
+
+Where the reference implementation does win decisively is execution. On the
+same `.mb`:
+
+| Interpreter | Time |
+|---|---|
+| Nagoya reference (C) | 0.16 s |
+| pyMalbolge (CPython) | 3.07 s |
+
+That is a **19x gap**, and it is the honest reason the end-to-end tests reach
+for `ref/nagoya-malbolge20-interpreter` when it is available. If you are
+running large compiled programs rather than debugging them, use the C
+interpreter; if you want breakpoints, step-back and a memory view, use this
+one.
+
 ## Running Malbolge programs
 
 ```bash
