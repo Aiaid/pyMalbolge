@@ -1,0 +1,26 @@
+# baseline vs option-one, raw flag-event streams, window around the divergence
+# columns: index | baseline (unit, decoded_v, step) | option-one (unit, decoded_v, step)
+
+ 6921 | FLAG_JMP                40    6544153 | FLAG_JMP                40    6536077
+ 6922 | ROT                     39    6544156 | ROT                     39    6536080
+ 6923 | FLAG_REV_OPR_ROT        36    6544158 | FLAG_REV_OPR_ROT        36    6536082
+ 6924 | SKIP                     4    6544163 | SKIP                     4    6536087
+ 6925 | FLAG9                   40    6544165 | FLAG9                   40    6536089
+ 6926 | FLAG_JMP                40    6544168 | FLAG_JMP                40    6536092
+ 6927 | OPR                     62    6544172 | OPR                     62    6536096
+ 6928 | FLAG_REV_OPR_ROT        40    6544174 | FLAG_REV_OPR_ROT        40    6536098
+ 6929 | FLAG3                   36    6544179 | FLAG3                   36    6536103
+ 6930 | FLAG6                   44    6544184 | FLAG6                   44    6536108
+ 6931 | FLAG10                  40    6544189 | FLAG10                  44    6536113  <== DIVERGES
+ 6932 | FLAG_JMP                40    6544192 | FLAG16                  44    6536118  <== DIVERGES
+ 6933 | ROT                     39    6544195 | FLAG23                  44    6536123  <== DIVERGES
+ 6934 | FLAG_REV_OPR_ROT        36    6544197 | FLAG49                  44    6536128  <== DIVERGES
+ 6935 | SKIP                     4    6544202 | FLAG51                  36    6536133  <== DIVERGES
+ 6936 | FLAG2                   44    6544204 | FLAG140                 36    6536138  <== DIVERGES
+ 6937 | FLAG5                   36    6544209 | FLAG142                 36    6536143  <== DIVERGES
+ 6938 | FLAG11                  40    6544214 | FLAG161                 44    6536148  <== DIVERGES
+ 6939 | FLAG_JMP                40    6544217 | FLAG168                 36    6536153  <== DIVERGES
+ 6940 | REPEAT0_COUNTER0        44    6544219 | FLAG172                 44    6536158  <== DIVERGES
+
+# baseline total events: 85817 (run completes)
+# option-one total events: 6976 (run dies 45 events after the divergence)

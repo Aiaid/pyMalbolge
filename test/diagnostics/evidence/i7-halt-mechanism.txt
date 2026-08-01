@@ -1,0 +1,49 @@
+# How the I7 defect kills a program, via write_trace.culprit
+#
+# Programs: test/fixtures/opt/d1_fails.py (fails) and d2_passes.py (passes),
+# both built with the shipped assembler. Captured 2026-08-01.
+# d1 is the cheapest known instance: 53 MB, dies at 4.77M steps.
+
+=== d1_fails.py -- 53,433,455 B
+regions:  data module / bootstrap @0
+          direct units            @53,432,796
+          routines                @53,433,549
+          indirect units          @53,443,230
+
+halt:     reason 'illegal' at step 4,769,021, address 4,769,119
+          -> inside the data module / bootstrap region
+
+writes that ever hit cell 4,769,119:  exactly one
+          step 4,698,238   pc 4,698,336   wrote 0
+
+=== d2_passes.py -- 53,442,761 B  (the same program, one more constant)
+halt:     reason 'end' at step 13,533,119, address 53,442,103 -- normal exit
+writes that ever hit that cell: none
+
+--- reading -------------------------------------------------------------
+
+Note that pc - step == 98 for both the write (4,698,336 - 4,698,238) and the
+halt (4,769,119 - 4,769,021). During bootstrap C advances by one per step, so
+a constant offset means both events happen inside the same linear march
+through the bootstrap stream. The writer and the victim are 70,783 cells
+apart in that stream.
+
+So: the bootstrap performs a forward write of 0 into a cell 70,783 positions
+ahead of itself, and 70,783 steps later walks onto that cell. 0 is outside
+33..126, no instruction decodes from it, and the machine halts having emitted
+nothing.
+
+This is NOT the I2 death mechanism. There (see i2-death-mechanism.txt) the
+halt cell was untouched at run time and had held a constant since bootstrap --
+a wild jump into data. Here a run-time write genuinely corrupts the
+instruction stream, which is the class of failure I3 described before its
+falsification was retracted. I3's mechanism story may therefore have been
+pointing at something real; what was wrong was attributing it to option two,
+which had not been compared against a baseline.
+
+--- what this does NOT establish ---------------------------------------
+
+Whether cell 4,769,119 was legal code before the write. If the bootstrap was
+supposed to branch away before reaching it, the 0 is incidental and the defect
+is in control flow rather than in the write. Distinguishing these needs the
+cell's value history, not just its writers -- the natural next instrument.

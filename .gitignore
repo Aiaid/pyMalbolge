@@ -13,12 +13,14 @@ pyenv/
 .venv/
 venv/
 
-# Scratch compiler in/out
-foo.py
-foo.mb
-foo.mg
-foo.mc
-foo.c
+# Scratch compiler in/out. Anchored to the repo root: unanchored patterns match
+# at any depth, which silently excluded test/fixtures/opt/foo.mc -- a fixture
+# most of the layout tests read.
+/foo.py
+/foo.mb
+/foo.mg
+/foo.mc
+/foo.c
 
 # Research notes kept in a private companion repository
 docs/research/

@@ -1,0 +1,31 @@
+# How the option-one build actually dies (finding I2), via write_trace.culprit
+#
+# Program: test/fixtures/opt/f1_recursion.py, option one applied to FLAG10 only.
+# Captured 2026-08-01 on the rebuilt tooling.
+
+report:
+  reason      illegal
+  steps       6,351,178
+  output      '' (baseline prints 'A')
+  halt addr   54            -- data module / bootstrap region, unmapped
+
+writes that ever hit cell 54:
+  step 491    pc 589    wrote 40
+  step 493    pc 591    wrote 1743392160
+  step 617    pc 715    wrote 3486784329
+
+Reading: nothing corrupted this cell at run time. All three writes happen
+during early bootstrap (steps 491-617), and the last one leaves it holding
+3486784329 -- a 20-trit constant, far outside the 33..126 range any
+instruction decodes from. Cell 54 was never code; it is data, and it still
+holds exactly what bootstrap put there.
+
+So the option-one death is a *wild jump into the data module*, not a
+self-modification that ate its own code. The flag misread at event 6885
+(see i2-flag-divergence.txt) sends return dispatch to a target that was never
+a call site, and the machine walks into constants and halts.
+
+This is worth keeping distinct from finding I3, whose failure mode is the
+opposite: there a cell that *was* code gets overwritten during execution. Two
+different mechanisms, two different transforms -- which is what makes them
+independent falsifications rather than one bug seen twice.
