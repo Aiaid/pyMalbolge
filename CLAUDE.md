@@ -12,6 +12,12 @@ Supports multiple variants:
 
 ## Commands
 
+**Run everything through `uv`.** The dev environment lives in `.venv`
+(`uv venv --python 3.14 && uv pip install -e ".[dev]"`); `pytest` is not
+installed in the system interpreter, so a bare `python3 -m pytest` fails.
+Prefix commands with `uv run` — the `python3 -m malbolge ...` forms below are
+what an end user types after installing the package.
+
 ### Run interpreter on a file
 ```bash
 # Original Malbolge
@@ -57,16 +63,18 @@ Subset spec: `docs/python-subset-spec.md`. Direct-backend design: `docs/py2mg-ba
 
 ### Run tests
 ```bash
-python3 -m pytest test/
-# Parallel (~2.6x faster, needs pytest-xdist: pip install -e .[dev]):
-python3 -m pytest test/ -n auto
-# Or with unittest:
-python3 -m unittest discover -v test/
+uv run --no-sync pytest test/ -n auto     # ~6 min (parallel, via pytest-xdist)
+uv run --no-sync pytest test/             # serial
+uv run --no-sync pytest test/test_mg2mc.py -q          # single module
+MALBOLGE_SLOW_TESTS=1 uv run --no-sync pytest test/    # + the gated slow cases
 ```
+462 pass / 5 skip as of 2026-08-02. Serial `unittest discover` also works
+(`uv run --no-sync python -m unittest discover -v test/`) but takes ~24 min,
+and `test_py2c_diagnostics.py` needs pytest importable either way.
 
 ### Build package
 ```bash
-python3 -m build
+uv build
 ```
 
 ## Architecture
