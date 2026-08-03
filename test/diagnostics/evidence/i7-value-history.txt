@@ -1,0 +1,186 @@
+# Was the I7 write the defect, or was the control flow? -- via value_history
+#
+# Programs: test/fixtures/opt/d1_fails.py (fails) and d2_passes.py (passes),
+# both built with the shipped chain. Captured 2026-08-03.
+# The .mb built by test/test_opt_counterexamples.py's build() + optpatch is
+# byte-identical to the images measured here (verified, both programs).
+#
+# i7-halt-mechanism.txt left one question open: whether cell 4,769,119 held
+# legal code before the bootstrap wrote 0 into it (so the write is the defect)
+# or was data the bootstrap should have branched away from (so control flow is
+# the defect). That needs the cell's value history, not its writer list.
+
+=== 1. d1: value history of the halt cell ============================
+
+cell 4,769,119
+  init 39 (legal)   -- (39 + 4769119) % 94 == 68, i.e. a nop
+  executed 0 times
+  2 valuation events:
+    step -           init      pc -           -  -> 39   legal
+    step 4698238     write     pc 4698336     39 -> 0    ILLEGAL  a_before=1743392200
+  final 0 (ILLEGAL)
+
+writer, with the operands it consumed:
+  step 4698238  pc 4698336  v=62 (crz [d],a)  mem[c]=34
+                a=1743392200  d=4769119  mem[d]=39   -> crazy20(a, 39) == 0
+
+the twelve cells below it, 4,769,107 .. 4,769,118:
+  every one executed exactly once, at consecutive steps 4,769,009 .. 4,769,020
+  every one written zero times; every one legal; each changed only by ENCRYPT
+  e.g. 4,769,118: init 34 -> encrypt at step 4,769,020 -> 122
+
+the cells above it, 4,769,120 .. 4,769,131:
+  never executed, never written -- the run ends at 4,769,119
+
+approach: last 400 executed cells, 0 non-consecutive hops
+
+=== 2. d2: the same address, in the program that works ===============
+
+cell 4,769,119
+  init 39 (legal)
+  executed 1 time, at step 4,769,021   <-- the exact step d1 dies at
+  2 valuation events: init 39, then encrypt at step 4,769,021 -> 116
+  written 0 times
+
+50 observed cells (4,769,107..4,769,131 and 4,778,413..4,778,437):
+  all executed exactly once, at consecutive steps; zero writes among them
+approach at step 4,769,021: last 400 executed cells, 0 non-consecutive hops
+run: reason 'end', 13,533,119 steps, output '@'
+
+=== 3. Does the bootstrap ever branch? ===============================
+
+Counting every non-consecutive C transition over the whole run:
+
+  d1  4,769,021 steps   hops: 1   -- step 1, 0 -> 99 (the entry jump)
+  d2 13,533,120 steps   hops: 2,305,044
+                        first hop after entry: step 10,435,606,
+                        10,435,703 -> 53,505,616
+
+So both bootstraps are a single straight-line march, C = step + 98, roughly
+10.4M cells long. d1 dies at cell 4,769,119, less than halfway through its own
+bootstrap, having never executed a branch. d2 marches to 10,435,703 and only
+then enters the compiled program.
+
+Writes that could have removed an exit before the halt:
+
+  d1: writes producing a LEGAL value into a cell ahead of C:  73
+      of those at an address below the halt address:          0
+  d1: distinct cells ahead of C written at all, below the halt address: 0
+
+=== 4. Undoing the write ============================================
+
+E1  repair mem[4,769,119] := 39 right after the write (value_history.repair)
+E2  patch the image: cell 4,698,336 from chr(34) (v=62, crz) to chr(40)
+    (v=68, nop), then run through the ordinary path with no hooks
+
+  E1: reason 'illegal', step 4,782,872, addr 4,782,970, output ''
+  E2: reason 'illegal', step 4,782,872, addr 4,782,970, output ''
+
+Identical outcomes, so the A-register half of the crz (which E1 does not undo)
+made no difference. d(1) is 32, so a correct run prints a space; neither does.
+
+=== 5. Landmines: cells in the march's own future path ===============
+
+A write to address d while C < d <= 10,435,703 lands on a cell the branchless
+march will execute later. Counting distinct such cells:
+
+  d1: 32 landmines, 31 of them left holding a value outside 33..126
+  d2:  0 landmines
+
+d1's first two by address:
+  4,769,119  written step 4,698,238 by c 4,698,336  value 0            ILLEGAL
+  4,782,970  written step 4,664,802 by c 4,664,900  value 1,162,261,498 ILLEGAL
+
+the rest cluster at 4,844,233-4,844,242, 5,137,264, 5,196,313, 5,609,656,
+6,439,258, 6,849,685, 7,263,028-7,263,033, 8,543,944, 9,388,792-9,388,797,
+9,686,278-9,686,283, 9,688,465-9,688,474.
+
+=== 6. Where the two bootstraps write =================================
+
+Landmines could mean d1 lost a race (same cells as d2, written too late) or
+that d1's scratch cells are simply in a region d2 does not touch. Counting
+every write whose target is inside the march region [99, 10,435,703]:
+
+                      at or behind C            ahead of C (landmines)
+  d1_fails    3,016 writes / 118 cells        32 cells
+  d2_passes       0 writes /   0 cells         0 cells
+
+d1's behind-C targets run from 99 to 3,720,088. d2 does not write inside the
+march region at all -- not ahead of C, not behind it.
+
+Total writes, counted rather than assumed (an independent re-count driving
+traced_run directly, not value_history, so a bug in the new instrument could
+not reproduce itself):
+
+  d1_fails   1,395,077 writes    32 landmines + 118 behind-C cells
+  d2_passes  3,051,080 writes    none anywhere in the march region
+
+So this is placement, not volume -- and more sharply than "both write about
+as much" would have put it: d2 writes 2.2x as often as d1 and still lands
+nothing in the region it is marching through. (An earlier draft of this file
+said both perform ~1.4M writes. That figure was d1's, carried over to d2
+without measuring it.)
+
+The re-count also reproduces every landmine address, the behind-C span, and
+both halt records exactly. Throughput differed by 12x -- d1 35k steps/s
+against d2 423k -- which is itself consistent with the census: d1's writes
+scatter across the march region and keep forcing SparseMemory to materialize
+fresh 59,049-cell blocks, while d2's stay out of it.
+
+--- reading -------------------------------------------------------------
+
+Story (A) -- the cell was legal code and the write destroyed it -- is what the
+measurements say, and story (B) -- the bootstrap should have branched away
+before reaching it -- is refuted.
+
+For (A): the cell was loaded holding 39, which decodes to 68 (nop) at that
+address; it was never executed and never ENCRYPTed, so 39 is what it held right
+up to the write; the twelve cells below it are the same instruction stream,
+executed in order at consecutive steps; and d2 executes this very address, at
+this very step, as an instruction.
+
+Against (B): the march that reached the cell contains no branch at all. One hop
+in 4,769,021 steps, and that is the entry jump at step 1. A Malbolge march
+leaves only by executing `jmp [d]`, which is unconditional -- there is no
+conditional branch that could have failed to fire. Nor was an exit silently
+destroyed: of the 73 runtime writes that produced a legal value into a cell
+ahead of C, none targeted an address below the halt address, and no cell below
+the halt address was written at all. The bootstrap was going to execute
+4,769,119 unconditionally, and it did.
+
+The write is therefore the defect -- but "the write", singular, is not. Undoing
+it does not fix the program; the march walks 13,851 cells further and dies on
+4,782,970, which the landmine census shows was written 33,436 steps *before*
+the fatal one. There are 32 such cells in d1's remaining march path and 31 of
+them hold non-instructions. d1 was not killed by one bad write; it was walking
+into a minefield and 4,769,119 was merely the nearest mine.
+
+d2, marching through the same address range at the same steps, lays none --
+and §6 says why the comparison is sharp rather than lucky: d2 never writes
+inside the march region at all, while d1 writes to 150 distinct cells in it --
+118 below the death point, all of them safely behind C, and 32 above it, all
+of them ahead of C. (The two sets are disjoint: the highest behind-C target is
+3,720,088 and the lowest landmine is 4,769,119.) The two bootstraps are not
+racing over the same scratch space with different timing; they are using
+different scratch space.
+
+--- what this does NOT establish ---------------------------------------
+
+Why d1's writes go into the region it is marching through and d2's do not.
+Two readings fit §6 equally well: d1's data module was *placed* inside the
+bootstrap image, or d1's D register is being led there by a pointer chase that
+reads something wrong. Nothing here separates them. Deciding it needs the
+provenance of D at those writes -- which `mov d,[d]` loaded the pointer, and
+from where -- and that is the next instrument, not this one. This document has
+already been wrong three times about what selects these failures (findings
+§I7), so the reading stops at what was counted.
+
+Also not established:
+  * whether 32 is characteristic or accidental -- one failing program measured
+  * whether the same landmine structure appears in fib3_in_loop.py, the other
+    known-failing program
+  * anything about *why* the +9,306 constant changes where the scratch cells
+    land; the census says only that it does
+  * the single landmine that took a legal value (9,686,281 <- 37) would have
+    silently changed an instruction rather than halting. It sits far past the
+    death point, so nothing here says what it would have done.

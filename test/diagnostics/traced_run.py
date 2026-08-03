@@ -4,14 +4,25 @@
 should stay that way -- a per-step callback there would cost more than the
 interpreter. So the diagnostics keep their own copy of the loop, structurally
 identical to `malbolge20.eval` (same opcode dispatch, same ENCRYPT step, same
-wraparound), with two observation points added:
+wraparound), with these observation points added:
 
+    on_load(mem)                 once, after the source is loaded into memory
     on_exec(step, c, v)          before every instruction dispatch
+    on_regs(step, a, c, d)       before every instruction dispatch
     on_write(step, c, d, value)  after every cell write (rotr / crz)
+    on_encrypt(step, c, old, new)  after every ENCRYPT self-modification
 
-Both are optional; passing neither runs at roughly `eval`'s own speed. Keep
-this loop in sync with `malbolge20.eval` -- if the two ever disagree, the
-traces stop describing the interpreter under test.
+All are optional; passing none runs at roughly `eval`'s own speed. Keep this
+loop in sync with `malbolge20.eval` -- if the two ever disagree, the traces
+stop describing the interpreter under test.
+
+Why the last three exist. A cell's value changes on three occasions: the
+initial load, a `rotr`/`crz` write, and the ENCRYPT step that follows *its own
+execution*. `on_write` alone therefore cannot produce a cell's value history --
+a cell nobody writes still changes every time it runs. `on_load` supplies the
+t=0 value without a second 53 MB memory image, and `on_regs` supplies the
+register state a write was computed from (`crz` overwrites A with the result,
+so the operands are gone by the time `on_write` fires).
 """
 
 import collections
@@ -29,7 +40,7 @@ RunResult = collections.namedtuple('RunResult', 'output steps reason addr')
 
 
 def run(code, input_data="", eof='stop', on_exec=None, on_write=None,
-        max_steps=None):
+        on_encrypt=None, on_load=None, on_regs=None, max_steps=None):
     """Run a Malbolge20 program with instrumentation.
 
     Returns a RunResult whose `reason` is one of 'illegal' (reached a cell
@@ -37,6 +48,9 @@ def run(code, input_data="", eof='stop', on_exec=None, on_write=None,
     """
     mem = create_memory(CONFIG)
     mem.initialize_source(parse_source(code, CONFIG))
+
+    if on_load is not None:
+        on_load(mem)
 
     output = []
     input_pos = 0
@@ -55,6 +69,9 @@ def run(code, input_data="", eof='stop', on_exec=None, on_write=None,
 
         if on_exec is not None:
             on_exec(step, c, v)
+
+        if on_regs is not None:
+            on_regs(step, a, c, d)
 
         if v == 4:      # jmp [d]
             c = mem[d]
@@ -83,7 +100,12 @@ def run(code, input_data="", eof='stop', on_exec=None, on_write=None,
         # v == 68: nop
 
         if 33 <= mem[c] <= 126:
-            mem[c] = ENCRYPT[mem[c] - 33]
+            if on_encrypt is None:
+                mem[c] = ENCRYPT[mem[c] - 33]
+            else:
+                old = mem[c]
+                mem[c] = new = ENCRYPT[old - 33]
+                on_encrypt(step, c, old, new)
 
         c = 0 if c == mem_size - 1 else c + 1
         d = 0 if d == mem_size - 1 else d + 1

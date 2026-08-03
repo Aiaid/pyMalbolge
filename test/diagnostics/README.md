@@ -16,8 +16,19 @@ are what located all of it, kept runnable so the results stay reproducible.
 | `traced_run.py` | An instrumented copy of the Malbolge20 interpreter loop, with per-instruction and per-write hooks |
 | `flag_trace.py` | Records and diffs flag event streams — the instrument behind finding I2 |
 | `write_trace.py` | Finds which runtime write corrupted the code cell a program died on — the instrument behind findings I2's and I7's death mechanisms |
+| `value_history.py` | Full value history of chosen cells (init / write / ENCRYPT), plus two interventions for testing a story: undo one write, or patch one cell of the image — the instrument that decided §I7's open question |
 | `optpatch.py` | The two falsified transforms, applied on top of the shipped compiler rather than inside it |
-| `evidence/` | `i2-flag-divergence.txt` (the original 2026-07-23 divergence window), `i2-death-mechanism.txt` (wild jump into data), `i7-halt-mechanism.txt` (bootstrap writing 0 into its own instruction stream) |
+| `evidence/` | `i2-flag-divergence.txt` (the original 2026-07-23 divergence window), `i2-death-mechanism.txt` (wild jump into data), `i7-halt-mechanism.txt` (bootstrap writing 0 into its own instruction stream), `i7-value-history.txt` (that write is one of several, and the bootstrap has no branch to avoid them) |
+
+## Why `write_trace` was not enough
+
+A cell's value changes on three occasions: the image load, a runtime write, and
+the ENCRYPT substitution applied to a cell *after it executes*. `write_trace`
+sees only the middle one, so it can say who wrote a cell but not what the cell
+held before, nor whether it had ever been legal code. §I7 stalled exactly
+there. `value_history` records all three, which is why `traced_run` grew an
+`on_encrypt` hook (plus `on_load` for the t=0 values and `on_regs` for the
+operands a write consumed — `crz` clobbers A with its own result).
 
 ## Why the transforms live here and not in the compiler
 
@@ -88,6 +99,8 @@ Both tools also have command-line entry points:
 ```bash
 python -m test.diagnostics.flag_trace base.mb base.mc var.mb var.mc
 python -m test.diagnostics.write_trace fib2.mb fib2.mc
+python -m test.diagnostics.value_history d1.mb d1.mc --addr 4769119 \
+    --pc 4698336 --tail 200
 ```
 
 Runs are slow — pure Python, and these programs take millions of steps. The

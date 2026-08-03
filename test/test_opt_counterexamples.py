@@ -25,14 +25,28 @@ import unittest
 
 from malbolge.compiler.mg2mc import translate_mg_to_mc
 from malbolge.compiler.py2mg import compile_python_to_mg
+from malbolge.malbolge20 import ENCRYPT
 
 from test.diagnostics import optpatch
 from test.diagnostics.flag_trace import first_divergence, record
 from test.diagnostics.layout_tool import cell_owners, layout_map
+from test.diagnostics.value_history import (
+    crz_operands, history, is_march, patch_source, repair,
+)
 
 FIXTURES = os.path.join(os.path.dirname(__file__), 'fixtures', 'opt')
 
 SLOW = os.environ.get('MALBOLGE_SLOW_TESTS') == '1'
+
+# §I7 addresses, measured on `d1_fails.py` / `d2_passes.py` as the shipped
+# chain builds them today. They are pinned rather than rediscovered because a
+# discovery pass costs an extra multi-million-step run per test; if the
+# compiler's layout moves, these assertions are the alarm.
+I7_HALT_CELL = 4_769_119
+I7_HALT_STEP = 4_769_021
+I7_WRITER_PC = 4_698_336
+I7_WRITE_STEP = 4_698_238
+I7_SECOND_HALT_CELL = 4_782_970
 
 
 def fixture(name):
@@ -117,6 +131,87 @@ class FlagTrace(unittest.TestCase):
         a, _ = record(mb, mc)
         b, _ = record(mb, mc)
         self.assertIsNone(first_divergence(a, b))
+
+
+class ValueHistory(unittest.TestCase):
+    """The value recorder must see every way a cell's value can change.
+
+    `write_trace` only sees writes, which is why §I7 could not decide whether
+    the cell it died on had ever held legal code: in Malbolge a cell also
+    changes every time it is *executed*, via ENCRYPT. These tests pin that the
+    reconstructed chain is complete and self-consistent on a cheap program.
+    """
+
+    def setUp(self):
+        self.mc = fixture('foo.mc')
+        self.mb = optpatch.assemble(self.mc)
+        # 1000 is executed once and never written; 500,000 is never reached.
+        # Both are properties of a fixed fixture, so a change here means the
+        # fixture or the assembler moved, not that the tool is wrong.
+        self.rep = history(self.mb, [1000, 500_000], self.mc,
+                           watch_pcs=[1000], tail=50)
+
+    def assert_chain_is_consistent(self, cell):
+        self.assertEqual(cell.events[0].kind, 'init')
+        self.assertEqual(cell.events[0].new, cell.init)
+        for prev, cur in zip(cell.events, cell.events[1:]):
+            self.assertEqual(cur.old, prev.new,
+                             'gap in the value history of %d' % cell.addr)
+        self.assertEqual(cell.events[-1].new, cell.final)
+
+    def test_an_unwritten_cell_still_changes_when_it_executes(self):
+        cell = self.rep.cells[1000]
+        self.assertEqual(len(cell.execs), 1)
+        self.assertEqual([e.kind for e in cell.events], ['init', 'encrypt'])
+        self.assertEqual(cell.events[1].new, ENCRYPT[cell.init - 33])
+        self.assertNotEqual(cell.final, cell.init)
+        self.assert_chain_is_consistent(cell)
+
+    def test_an_untouched_cell_has_only_its_initial_value(self):
+        cell = self.rep.cells[500_000]
+        self.assertEqual(cell.execs, [])
+        self.assertEqual([e.kind for e in cell.events], ['init'])
+        self.assertEqual(cell.final, cell.init)
+
+    def test_watched_pc_reports_the_opcode_that_dispatched(self):
+        recs = [r for r in self.rep.pc_execs if r['pc'] == 1000]
+        self.assertEqual(len(recs), 1)
+        rec = recs[0]
+        # The opcode must be derived from the pre-ENCRYPT cell value, which is
+        # the only reading that matches what the interpreter dispatched on.
+        self.assertEqual(rec['v'], (rec['mem_c'] + rec['pc']) % 94)
+        self.assertEqual(rec['mem_c'], self.rep.cells[1000].init)
+
+    def test_approach_trace_classifies_a_march(self):
+        self.assertEqual(len(self.rep.tail), 50)
+        march = [(10, 500, 68), (11, 501, 68), (12, 502, 68)]
+        self.assertEqual(is_march(march), (3, 0))
+        jump = [(10, 500, 4), (11, 900, 68)]
+        self.assertEqual(is_march(jump), (2, 1))
+
+    def test_repair_that_matches_nothing_changes_nothing(self):
+        info, applied = repair(self.mb, {(0, 500_000): 33})
+        self.assertEqual(applied, [])
+        self.assertEqual(info['output'], 'foo\n')
+        self.assertEqual(info['reason'], 'end')
+
+    def test_patch_source_refuses_a_character_that_is_not_an_instruction(self):
+        with self.assertRaises(AssertionError):
+            # v == 0 is not in OPS_VALID at any address; pick the character
+            # that produces it for cell 0.
+            patch_source(self.mb, {0: 94})
+
+    def test_patch_source_replaces_exactly_one_cell(self):
+        # Each address admits exactly one character per opcode -- the printable
+        # range is 94 wide, the same as the opcode modulus -- so a patch always
+        # changes the instruction, never just its encoding.
+        nop = (68 - 1000) % 94
+        nop += 94 if nop < 33 else 0
+        patched = patch_source(self.mb, {1000: nop})
+        self.assertEqual(len(patched), len(self.mb))
+        self.assertEqual((ord(patched[1000]) + 1000) % 94, 68)
+        self.assertEqual(patched[:1000], self.mb[:1000])
+        self.assertEqual(patched[1001:], self.mb[1001:])
 
 
 class TransformSizes(unittest.TestCase):
@@ -218,6 +313,81 @@ class Counterexamples(unittest.TestCase):
         self.assertEqual(i1['reason'], 'illegal')
         self.assertEqual(i2['output'], '@')
         self.assertEqual(i2['reason'], 'end')
+
+    def test_i7_the_halt_cell_held_a_legal_instruction_until_it_was_written(self):
+        """§I7: the value history `write_trace` could not produce.
+
+        The open question was whether cell 4,769,119 was code the bootstrap
+        was going to execute (so the write destroyed it) or data the bootstrap
+        should never have walked onto (so the defect is control flow). The
+        chain says it was loaded holding 39, which decodes to 68 -- a nop --
+        at that address, was never executed or ENCRYPTed, and was written
+        exactly once, with 0.
+
+        See `test/diagnostics/evidence/i7-value-history.txt`.
+        """
+        mc = build('d1_fails.py')
+        rep = history(optpatch.assemble(mc), [I7_HALT_CELL], mc,
+                      watch_pcs=[I7_WRITER_PC], tail=200)
+
+        self.assertEqual(rep.run['reason'], 'illegal')
+        self.assertEqual(rep.run['addr'], I7_HALT_CELL)
+
+        cell = rep.cells[I7_HALT_CELL]
+        self.assertEqual(cell.init, 39)
+        self.assertEqual((cell.init + I7_HALT_CELL) % 94, 68)   # nop
+        self.assertEqual(cell.execs, [])
+        writes = [e for e in cell.events if e.kind == 'write']
+        self.assertEqual(len(writes), 1)
+        self.assertEqual((writes[0].step, writes[0].pc, writes[0].old,
+                          writes[0].new),
+                         (I7_WRITE_STEP, I7_WRITER_PC, 39, 0))
+
+        # The recorded operands must actually explain the write: the writer is
+        # `crz [d], a` (v == 62), and crazy20 of what it read is what landed.
+        rec = rep.pc_execs[0]
+        self.assertEqual((rec['step'], rec['v'], rec['d'], rec['mem_d']),
+                         (I7_WRITE_STEP, 62, I7_HALT_CELL, 39))
+        self.assertEqual(crz_operands(writes[0].info['a_before'],
+                                      writes[0].old), writes[0].new)
+
+        # And it was reached by a march, not a jump: 200 consecutive cells.
+        self.assertEqual(is_march(rep.tail), (200, 0))
+
+    def test_i7_the_passing_sibling_executes_the_same_cell(self):
+        """§I7: the control the value history needed.
+
+        d2 walks onto the very address d1 dies on, at the very step d1 dies
+        at, executes it as an instruction, and nothing writes to it. Whatever
+        is wrong with d1, it is not that this address is data.
+        """
+        mc = build('d2_passes.py')
+        rep = history(optpatch.assemble(mc), [I7_HALT_CELL], mc, tail=200,
+                      tail_until=I7_HALT_STEP)
+
+        self.assertEqual(rep.run['reason'], 'end')
+        cell = rep.cells[I7_HALT_CELL]
+        self.assertEqual([e.kind for e in cell.events], ['init', 'encrypt'])
+        self.assertEqual([s for s, _v in cell.execs], [I7_HALT_STEP])
+        self.assertEqual(is_march(rep.tail), (200, 0))
+
+    def test_i7_undoing_the_write_only_moves_the_halt(self):
+        """§I7: the experiment that stopped "one bad write" from being the story.
+
+        If that single write were the defect, undoing it would produce a
+        correct program -- d(1) is 32, so a space. It does not: the march
+        walks 13,851 cells further and dies on the next corrupted cell. The
+        write is one instance of a repeated corruption, not the whole fault.
+        """
+        mc = build('d1_fails.py')
+        info, applied = repair(optpatch.assemble(mc),
+                               {(I7_WRITE_STEP, I7_HALT_CELL): 39})
+
+        self.assertEqual(len(applied), 1)
+        self.assertEqual(info['output'], '')
+        self.assertEqual(info['reason'], 'illegal')
+        self.assertEqual(info['addr'], I7_SECOND_HALT_CELL)
+        self.assertGreater(info['steps'], I7_HALT_STEP)
 
     def test_i7_shipped_chain_miscompiles_fib3_in_loop(self):
         """§I7: a known defect in the shipped compiler, pinned as a test.
