@@ -3,13 +3,22 @@ malbolge.compiler.mg2mc -- pure-Python port of the Nagoya ``.mg`` (control-beari
 pseudo-instruction sequence) -> ``.mc`` (Low-Level-Assembly, LAL) translator.
 
 This is a faithful, deterministic re-implementation of the C++/flex/bison tool at
-``ref/nagoya-ternary/`` (MIT licensed) restricted to its ``-m -c`` code-generation
-style (continuous ROT/OPR calls return to the main control flow; OUTPUT/INPUT/SET/
-RESET are emitted as shared cluster modules).  Under ``-m -c`` the reference tool's
-two ``rand()`` decision points (``Option::back_to_main`` / ``Option::use_op_block``)
-both take their deterministic branch and ``std::mt19937`` is never consulted, so the
-output does not depend on the ``-s`` seed at all.  ``translate_mg_to_mc`` reproduces
-``parser -m -c -s 1 <file>`` byte for byte.
+``ref/nagoya-ternary/`` (MIT licensed).  The reference tool has two independent
+code-generation switches, each with two deterministic settings, and all four
+combinations are available here through ``translate_mg_to_mc``'s keyword arguments:
+
+* ``op_style="cluster"`` (``-c``, the default) emits OUTPUT/INPUT/SET/RESET as
+  shared cluster modules; ``op_style="inline"`` (``-i``) expands them in place.
+* ``jmp_style="main"`` (``-m``, the default) makes continuous ROT/OPR calls return
+  to the main control flow first; ``jmp_style="direct"`` (``-d``) jumps straight to
+  the next module.
+
+What is *not* ported is the reference tool's default, seed-dependent behaviour: with
+neither ``-c`` nor ``-i`` (resp. neither ``-m`` nor ``-d``) upstream mixes the two
+styles per decision point via ``std::mt19937``, and ``Option.use_op_block`` /
+``Option.back_to_main`` still raise ``RuntimeError`` on those branches.  Every style
+selectable here is deterministic and independent of the ``-s`` seed.  The default
+``translate_mg_to_mc(mg)`` reproduces ``parser -m -c -s 1 <file>`` byte for byte.
 
 The single intentional behavioural change over the upstream tool: upstream prints
 every syntax/semantic error to stderr and *always* exits 0 (``main.cc`` never checks
@@ -22,6 +31,7 @@ as upstream's ``scanner.ll`` ``.`` rule does, so fragment files like
 
     from malbolge.compiler.mg2mc import translate_mg_to_mc, Mg2McError
     mc = translate_mg_to_mc("DEF MAIN\n  OUTPUT\nEND\n")
+    mc = translate_mg_to_mc(mg, op_style="inline", jmp_style="direct")
 """
 
 from __future__ import annotations
@@ -970,38 +980,69 @@ class CodeBlock:
 
 
 # ---------------------------------------------------------------------------
-# Option.cc -- fixed to the ``-m -c`` style
+# Option.cc
 # ---------------------------------------------------------------------------
 
-class Option:
-    """The reference tool's Option singleton, pinned to ``-m -c``.
+OP_STYLES = ("cluster", "inline")
+JMP_STYLES = ("main", "direct")
 
-    ``-c`` sets ``op_inline = False`` and ``-m`` sets ``jmp_directly = False``, so
-    both decision methods below take their deterministic branch and never reach
-    ``get_rand()`` (``std::mt19937``); the ``-s`` seed is irrelevant.  The rand
-    branches are kept as guards that fail loudly if a non ``-m -c`` style were ever
-    wired up.
+
+class Option:
+    """The reference tool's Option singleton, driven by a code-generation style.
+
+    ``Option.h`` initialises all four fields to ``true``; each of ``main.cc``'s
+    getopt cases clears exactly one of them, and this constructor does the same:
+
+        op_style="cluster"  ->  -c  ->  op_inline    = False
+        op_style="inline"   ->  -i  ->  op_block     = False
+        jmp_style="main"    ->  -m  ->  jmp_directly = False
+        jmp_style="direct"  ->  -d  ->  jmp_main     = False
+
+    Either way one of the two fields each decision method inspects is False, so
+    the method takes a deterministic branch and never reaches ``get_rand()``
+    (``std::mt19937``); the ``-s`` seed is irrelevant for all four styles.  The
+    rand branches are kept as guards: upstream reaches them when *neither* switch
+    of a pair is given, mixing both styles per decision point, which is not ported.
     """
 
-    def __init__(self):
+    def __init__(self, op_style: str = "cluster", jmp_style: str = "main"):
+        if op_style not in OP_STYLES:
+            raise ValueError("unknown op_style {!r} (use {})".format(
+                op_style, " or ".join(repr(s) for s in OP_STYLES)))
+        if jmp_style not in JMP_STYLES:
+            raise ValueError("unknown jmp_style {!r} (use {})".format(
+                jmp_style, " or ".join(repr(s) for s in JMP_STYLES)))
+        self.op_style = op_style
+        self.jmp_style = jmp_style
+        # Option.h defaults, then clear the field main.cc's getopt case clears.
         self.op_block = True
-        self.op_inline = False   # -c
+        self.op_inline = True
         self.jmp_main = True
-        self.jmp_directly = False  # -m
+        self.jmp_directly = True
+        if op_style == "cluster":
+            self.op_inline = False   # -c
+        else:
+            self.op_block = False    # -i
+        if jmp_style == "main":
+            self.jmp_directly = False  # -m
+        else:
+            self.jmp_main = False      # -d
 
     def back_to_main(self):
         if self.jmp_main:
             if self.jmp_directly:
-                raise RuntimeError("rand() path is only reached without -m; "
-                                   "this port implements the -m -c style only")
+                raise RuntimeError("rand() path is only reached with neither -m "
+                                   "nor -d; the mt19937 style mixing is not "
+                                   "ported")
             return True
         return False
 
     def use_op_block(self):
         if self.op_block:
             if self.op_inline:
-                raise RuntimeError("rand() path is only reached without -c; "
-                                   "this port implements the -m -c style only")
+                raise RuntimeError("rand() path is only reached with neither -c "
+                                   "nor -i; the mt19937 style mixing is not "
+                                   "ported")
             return True
         return False
 
@@ -1011,8 +1052,8 @@ class Option:
 # ---------------------------------------------------------------------------
 
 class Program:
-    def __init__(self):
-        self.option = Option()
+    def __init__(self, option: Optional[Option] = None):
+        self.option = option if option is not None else Option()
         self.seq_ids: Dict[str, int] = {}
         self.flags: Dict[str, int] = {}
         self.routines: Dict[str, Routine] = {}
@@ -1429,15 +1470,24 @@ class _Parser:
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def translate_mg_to_mc(mg_source: str) -> str:
+def translate_mg_to_mc(mg_source: str, *, op_style: str = "cluster",
+                       jmp_style: str = "main") -> str:
     """Translate ``.mg`` source text to ``.mc`` (LAL) text.
 
-    Output is byte-identical to ``ref/nagoya-ternary/parser -m -c -s 1 <file>``.
-    Raises :class:`Mg2McError` on any syntax or semantic error.
+    ``op_style`` picks how OUTPUT/INPUT/SET/RESET are emitted: ``"cluster"``
+    (default, upstream ``-c``) shares one cluster module per operation, while
+    ``"inline"`` (upstream ``-i``) expands each occurrence in place.  ``jmp_style``
+    picks how continuous ROT/OPR calls chain: ``"main"`` (default, upstream ``-m``)
+    returns to the main control flow between modules, ``"direct"`` (upstream ``-d``)
+    jumps straight to the next one.  All four combinations are deterministic.
+
+    With the defaults the output is byte-identical to
+    ``ref/nagoya-ternary/parser -m -c -s 1 <file>``.  Raises :class:`Mg2McError` on
+    any syntax or semantic error and :class:`ValueError` on an unknown style.
     """
-    program = Program()
+    program = Program(Option(op_style=op_style, jmp_style=jmp_style))
     tokens = _tokenize(mg_source)
     return _Parser(tokens, program).parse()
 
 
-__all__ = ["translate_mg_to_mc", "Mg2McError"]
+__all__ = ["translate_mg_to_mc", "Mg2McError", "Option"]

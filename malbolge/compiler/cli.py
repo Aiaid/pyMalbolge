@@ -12,6 +12,11 @@ The entire pipeline is pure Python (see malbolge.compiler) and fully
 deterministic -- the same input always produces the same .mb bytes. The
 Nagoya reference tools under ref/ are no longer needed to compile; they
 are only exercised by the conformance test suite.
+
+--op-style/--jmp-style select the mg2mc code-generation style; they take
+effect from the .mc stage onwards, so --emit-c and --emit-mg output is
+the same whatever they are set to. The defaults keep the .mc byte-identical
+to `parser -m -c`.
 """
 
 import argparse
@@ -61,6 +66,19 @@ def main(argv):
         "--backend", choices=("c", "direct"), default="c",
         help="front-end path to .mg: 'c' (default, via py2c+c2mg) or 'direct' "
              "(py2mg, skips the C layer)")
+    parser.add_argument(
+        "--op-style", choices=("cluster", "inline"), default="cluster",
+        help="mg2mc code generation for OUTPUT/INPUT/SET/RESET: 'cluster' "
+             "(default, upstream -c) shares one cluster module per operation; "
+             "'inline' (upstream -i) expands each occurrence in place, which "
+             "drops the cluster branch flags and shrinks the .mb -- little to "
+             "gain on ROT/OPR-heavy programs. Affects .mc and .mb only")
+    parser.add_argument(
+        "--jmp-style", choices=("main", "direct"), default="main",
+        help="mg2mc code generation for continuous ROT/OPR calls: 'main' "
+             "(default, upstream -m) returns to the main control flow between "
+             "modules; 'direct' (upstream -d) jumps straight to the next "
+             "module. Affects .mc and .mb only")
     args = parser.parse_args(argv)
 
     wants_intermediate = (args.emit_c is not None or args.emit_mg is not None
@@ -111,7 +129,8 @@ def main(argv):
         return
 
     try:
-        mc_source = translate_mg_to_mc(mg_source)
+        mc_source = translate_mg_to_mc(mg_source, op_style=args.op_style,
+                                       jmp_style=args.jmp_style)
     except Mg2McError as e:
         _die("internal: generated .mg rejected by mg2mc: {}".format(e))
     if args.emit_mc is not None:

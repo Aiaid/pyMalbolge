@@ -24,7 +24,9 @@ from .mg2mc import translate_mg_to_mc, Mg2McError
 from .mc2mb import assemble_mc_to_mb, Mc2MbError
 
 
-def compile_python_to_mb(py_source: str, backend: str = "c") -> str:
+def compile_python_to_mb(py_source: str, backend: str = "c", *,
+                         op_style: str = "cluster",
+                         jmp_style: str = "main") -> str:
     """Compile a Python-subset program all the way to Malbolge20 source.
 
     ``backend`` selects the front half of the pipeline:
@@ -35,7 +37,10 @@ def compile_python_to_mb(py_source: str, backend: str = "c") -> str:
       skips the C layer (smaller, non-recursive functions carry no frame
       protection; see ``docs/py2mg-backend.md``).
 
-    Both paths share the ``mg2mc`` and ``mc2mb`` back half.
+    Both paths share the ``mg2mc`` and ``mc2mb`` back half.  ``op_style`` and
+    ``jmp_style`` are the ``mg2mc`` code-generation styles (see
+    :func:`~malbolge.compiler.mg2mc.translate_mg_to_mc`); the defaults keep the
+    output byte-identical to the reference toolchain.
     """
     if backend == "direct":
         mg_source = compile_python_to_mg(py_source)
@@ -44,7 +49,8 @@ def compile_python_to_mb(py_source: str, backend: str = "c") -> str:
     else:
         raise ValueError("unknown backend {!r} (use 'c' or 'direct')".format(
             backend))
-    mc_source = translate_mg_to_mc(mg_source)
+    mc_source = translate_mg_to_mc(mg_source, op_style=op_style,
+                                   jmp_style=jmp_style)
     return assemble_mc_to_mb(mc_source)
 
 
