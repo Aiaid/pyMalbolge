@@ -94,7 +94,7 @@ from malbolge.compiler import (
 浮点数、`bool`、列表 / 字典 / 集合、类、`import`、`lambda`、推导式、嵌套函数、
 元组解包与关键字参数。
 
-[规范性说明文档](https://github.com/Aiaid/pyMalbolge/blob/master/docs/python-subset-spec.md)
+[规范性说明文档](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md)
 覆盖了受理的 AST 白名单、与 CPython 语义之间全部十七处有记录的分歧,以及诊断契约。
 
 ## 流水线如何工作
@@ -305,13 +305,13 @@ Szewczyk 的 **MalbolgeLISP** —— 一个约 350 MB 的 LISP 解释器 —— 
 [`docs/`](https://github.com/Aiaid/pyMalbolge/blob/master/docs/README.md)。
 每份文档都有英文(`<name>.md`)和中文(`<name>.zh.md`)两个版本。
 
-- [python-subset-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/python-subset-spec.md) —— 受理的 Python 子集的规范性说明
-- [py2mg-backend](https://github.com/Aiaid/pyMalbolge/blob/master/docs/py2mg-backend.md) —— `py → .mg` 直连后端的设计
-- [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/highlevel-to-malbolge.md) —— 流水线为什么长这样
-- [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/mg-spec.md) —— `.mg` 伪指令语言,从 `ternary` 逆向而来
-- [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/lmao-internals.md) —— HeLL 与 LMAO 汇编器的算法
-- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/perf-baseline.md) —— 性能剖析,以及被修掉的两个热点
-- [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/toolchain-guide.md) —— 构建参考工具,用于一致性工作
+- [python-subset-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md) —— 受理的 Python 子集的规范性说明
+- [py2mg-backend](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/py2mg-backend.md) —— `py → .mg` 直连后端的设计
+- [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/highlevel-to-malbolge.md) —— 流水线为什么长这样
+- [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/mg-spec.md) —— `.mg` 伪指令语言,从 `ternary` 逆向而来
+- [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/lmao-internals.md) —— HeLL 与 LMAO 汇编器的算法
+- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) —— 性能剖析,以及被修掉的两个热点
+- [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/toolchain-guide.md) —— 构建参考工具,用于一致性工作
 
 ## 开发
 

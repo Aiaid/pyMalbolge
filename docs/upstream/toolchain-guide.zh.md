@@ -61,6 +61,13 @@ ref/LMAO/lmao program.hell -o program.mal
 python3 -m malbolge program.mal
 ```
 
+**适用范围说明**:`python3 -m malbolge compile` 只接受 `.py` 源文件作为
+输入。若场景是"手写的 `.mg` → `.mb`"(即已手写好 `.mg` 中间代码,不是从
+`.py` 编译而来),`scripts/mg2mb.sh`(包装外部 ref/ 工具链)目前仍是唯一
+的命令行(CLI)路径。想用纯 Python 完成这一场景,需在代码里直接调用
+`translate_mg_to_mc()`(`malbolge/compiler/mg2mc.py`)与
+`assemble_mc_to_mb()`(`malbolge/compiler/mc2mb.py`),而不经过 CLI。
+
 ## 4. 确定性与可复现
 
 - `ternary`:不给 `-s` 会随机化代码风格;固定 `-m -c -s 1`(mg2mb.sh 默认)。
@@ -72,5 +79,5 @@ python3 -m malbolge program.mal
 
 - 双解释器逐字节对拍(pyMalbolge vs 参考 C 解释器)是所有 fixture 的准入标准。
 - 批量验证用 C 参考(快),pyMalbolge 抽样交叉。
-- 运行时库自检:`python3 runtime/mg/tests/run.py`(19 项;`--py` 同时跑 pyMalbolge)。
-- 全量测试:`python3 -m unittest discover test/`(不依赖 ref/ 工具,fixtures 已入库;e2e 测试在工具缺失时自动 skip)。
+- 运行时库自检:`uv run --no-sync python runtime/mg/tests/run.py`(19 项;`--py` 同时跑 pyMalbolge)。
+- 全量测试:`uv run --no-sync python -m unittest discover test/`(不依赖 ref/ 工具,fixtures 已入库;e2e 测试在工具缺失时自动 skip)。

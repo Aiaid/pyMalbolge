@@ -153,22 +153,19 @@ recursion's branching factor, so each individual `dm_mov_search` call tree
 grows larger, and this compounds with the call count itself growing with
 program size — the product of the two yields O(n^1.4) instead of O(n).
 
-**Optimizability assessment**: this is an **algorithm ported verbatim from
-the reference C++ implementation** (the search logic from `init/dmod.cpp` was
-ported byte-for-byte to guarantee bit-identical `.mb` output); the
-algorithm's complexity wasn't noticeable in C++ because of its raw speed, but
-after porting to pure Python the constant factor got amplified into the
-dominant bottleneck. **Adding a memoization cache (keyed on
-`(d, pos, depth)`, valid only during the stage where `jmpaddrs` doesn't
-change — or more conservatively, snapshotting `jmpaddrs` before
-`code_generate()` starts and including the snapshot's hash in the cache key
-to absolutely guarantee correctness) is a zero-risk optimization that doesn't
-change the output** — because `dm_mov_search` is a pure function during this
-stage, caching cannot change any return value, only eliminate redundant
-computation. Rough estimates based on call count and hit/repeat rate suggest
-this could compress this item's runtime from "seconds/tens of seconds" down
-to "milliseconds," making it the single highest-payoff optimization in the
-entire pipeline right now.
+**Optimizability assessment (fixed)**: this is an **algorithm ported
+verbatim from the reference C++ implementation** (the search logic from
+`init/dmod.cpp` was ported byte-for-byte to guarantee bit-identical `.mb`
+output); the algorithm's complexity wasn't noticeable in C++ because of its
+raw speed, but after porting to pure Python the constant factor got
+amplified into the dominant bottleneck. **Fixed in commit f121676**
+("Memoize dm_mov_search in mc2mb: ~100x faster assembly, byte-identical
+output"): a memoization cache keyed on `(d, pos, depth)`, invalidated via a
+mutation counter on `jmpaddrs`, was added — because `dm_mov_search` is a pure
+function during this stage, caching could only eliminate redundant
+computation, never change a return value, so the fix carried zero risk to
+output correctness (confirmed byte-identical by the `test_mc2mb.py` suite).
+Measured throughput improved from ~40s/MB to ~0.4s/MB, ~100× as predicted.
 
 ## 5. PyPy speedup: unknown (not installed, indirect assessment)
 
@@ -192,24 +189,28 @@ No number was directly measured. Indirect evidence that can be offered:
 | Path | Expected payoff | Notes |
 |---|---|---|
 | Pure-Python micro-optimization (de-dict-ify / bind locals / reduce attribute lookups) | **Limited, ~1.2–1.5×** | The bulk of the cost at both hotspots is "redundantly doing the same work" (whole-block materialization, unmemoized search), not "each operation being slightly slow"; conventional tricks like localizing variables can only shrink the constant factor — they treat the symptom, not the cause. |
-| mypyc (compile the existing .py to a C extension, types unchanged) | **Moderate, expected 3–8×**, contingent on fixing the algorithm first | This eliminates Python interpretation overhead / function-call overhead, and is especially effective for a high-call-frequency recursion like `dm_mov_search`; but without memoization first, the mypyc-compiled O(n^1.4) is still O(n^1.4), so large cases will still be slow. **The payoff order should be: fix the algorithm first, then apply mypyc to lock in the constant-factor gain.** |
+| mypyc (compile the existing .py to a C extension, types unchanged) | **Moderate, expected 3–8×**, on top of the now-fixed algorithm | This eliminates Python interpretation overhead / function-call overhead, and is especially effective for a high-call-frequency recursion like `dm_mov_search`; the memoization fix (commit f121676) already resolved the O(n^1.4) blowup, so mypyc would now stack as a straightforward constant-factor win rather than a prerequisite-gated one. **The payoff order held: the algorithm was fixed first (commit f121676), with mypyc remaining available to lock in a further constant-factor gain.** |
 | Cython (requires manual type annotations) | **Higher but with higher engineering cost too, expected 5–15×** | Annotating `crazy()`'s 20-iteration inner loop and `dm_mov_search`'s recursion with `cdef int` can yield more aggressive gains than mypyc, but it requires maintaining a `.pyx`/build chain, which creates some tension with the project's "pure Python, pip-installable" positioning (the all-Python-stack milestone just completed in B6) — worth evaluating whether it's worth trading away that property for performance. |
 
 **Conclusion**: language-level speedups (mypyc/Cython) should both come
 **after** the algorithm/cache fix, otherwise they're "accelerating the
 engine" for a redundant computation that could have been eliminated outright.
 
-## 7. Recommended next optimization action (single item)
+## 7. Recommended next optimization action (single item) — fixed
 
 Add a memoization cache to `_Assembler.dm_mov_search` (e.g., a `dict` cache
 keyed on `(d, pos, depth)`, reused within the window where `jmpaddrs` is
 stage-wise constant; or, more conservatively, snapshot-validate `jmpaddrs`
 once before `code_generate()` starts and include the snapshot's hash in the
-cache key to absolutely guarantee correctness). This is the only action that
-simultaneously satisfies "zero risk, doesn't change `.mb` byte output" and
-"largest expected payoff" (97.9% share of runtime, well-evidenced repeated
-subproblems) — it should come before the SparseMemory block-materialization
-optimization and any mypyc/Cython investment.
+cache key to absolutely guarantee correctness). This was the only action
+that simultaneously satisfied "zero risk, doesn't change `.mb` byte output"
+and "largest expected payoff" (97.9% share of runtime, well-evidenced
+repeated subproblems) — and it has since been implemented in commit
+f121676 ("Memoize dm_mov_search in mc2mb: ~100x faster assembly,
+byte-identical output"), which added a `_dm_cache` keyed on
+`(d, pos, depth)`, invalidated via a mutation counter on `jmpaddrs`. It
+should still come before the SparseMemory block-materialization
+optimization (§2, still open) and any mypyc/Cython investment.
 
 ---
 
@@ -240,6 +241,10 @@ H1/H7, or merge directly into H7 and rewrite):
 > `.mb` byte output, and is currently the highest-payoff single-point
 > optimization — it should come before the SparseMemory block-materialization
 > optimization (next entry) and any mypyc/Cython investment.
+>
+> **Status: already implemented — commit f121676** ("Memoize dm_mov_search
+> in mc2mb: ~100x faster assembly, byte-identical output"); the root-cause
+> analysis above is kept for the record.
 
 > **H9. malbolge20 interpreter: SparseMemory block-materialization
 > granularity is too coarse**: cProfile shows the main interpreter loop body

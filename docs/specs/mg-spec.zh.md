@@ -268,7 +268,7 @@ CON2     = 3486784400   (末位 trit = 2 → 走 CASE2)
 这不是巧合:代码生成上,`SWITCH X` 直接 `JMP` 到 `X` 变量自己所在的内存地址
 (`CodeBlock::switch_statement` 里的 `Instruction::JMP(var_label_inst)`,
 `CodeBlock.cc:313`),依赖的是 Malbolge/低级汇编层"全 2 值紧邻的三个字面量,被当作指令
-执行时经过 xlat2 变换后恰好三向跳转"这一固定单元技巧(与 `docs/hell-spec.zh.md` 3.1 节
+执行时经过 xlat2 变换后恰好三向跳转"这一固定单元技巧(与 `docs/specs/hell-spec.zh.md` 3.1 节
 `immutable_nops`/SNOP 的思路同源,都是利用"某几个特定字节值在 xlat2 表下有确定行为"
 的性质)。**`.mg`/`ref/nagoya-ternary/parser` 完全不会静态检查这条约束**——`X` 存的
 是别的值也能编译通过,只会在运行期产生"予測不能な動作"(2016 论文原话:不可预测的行
@@ -539,5 +539,5 @@ END
   サブセットから Malbolge へのコンパイラ", 電子情報通信学会技術報告, Vol.117,
   No.136, SS2017-18, pp.145-150 (2017).
 - `test/fixtures/nagoya/README.md`、`test/fixtures/nagoya/mg_*.mg`
-- `docs/hell-spec.zh.md`(姊妹文档:HeLL/LMAO 语言规格,SWITCH 的固定单元跳转技巧与其
+- `docs/specs/hell-spec.zh.md`(姊妹文档:HeLL/LMAO 语言规格,SWITCH 的固定单元跳转技巧与其
   3.1 节 `immutable_nops` 思路同源)

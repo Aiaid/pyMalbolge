@@ -100,7 +100,7 @@ arguments, `chr`, runtime strings and f-strings, floats, `bool`, lists / dicts
 / sets, classes, `import`, `lambda`, comprehensions, nested functions, tuple
 unpacking and keyword arguments.
 
-The [normative specification](https://github.com/Aiaid/pyMalbolge/blob/master/docs/python-subset-spec.md)
+The [normative specification](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md)
 covers the accepted-AST whitelist, all seventeen documented divergences from
 CPython semantics, and the diagnostic contract.
 
@@ -343,13 +343,13 @@ Design notes and reverse-engineered language specifications live in
 [`docs/`](https://github.com/Aiaid/pyMalbolge/blob/master/docs/README.md).
 Every document exists in English (`<name>.md`) and Chinese (`<name>.zh.md`).
 
-- [python-subset-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/python-subset-spec.md) — normative spec for the accepted Python subset
-- [py2mg-backend](https://github.com/Aiaid/pyMalbolge/blob/master/docs/py2mg-backend.md) — design of the direct `py → .mg` backend
-- [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/highlevel-to-malbolge.md) — why the pipeline looks like this
-- [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered from `ternary`
-- [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/lmao-internals.md) — HeLL and the LMAO assembler's algorithms
-- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/perf-baseline.md) — profiling and the two hotspots that were fixed
-- [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/toolchain-guide.md) — building the reference tools, for conformance work
+- [python-subset-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md) — normative spec for the accepted Python subset
+- [py2mg-backend](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/py2mg-backend.md) — design of the direct `py → .mg` backend
+- [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/highlevel-to-malbolge.md) — why the pipeline looks like this
+- [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered from `ternary`
+- [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/lmao-internals.md) — HeLL and the LMAO assembler's algorithms
+- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) — profiling and the two hotspots that were fixed
+- [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/toolchain-guide.md) — building the reference tools, for conformance work
 
 ## Development
 

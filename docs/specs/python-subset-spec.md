@@ -7,7 +7,7 @@
 > `compile_python_to_c`). This document treats the **source-level behaviour** of
 > that file as the single source of truth and checks every clause against it; it
 > does not settle for the overview-level description in
-> `docs/highlevel-to-malbolge.md` §5.
+> `docs/design/highlevel-to-malbolge.md` §5.
 > Version: v1 (state at commit `02c0b82`, 957 lines). The diagnostic audit
 > methodology and its full results are in the appendix.
 
@@ -141,7 +141,7 @@ stored into a variable as a "comparison result value". Instead, control flow of
 the shape `flag = 0; if(cond){ flag = 1; }` materialises the result into an
 `int` variable taking the value 0 or 1. This works around the known breakage of
 the downstream C subset's `bool`/`true`/`false` type system (see
-`docs/highlevel-to-malbolge.md` §5, "Implementation notes").
+`docs/design/highlevel-to-malbolge.md` §5, "Implementation notes").
 
 ### 1.5 Constant and operator sub-tables
 

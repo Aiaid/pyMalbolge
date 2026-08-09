@@ -55,7 +55,7 @@ Language subset (int arithmetic, ``while``, ``if``/``elif``/``else``,
   fresh, normalised ``skip == 0`` comparison -- never on the raw flag cell --
   so the A3 self-modification trap never arises (findings.md A3).
 
-Known v0 limitations (documented in ``docs/py2mg-backend.md``):
+Known v0 limitations (documented in ``docs/design/py2mg-backend.md``):
 
 * ``and``/``or`` are evaluated non-short-circuit (both sides always run).  This
   differs from Python only when an operand has side effects; the pure-Python

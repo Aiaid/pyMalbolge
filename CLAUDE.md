@@ -59,7 +59,7 @@ python3 -m malbolge compile foo.py -o foo.mb                    # default 'c' ba
 python3 -m malbolge compile foo.py --backend=direct -o foo.mb   # py->.mg direct backend
 python3 -m malbolge --variant=malbolge20 foo.mb                 # run the result
 ```
-Subset spec: `docs/python-subset-spec.md`. Direct-backend design: `docs/py2mg-backend.md`.
+Subset spec: `docs/specs/python-subset-spec.md`. Direct-backend design: `docs/design/py2mg-backend.md`.
 
 ### Run tests
 ```bash
@@ -112,6 +112,11 @@ uv build
 
 ## TODO
 
+> The live, prioritized all-directions roadmap is `docs/research/roadmap.md`
+> (private, not in the public repo); the next-phase design is
+> `docs/research/mb-dialect-plan.md` (same). The lists below are the public
+> summary.
+
 ### Completed
 - [x] Support Malbolge20
 - [x] Add debug mode (CLI + TUI)
@@ -146,7 +151,7 @@ Malbolge Unshackled is a Turing-complete variant with unbounded memory. Implemen
 
 - Signed integers, decimal `print()`/`input()`, `break`/`continue`
 - Arrays/strings via `IND_OPR` (design: `docs/research/iwagane-arrays.md` — private, not in the public repo)
-- (Original-Malbolge generator via LMAO port remains shelved — GPL question, see `docs/hell-assembler-design.md` §6)
+- (Original-Malbolge generator via LMAO port remains shelved — GPL question, see `docs/design/hell-assembler-design.md` §6)
 
 ## References
 

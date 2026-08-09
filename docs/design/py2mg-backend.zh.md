@@ -100,7 +100,7 @@ push/pop 机器自身用的临时单元在生成保护代码时**清空 free-lis
 - 函数名沿用 c2mg 约定**大写**(`fib`→`FIB`);局部 `u_` 前缀。名字合法性检查同 py2c
   (拒绝 `zz` 前缀、C 关键字、`main/putchar/getchar` 保留)。
 
-## 4.1 诊断契约(对齐 `docs/python-subset-spec.zh.md` §3,不复刻 py2c 缺陷)
+## 4.1 诊断契约(对齐 `docs/specs/python-subset-spec.zh.md` §3,不复刻 py2c 缺陷)
 
 py2mg 是**全新前端**(未复用 py2c 的 AST 处理代码),因此可以直接规避
 `tmp/subset-spec/defects.md` 记录的 py2c 静默错译(C 类)缺陷。所有拒绝均抛

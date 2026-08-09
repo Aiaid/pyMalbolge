@@ -27,7 +27,7 @@ The `.py` files are compiled through `py2mg` → `mg2mc` by the slow tests
 of steps.
 
 They are also written in the compiler's Python subset, not full Python — see
-`docs/python-subset-spec.md`. Running them under CPython works and prints the
+`docs/specs/python-subset-spec.md`. Running them under CPython works and prints the
 same thing, which is a useful sanity check on the fixture itself.
 
 ## What §I7 is not

@@ -4,7 +4,7 @@
 
 > 规范对象:`malbolge/compiler/py2c.py`(Python 子集 → 名古屋高层 C 子集的转译
 > 前端,函数 `compile_python_to_c`)。本文档以该文件的**源码行为**为唯一事实
-> 来源,逐条对照;不满足于 `docs/highlevel-to-malbolge.zh.md` §5 的概述性描述。
+> 来源,逐条对照;不满足于 `docs/design/highlevel-to-malbolge.zh.md` §5 的概述性描述。
 > 版本:v1(commit `02c0b82` 时的状态,957 行)。诊断审计方法与完整结果见附录。
 
 ## 0. 术语与定位
@@ -116,7 +116,7 @@ expression: {TypeName}"`。`JoinedStr`(f-string)例外:**仅在 `print()`
 布尔运算、`not`、`while`/`if` 的 `test`)从不作为一个"比较结果值"存进变量,
 而是通过 `flag = 0; if(cond){ flag = 1; }` 这样的控制流,把结果物化成一个
 `int` 变量(取值 0/1)。这是为了绕开下游 C 子集 `bool`/`true`/`false` 类型
-系统的已知损坏(见 `docs/highlevel-to-malbolge.zh.md` §5"实现要点")。
+系统的已知损坏(见 `docs/design/highlevel-to-malbolge.zh.md` §5"实现要点")。
 
 ### 1.5 常量与运算符子表
 

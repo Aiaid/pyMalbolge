@@ -131,7 +131,7 @@ recursion), `putchar`/`getchar`/`ord`. Known v0 trade-offs (recorded in the modu
   prefix. Name-validity checks match py2c (rejecting the `zz` prefix, C keywords, and reserved
   `main`/`putchar`/`getchar`).
 
-## 4.1 Diagnostic Contract (aligned with `docs/python-subset-spec.md` §3; does not replicate py2c's defects)
+## 4.1 Diagnostic Contract (aligned with `docs/specs/python-subset-spec.md` §3; does not replicate py2c's defects)
 
 py2mg is a **brand-new front end** (it does not reuse py2c's AST-processing code), so it can
 directly avoid the silent-mistranslation (class C) defects recorded in `tmp/subset-spec/defects.md`.

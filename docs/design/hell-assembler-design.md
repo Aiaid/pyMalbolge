@@ -3,8 +3,8 @@
 > [中文](hell-assembler-design.zh.md) | **English**
 
 > Goal: implement a HeLL → Malbolge assembler in pyMalbolge, behavior-compatible with LMAO v0.6.0.
-> Basis: `docs/hell-spec.md` (language spec) and `docs/lmao-internals.md` (LMAO algorithm analysis).
-> Status: design draft, pending review. 2026-07-20.
+> Basis: `docs/specs/hell-spec.md` (language spec) and `docs/upstream/lmao-internals.md` (LMAO algorithm analysis).
+> Status: shelved — pending a licensing decision (see §6). Drafted 2026-07-20.
 
 ## 1. Goals and Scope
 

@@ -1,5 +1,5 @@
 """
-Staged pytest corpus from the py2c.py diagnostic audit (docs/python-subset-spec.md
+Staged pytest corpus from the py2c.py diagnostic audit (docs/specs/python-subset-spec.md
 appendix, /Users/anend/.claude/jobs/1d5df563/tmp/subset-spec/{probe.py,defects.md}).
 
 Two kinds of cases:
@@ -491,7 +491,7 @@ class TestKnownDefects:
 
 
 # ===========================================================================
-# Batch-one syntax sugar (docs/python-subset-spec.md v2 plan items now
+# Batch-one syntax sugar (docs/specs/python-subset-spec.md v2 plan items now
 # implemented): four probe IDs from the original audit corpus that were
 # A-class "correctly rejected" results are now A-class "correctly accepted"
 # results instead, because the underlying constructs moved from the "must

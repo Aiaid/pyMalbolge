@@ -44,7 +44,7 @@ Iizawa 2005 年 99-bottles 论文的后继工作,持续到 2017 年,是**唯一�
 - HeLL + LMAO(原版)、LMFAO(Unshackled):汇编器层,无高级语言前端。
 - MalbolgeLISP(Kamila Szewczyk,2020-21):350MB 的 LISP 解释器,**手写**
   HeLL 方言(密码分析式方法),不是编译器产物。
-- 详见 `docs/hell-spec.zh.md`、`docs/lmao-internals.zh.md`、`docs/hell-assembler-design.zh.md`。
+- 详见 `docs/specs/hell-spec.zh.md`、`docs/upstream/lmao-internals.zh.md`、`docs/design/hell-assembler-design.zh.md`。
 
 ### 结论修正
 
@@ -89,6 +89,10 @@ Malbolge20 (.mb)
 运行 / 调试(TUI debugger 支持 --variant=malbolge20)
 ```
 
+*(此图是原始规划:当时 `ternary`/`lowass` 还是现成外部工具,只是"后续可
+Python 化"。下面的 P4 已完成这一 Python 化——整条工具链现已是
+`malbolge/compiler/` 下的纯 Python 实现,现状见 §5。)*
+
 ### 里程碑
 
 - **P1 管线打通**:构建 ternary + lowass,跑通 `.mg → .mc → .mb → pyMalbolge`,
@@ -105,7 +109,7 @@ Malbolge20 (.mb)
 
 ### 与 HeLL 汇编器计划的关系
 
-`docs/hell-assembler-design.zh.md` 的 LMAO 移植计划**保留但降级为备选**
+`docs/design/hell-assembler-design.zh.md` 的 LMAO 移植计划**保留但降级为备选**
 (服务于原版 Malbolge 的研究价值);主线转向名古屋栈,理由:目标
 (Malbolge20)内存充裕、许可干净、高层组件现成、且 pyMalbolge 在该
 生态里有明确的独特定位(唯一的现代运行时 + 调试器)。
@@ -147,6 +151,9 @@ python3 -m malbolge --variant=malbolge20 prog.mb
 python3 -m malbolge compile prog.py --backend=direct -o prog.mb
 ```
 
+`compile` 还提供 `--op-style=cluster|inline` 与 `--jmp-style=main|direct`,
+用于选择 `mg2mc` 的代码生成风格(默认值不变:`cluster`/`main`)。
+
 ```python
 from malbolge.compiler import compile_python_to_c, compile_python_to_mb
 c_source = compile_python_to_c("putchar(72)\nputchar(105)\n")
@@ -160,7 +167,7 @@ mb = compile_python_to_mb(source, backend="direct")   # 直连后端
 检测(c2mg 把一切递归都按最坏情况处理)、只保护跨调用存活的临时量。因此
 **双递归 `fib(n-1) + fib(n-2)` 天然正确**,是从根上消除上游 bug A2,而不是
 靠三地址式绕开。产物在含控制流/函数的程序上比 `c` 后端小 46-75%,且从不更大。
-设计文档见 `docs/py2mg-backend.zh.md`;两个后端的语言子集严格一致,e2e 逐字节
+设计文档见 `docs/design/py2mg-backend.zh.md`;两个后端的语言子集严格一致,e2e 逐字节
 对拍程序输出。
 
 ### 支持的 Python 子集
@@ -223,6 +230,8 @@ mb = compile_python_to_mb(source, backend="direct")   # 直连后端
   层(Python → `.mb` 后运行并断言输出)。端到端断言优先用 **C 参考解释器**
   (`ref/nagoya-malbolge20-interpreter/malbolge20`,比 pyMalbolge 快 15–100 倍),
   并在 hi / echo 两个小用例上额外用 pyMalbolge 交叉验证输出一致。
+- `test/test_py2mg.py` / `test/test_py2mg_e2e.py`:直连后端(§5.1)对应的
+  同款两层测试——纯转译单测,以及与 `c` 后端逐字节对拍程序输出的端到端测试。
 
 ### 已知取舍
 

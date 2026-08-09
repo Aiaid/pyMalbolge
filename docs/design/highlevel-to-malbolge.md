@@ -34,7 +34,7 @@ Project page: https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/
 
 - HeLL + LMAO (original), LMFAO (Unshackled): assembler-level tooling, no high-level language front end.
 - MalbolgeLISP (Kamila Szewczyk, 2020-21): a 350MB LISP interpreter, **hand-written** in a HeLL dialect (a cryptanalysis-style method), not the output of a compiler.
-- See `docs/hell-spec.md`, `docs/lmao-internals.md`, `docs/hell-assembler-design.md` for details.
+- See `docs/specs/hell-spec.md`, `docs/upstream/lmao-internals.md`, `docs/design/hell-assembler-design.md` for details.
 
 ### Revised Conclusion
 
@@ -70,6 +70,11 @@ Malbolge20 (.mb)
 Run / debug (TUI debugger supports --variant=malbolge20)
 ```
 
+*(This diagram reflects the original planning, when `ternary`/`lowass` were still
+external tools slated for a possible future Pythonization. P4 below completed
+that Pythonization — the whole chain is now pure Python under
+`malbolge/compiler/`. See §5 for the current pipeline.)*
+
 ### Milestones
 
 - **P1 Get the pipeline working**: build ternary + lowass, get `.mg → .mc → .mb → pyMalbolge` running end to end, and land examples in `test/fixtures/` (pseudo-instruction-layer conformance).
@@ -79,7 +84,7 @@ Run / debug (TUI debugger supports --variant=malbolge20)
 
 ### Relationship to the HeLL Assembler Plan
 
-The LMAO porting plan in `docs/hell-assembler-design.md` **is retained but downgraded to a backup option** (serving original Malbolge's research value); the main line shifts to the Nagoya stack, for these reasons: the target (Malbolge20) has ample memory, a clean license, ready-made high-level components, and pyMalbolge has a clear, unique position in that ecosystem (the only modern runtime + debugger).
+The LMAO porting plan in `docs/design/hell-assembler-design.md` **is retained but downgraded to a backup option** (serving original Malbolge's research value); the main line shifts to the Nagoya stack, for these reasons: the target (Malbolge20) has ample memory, a clean license, ready-made high-level components, and pyMalbolge has a clear, unique position in that ecosystem (the only modern runtime + debugger).
 
 ## 5. Python Front End (v1 Implemented)
 
@@ -115,6 +120,9 @@ python3 -m malbolge --variant=malbolge20 prog.mb
 python3 -m malbolge compile prog.py --backend=direct -o prog.mb
 ```
 
+`compile` also exposes `--op-style=cluster|inline` and `--jmp-style=main|direct`
+to pick the `mg2mc` code-generation style (defaults unchanged: `cluster`/`main`).
+
 ```python
 from malbolge.compiler import compile_python_to_c, compile_python_to_mb
 c_source = compile_python_to_c("putchar(72)\nputchar(105)\n")
@@ -123,7 +131,7 @@ mb = compile_python_to_mb(source, backend="direct")   # direct backend
 
 ### 5.1 Direct Backend (py2mg, v0 Implemented)
 
-`py2mg.py` generates `.mg` directly from the Python AST, reusing c2mg's already-validated code-generation primitives, but swaps out the stack-frame strategy: each function's temporaries are declared inside its own `DEF`, real recursion-cycle detection is performed (c2mg treats all recursion as worst-case), and only temporaries that survive across a call are protected. As a result, **double recursion `fib(n-1) + fib(n-2)` is correct by construction** — it eliminates upstream bug A2 at the root, rather than sidestepping it via three-address form. On programs with control flow/functions, the output is 46-75% smaller than the `c` backend, and never larger. See `docs/py2mg-backend.md` for the design document; the two backends' language subsets are strictly identical, and e2e testing does a byte-exact differential comparison of program output.
+`py2mg.py` generates `.mg` directly from the Python AST, reusing c2mg's already-validated code-generation primitives, but swaps out the stack-frame strategy: each function's temporaries are declared inside its own `DEF`, real recursion-cycle detection is performed (c2mg treats all recursion as worst-case), and only temporaries that survive across a call are protected. As a result, **double recursion `fib(n-1) + fib(n-2)` is correct by construction** — it eliminates upstream bug A2 at the root, rather than sidestepping it via three-address form. On programs with control flow/functions, the output is 46-75% smaller than the `c` backend, and never larger. See `docs/design/py2mg-backend.md` for the design document; the two backends' language subsets are strictly identical, and e2e testing does a byte-exact differential comparison of program output.
 
 ### Supported Python Subset
 
@@ -158,6 +166,7 @@ The backend C subset has several confirmed pitfalls (found through testing); the
 
 - `test/test_py2c.py`: pure transpilation unit tests (no dependency on ref tools) — emission structure, constant folding, temporary-variable expansion, library-function injection, error cases, library-function algorithm regression.
 - `test/test_py2c_e2e.py`: two layers, both auto-skipped when the ref tools are absent — a parser-acceptance layer (the generated C passes `ref/nagoya-highlevel/parser`) and a full-pipeline end-to-end layer (Python → `.mb`, then run and assert on the output). End-to-end assertions prefer the **C reference interpreter** (`ref/nagoya-malbolge20-interpreter/malbolge20`, 15-100x faster than pyMalbolge), with pyMalbolge additionally cross-checked for matching output on two small cases, hi / echo.
+- `test/test_py2mg.py` / `test/test_py2mg_e2e.py`: the same two-layer split for the direct backend (§5.1) — pure transpilation unit tests, and end-to-end tests that byte-exact diff `py2mg`'s output against the `c` backend's.
 
 ### Known Trade-offs
 

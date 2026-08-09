@@ -29,7 +29,7 @@
     "deterministic": true,
     "stdout_bytes": 2163,
     "stderr_excerpt": null,
-    "notes": "While loop over char-literal-initialised global with <=, postfix ++; known-good end-to-end reference case per docs/highlevel-to-malbolge.md (matches pyMalbolge output byte-for-byte through the full pipeline)."
+    "notes": "While loop over char-literal-initialised global with <=, postfix ++; known-good end-to-end reference case per docs/design/highlevel-to-malbolge.md (matches pyMalbolge output byte-for-byte through the full pipeline)."
   },
   {
     "path": "test/fixtures/c2mg_corpus/upstream/examples_while2.c",

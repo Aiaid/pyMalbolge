@@ -64,6 +64,15 @@ ref/LMAO/lmao program.hell -o program.mal
 python3 -m malbolge program.mal
 ```
 
+**Scope note**: `python3 -m malbolge compile` only accepts `.py` source as
+input. For the hand-written-`.mg`-to-`.mb` scenario — you already have
+hand-authored `.mg` intermediate code, not something compiled from `.py` —
+`scripts/mg2mb.sh` (wrapping the external ref/ toolchain) is still the only
+CLI path today. To do that scenario in pure Python, call
+`translate_mg_to_mc()` (`malbolge/compiler/mg2mc.py`) and
+`assemble_mc_to_mb()` (`malbolge/compiler/mc2mb.py`) directly instead of
+going through the CLI.
+
 ## 4. Determinism and Reproducibility
 
 - `ternary`: without `-s`, it randomizes code style; pin `-m -c -s 1` (the mg2mb.sh default).
@@ -75,5 +84,5 @@ python3 -m malbolge program.mal
 
 - Byte-exact differential comparison between the two interpreters (pyMalbolge vs. the reference C interpreter) is the admission bar for every fixture.
 - Bulk verification uses the C reference (fast); pyMalbolge cross-checks a sample.
-- Runtime library self-test: `python3 runtime/mg/tests/run.py` (19 checks; `--py` also runs pyMalbolge).
-- Full test suite: `python3 -m unittest discover test/` (doesn't depend on the ref/ tools — fixtures are checked in; e2e tests auto-skip when tools are missing).
+- Runtime library self-test: `uv run --no-sync python runtime/mg/tests/run.py` (19 checks; `--py` also runs pyMalbolge).
+- Full test suite: `uv run --no-sync python -m unittest discover test/` (doesn't depend on the ref/ tools — fixtures are checked in; e2e tests auto-skip when tools are missing).

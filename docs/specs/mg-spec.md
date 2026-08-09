@@ -308,7 +308,7 @@ variable `X` itself (`Instruction::JMP(var_label_inst)` inside `CodeBlock::switc
 `CodeBlock.cc:313`), relying on the fixed-cell technique at the Malbolge / low-level-assembly level
 whereby "three literals adjacent to the all-2s value, when executed as instructions, happen to
 produce a three-way branch after the xlat2 transformation" (the same idea as `immutable_nops`/SNOP
-in §3.1 of `docs/hell-spec.md` — both exploit the fact that certain byte values have well-defined
+in §3.1 of `docs/specs/hell-spec.md` — both exploit the fact that certain byte values have well-defined
 behaviour under the xlat2 table). **Neither `.mg` nor `ref/nagoya-ternary/parser` checks this
 constraint statically at all** — code where `X` holds some other value still compiles, and only at
 run time produces "予測不能な動作" (the 2016 paper's own wording: unpredictable behaviour — not a
@@ -629,5 +629,5 @@ END
   サブセットから Malbolge へのコンパイラ", 電子情報通信学会技術報告, Vol.117,
   No.136, SS2017-18, pp.145-150 (2017).
 - `test/fixtures/nagoya/README.md`, `test/fixtures/nagoya/mg_*.mg`
-- `docs/hell-spec.md` (sister document: the HeLL/LMAO language specification; `SWITCH`'s fixed-cell
+- `docs/specs/hell-spec.md` (sister document: the HeLL/LMAO language specification; `SWITCH`'s fixed-cell
   jump technique shares its origin with the `immutable_nops` idea in its §3.1)

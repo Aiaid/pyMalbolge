@@ -126,14 +126,16 @@ tottime  cumtime  函数
 换),递归分支因子随之变宽,单次 `dm_mov_search` 调用树变大,叠加调用
 次数本身也随程序变大而增长,两者相乘导致 O(n^1.4) 而非 O(n)。
 
-**可优化性判断**:这是**移植自参考 C++ 实现的原始算法**(`init/dmod.cpp`
-的搜索逻辑被逐字节忠实移植,保证了 `.mb` 输出字节级一致),算法复杂度
-本身在 C++ 里因为绝对速度快而不明显,移植到纯 Python 后常数因子被放大
-成了主要瓶颈。**加记忆化缓存(在 `(d, pos, depth)` 上,且仅在
-`jmpaddrs` 不变的阶段生效/或用其快照做缓存 key)是零风险、不改变输出
-的优化**——因为 `dm_mov_search` 在该阶段是纯函数,缓存不会改变任何返回
-值,只会消除重复计算。据调用次数与命中重复度粗估,理论上可将这一项的
-耗时从"秒级/十秒级"压缩到"毫秒级",是全流程目前性价比最高的单点优化。
+**可优化性判断(已修复)**:这是**移植自参考 C++ 实现的原始算法**
+(`init/dmod.cpp` 的搜索逻辑被逐字节忠实移植,保证了 `.mb` 输出字节级
+一致),算法复杂度本身在 C++ 里因为绝对速度快而不明显,移植到纯 Python
+后常数因子被放大成了主要瓶颈。**已在 commit f121676**("Memoize
+dm_mov_search in mc2mb: ~100x faster assembly, byte-identical output")
+**中修复**:加了一个按 `(d, pos, depth)` 做键、经 `jmpaddrs` 上的
+mutation counter 失效的记忆化缓存——因为 `dm_mov_search` 在该阶段是纯
+函数,缓存只会消除重复计算,不会改变任何返回值,所以这个修复对输出正确性
+是零风险的(`test_mc2mb.py` 套件确认字节级一致)。实测吞吐从 ~40s/MB
+提升到 ~0.4s/MB,约 100×,与预估一致。
 
 ## 5. PyPy 加速比:未知(未安装,间接判断)
 
@@ -153,20 +155,23 @@ tottime  cumtime  函数
 | 路线 | 预期收益 | 说明 |
 |---|---|---|
 | 纯 Python 微优化(去 dict 化/局部变量绑定/减少属性查找) | **有限,约 1.2–1.5×** | 两个热点的开销主体是"重复做同一件事"(整块物化、无记忆化搜索),不是"每次操作稍慢";局部变量化等常规手法只能压缩常数因子,治标不治本。 |
-| mypyc(编译现有 .py 为 C 扩展,类型不变) | **中等,预计 3–8×**,前提是先做算法修复 | 能消除 Python 解释开销/函数调用开销,对 `dm_mov_search` 这种高调用频次的递归特别有效;但如果不先加记忆化,mypyc 编译后的 O(n^1.4) 依然是 O(n^1.4),大用例仍会慢。**收益顺序应是:先修算法,再上 mypyc 巩固常数因子。** |
+| mypyc(编译现有 .py 为 C 扩展,类型不变) | **中等,预计 3–8×**,建立在已修复的算法之上 | 能消除 Python 解释开销/函数调用开销,对 `dm_mov_search` 这种高调用频次的递归特别有效;记忆化修复(commit f121676)已经解决了 O(n^1.4) 的膨胀问题,mypyc 现在可以作为一个单纯的常数因子收益叠加上去,而不再是一个有前提条件的选项。**收益顺序按预期兑现了:算法先修好(commit f121676),mypyc 仍可用于进一步巩固常数因子。** |
 | Cython(需手工加类型标注) | **较高但工程成本也高,预计 5–15×** | 对 `crazy()` 的 20 次内层循环、`dm_mov_search` 的递归可以标注 `cdef int` 获得比 mypyc 更激进的收益,但需要维护 `.pyx`/构建链,和"全 Python 可 pip install 安装"的项目定位(B6 里刚完成的全栈 Python 化成果)有一定张力,需要评估是否值得为性能牺牲部分这一优势。 |
 
 **结论**:语言层加速(mypyc/Cython)都应该排在**算法/缓存修复之后**,
 否则是在为一个本可以消除的重复计算"加速引擎"。
 
-## 7. 建议的下一步优化动作(单条)
+## 7. 建议的下一步优化动作(单条)——已修复
 
 给 `_Assembler.dm_mov_search` 加记忆化缓存(例如按 `(d, pos, depth)` 做
 `dict` 缓存,在 `jmpaddrs` 阶段性质不变的窗口内复用;或更保守地在
 `code_generate()` 开始前对 `jmpaddrs` 做一次快照校验,缓存 key 带上快照
 哈希以绝对保证正确性)。这是唯一同时满足"零风险不改变 `.mb` 字节输出"
 与"预期收益最大"(热点占比 97.9%,重复子问题证据充分)两个条件的动作,
-应先于 SparseMemory 块物化优化和任何 mypyc/Cython 投入。
+现已在 commit f121676("Memoize dm_mov_search in mc2mb: ~100x faster
+assembly, byte-identical output")中实现,加入了按 `(d, pos, depth)` 做键、
+经 `jmpaddrs` 上的 mutation counter 失效的 `_dm_cache`。它仍应先于
+SparseMemory 块物化优化(§2,仍是开放问题)和任何 mypyc/Cython 投入。
 
 ---
 
@@ -191,6 +196,10 @@ tottime  cumtime  函数
 > 799KB 用例调用 9500 万次,占该阶段运行时 97.9%(cProfile 实测)。
 > 加缓存不改变 `.mb` 字节输出,是当前性价比最高的单点优化,应先于
 > SparseMemory 块物化优化(见下条)和 mypyc/Cython 投入。
+>
+> **状态:已实现——commit f121676**("Memoize dm_mov_search in mc2mb:
+> ~100x faster assembly, byte-identical output");以上根因分析作为记录
+> 保留。
 
 > **H9. malbolge20 解释器:SparseMemory 块物化粒度过粗**:cProfile 显示
 > 主解释循环本体只占运行时 4–9%,70–80% 花在 `_materialize_block()` 整块

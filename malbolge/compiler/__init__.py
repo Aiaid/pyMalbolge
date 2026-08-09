@@ -35,7 +35,7 @@ def compile_python_to_mb(py_source: str, backend: str = "c", *,
       behaviour).
     * ``"direct"`` -- the ``py2mg`` direct Python -> ``.mg`` backend, which
       skips the C layer (smaller, non-recursive functions carry no frame
-      protection; see ``docs/py2mg-backend.md``).
+      protection; see ``docs/design/py2mg-backend.md``).
 
     Both paths share the ``mg2mc`` and ``mc2mb`` back half.  ``op_style`` and
     ``jmp_style`` are the ``mg2mc`` code-generation styles (see

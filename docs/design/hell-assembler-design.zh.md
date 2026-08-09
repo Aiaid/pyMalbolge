@@ -3,8 +3,8 @@
 > [English](hell-assembler-design.md) | **中文**
 
 > 目标:在 pyMalbolge 中实现 HeLL → Malbolge 汇编器,行为兼容 LMAO v0.6.0。
-> 依据:`docs/hell-spec.zh.md`(语言规格)与 `docs/lmao-internals.zh.md`(LMAO 算法分析)。
-> 状态:设计稿,待评审。2026-07-20。
+> 依据:`docs/specs/hell-spec.zh.md`(语言规格)与 `docs/upstream/lmao-internals.zh.md`(LMAO 算法分析)。
+> 状态:已搁置——等待许可证决策(见 §6)。2026-07-20 起草。
 
 ## 1. 目标与范围
 
