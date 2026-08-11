@@ -400,7 +400,10 @@ everything falls back to the pure-Python pipeline.
 
 **This project**
 
-- Forked from [Avantgarde95/pyMalbolge](https://github.com/Avantgarde95/pyMalbolge)
+- Started as a fork of [Avantgarde95/pyMalbolge](https://github.com/Avantgarde95/pyMalbolge).
+  The interpreter has since been rewritten from scratch and none of the original
+  source remains; the `.mal` examples and Ben Olmstead's public-domain reference
+  interpreter under `ref/` are all that carried over.
 
 ## License
 

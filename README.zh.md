@@ -361,7 +361,9 @@ python3 -m pytest test/ -n auto   # ~2.6x faster with pytest-xdist
 
 **本项目**
 
-- Fork 自 [Avantgarde95/pyMalbolge](https://github.com/Avantgarde95/pyMalbolge)
+- 最初 fork 自 [Avantgarde95/pyMalbolge](https://github.com/Avantgarde95/pyMalbolge)。
+  此后解释器已完全重写,不包含任何原始代码;沿用下来的只有 `.mal` 示例程序和
+  `ref/` 下 Ben Olmstead 置于公有领域的参考解释器。
 
 ## 许可证
 
