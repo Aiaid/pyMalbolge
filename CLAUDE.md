@@ -77,6 +77,23 @@ and `test_py2c_diagnostics.py` needs pytest importable either way.
 uv build
 ```
 
+### Searching the repo
+
+**`grep` here is an `rg` wrapper that honours `.gitignore` by default**, and
+`docs/research/` is gitignored (it lives in a private companion repository).
+So a plain `grep -r` over the repo silently skips every research note and
+returns a *false negative* — the hits are there, you just cannot see them.
+
+```bash
+grep -rn "some_symbol" .                      # skips docs/research/ silently
+grep -rn --no-ignore "some_symbol" .          # searches everything
+grep -rn "some_symbol" . docs/research/       # or name the path explicitly
+```
+
+This matters most when checking "is this symbol/claim still referenced
+anywhere?" before deleting or rewriting something. Two separate sessions have
+each been misled by it once.
+
 ## Architecture
 
 ### Core modules
