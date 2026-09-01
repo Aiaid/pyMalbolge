@@ -84,6 +84,14 @@ wrapper passes `--ignore-files`** — so searches honour `.gitignore`. That is
 the wrapper's doing, not ugrep's default; plain `ugrep` ignores `.gitignore`
 unless told otherwise. Check with `type grep` if a search behaves unexpectedly.
 
+**`command grep` is a different program**, not the same search with the
+wrapper peeled off: it bypasses the function and reaches `/usr/bin/grep` —
+BSD grep, not ugrep — which honours no ignore rules and takes different
+flags. So it cannot be used to check what the wrapper does; a parallel
+session spent three rounds of increasingly careful experiments concluding
+the wrapper had no effect, every round carrying `command` along as the
+unexamined constant.
+
 `docs/research/` is gitignored (it lives in a private companion repository),
 so a plain `grep -r` over this repo silently skips every research note and
 returns a *false negative* — the hits are there, you just cannot see them.
