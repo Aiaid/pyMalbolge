@@ -182,6 +182,15 @@ class Breakpoint:
     hit_count: int = 0
     condition: Optional[Callable[[MalbolgeState], bool]] = None
     temporary: bool = False  # One-shot breakpoint (for run-to-cursor)
+    # Human-readable source text of `condition`, e.g. "a == 72", supplied by
+    # whoever built the predicate. A UI has to be able to show the condition
+    # it is enforcing, and a Callable carries no usable text: a `lambda` gives
+    # inspect.getsource() the whole enclosing line, and a compiled expression
+    # or a functools.partial gives nothing at all. So the text is passed in,
+    # and is None whenever the caller did not supply one -- including for a
+    # breakpoint that does have a condition. `condition is not None` and
+    # `condition_text is not None` are therefore different questions.
+    condition_text: Optional[str] = None
 
     def should_break(self, state: MalbolgeState) -> bool:
         """Check if this breakpoint should trigger."""
@@ -321,11 +330,25 @@ class MalbolgeDebugger:
 
     def add_breakpoint(self, address: int,
                        condition: Optional[Callable[[MalbolgeState], bool]] = None,
-                       temporary: bool = False) -> Breakpoint:
-        """Add a breakpoint at the specified address."""
+                       temporary: bool = False,
+                       condition_text: Optional[str] = None) -> Breakpoint:
+        """
+        Add a breakpoint at the specified address.
+
+        Args:
+            address: where to break.
+            condition: predicate on the state; the breakpoint only fires when
+                it returns True.
+            temporary: one-shot breakpoint (used by run-to-cursor).
+            condition_text: what `condition` says, for display. Nothing reads
+                it back, and it is never parsed or evaluated -- a UI cannot
+                recover readable text from a Callable, so the caller that
+                built the predicate is the only place that has it.
+        """
         if not 0 <= address < self._config.memory_size:
             raise ValueError(f"Address {address} out of range (0-{self._config.memory_size-1})")
-        bp = Breakpoint(address=address, condition=condition, temporary=temporary)
+        bp = Breakpoint(address=address, condition=condition,
+                        temporary=temporary, condition_text=condition_text)
         self._breakpoints[address] = bp
         return bp
 

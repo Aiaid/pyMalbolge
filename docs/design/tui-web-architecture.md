@@ -111,9 +111,23 @@ TUI and the web build are both written against them.
 }
 ```
 
-`effect` is new. It is derived from `OPCODE_HELP[opcode]["syntax"]`, not
-invented per renderer — canvas 1a's `eff` column and the web build must show
-the same string.
+`effect` is new, and it is a **semantic key, not display text** — one of
+`disasm.EFFECT_KEYS`: the eight executable mnemonics (`jmp` `out` `in` `rotr`
+`mov` `crz` `nop` `end`) plus `unknown_opcode` and `illegal`. Each renderer
+maps the key to its own wording.
+
+It shipped briefly as an English display string ("d ← mem[d]"), which was
+wrong for the reason this whole layer exists: the web canvas is in Chinese, so
+baking one natural language into the shared layer leaves the other renderer
+either wrong or reverse-engineering text back into meaning.
+
+The two non-executing keys are deliberately distinct, because they are
+different sentences: at an `illegal` cell (outside 33..126) the machine
+*stops*; an `unknown_opcode` (printable, but `(raw + addr) % 94` is none of
+the eight) is *skipped* and execution carries on. `legal` plus
+`mnemonic == "???"` can already distinguish them, but only if every renderer
+independently knows that rule — naming them here makes a renderer's lookup
+table total over `EFFECT_KEYS` with no second field to consult.
 
 ### 3.3 `MemoryView`
 

@@ -16,6 +16,41 @@ def _char_or_dot(value: int) -> str:
     return chr(value) if 33 <= value <= 126 else "."
 
 
+# Unicode "Control Pictures" (U+2400..U+241F) name C0 control characters
+# visibly: U+2400 SYMBOL FOR NULL, U+2407 SYMBOL FOR BELL, and so on. DEL is
+# the odd one out at U+2421 (U+2420 is the symbol for space, which is not a
+# control character and so is never reached here).
+_CONTROL_PICTURES_BASE = 0x2400
+_SYMBOL_FOR_DELETE = "␡"
+
+
+def _classify_a(value: int):
+    """Classify the A register's low byte and give it a displayable symbol.
+
+    Returns ``(kind, symbol)``.
+
+    A is a full ternary word, not a byte -- ``a`` routinely runs into the tens
+    of thousands -- so the classification is of ``a % 256``, which is the byte
+    ``out a`` would actually emit (``malbolge.py``: ``chr(int(a % 256))``).
+    The printable bound is 32..126 inclusive, matching what the TUI's register
+    panel and ``debug_cli`` already show for A; note this is *not* the 33..126
+    bound ``a_char`` uses, which is the memory-cell convention (a space is not
+    a legal instruction character but is a perfectly ordinary output byte).
+
+    ``kind`` is "printable", "control" (a C0 control or DEL) or "other"
+    (0x80..0xFF, which is not a character at all until an encoding is chosen,
+    so no symbol is invented for it).
+    """
+    byte = value % 256
+    if 32 <= byte <= 126:
+        return "printable", chr(byte)
+    if byte < 32:
+        return "control", chr(_CONTROL_PICTURES_BASE + byte)
+    if byte == 127:
+        return "control", _SYMBOL_FOR_DELETE
+    return "other", None
+
+
 def build(dbg: MalbolgeDebugger) -> Dict[str, Any]:
     """Build a :class:`RegisterView` dict from the debugger's current state.
 
@@ -25,6 +60,7 @@ def build(dbg: MalbolgeDebugger) -> Dict[str, Any]:
     those come back as ``None``.
     """
     state = dbg.get_state()
+    a_kind, a_symbol = _classify_a(state.a)
     preview = dbg.preview_next_instruction()
     reg_changes = preview.get("register_changes") or {}
 
@@ -39,7 +75,14 @@ def build(dbg: MalbolgeDebugger) -> Dict[str, Any]:
     # reason.
     return {
         "a": state.a,
+        # a_char keeps its original meaning exactly -- the TUI and existing
+        # tests depend on it. a_char_kind / a_char_symbol are the strictly
+        # additional information: which *sort* of byte A holds, and a glyph
+        # that is displayable even when the byte is not (a control character
+        # gets its Control Pictures symbol, so A=7 reads "␇" rather than ".").
         "a_char": _char_or_dot(state.a),
+        "a_char_kind": a_kind,
+        "a_char_symbol": a_symbol,
         "c": state.c,
         "d": state.d,
         "next_a": _next("a"),

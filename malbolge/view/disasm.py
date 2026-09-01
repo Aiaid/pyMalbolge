@@ -3,45 +3,55 @@ DisasmView -- disassembly window data.
 
 Contract: ``docs/design/tui-web-architecture.md`` §3.2. Field names are
 normative; see :mod:`malbolge.view` for the two rules this package must obey.
+
+Departure from §3.2 as written: ``effect`` is a semantic key from
+:data:`EFFECT_KEYS`, not the display string ("d ← mem[d]") the spec's example
+shows. See the comment on :data:`EFFECT_KEYS` for why; the spec text needs
+reconciling.
 """
 
 from typing import Any, Dict, Optional
 
-from ..debugger import MalbolgeDebugger, OPCODE_HELP
+from ..debugger import MalbolgeDebugger, OPCODE_NAMES
 
 
-# Two opcodes' pseudocode isn't of the "x = y" assignment shape that the
-# mechanical "=" -> "<-" rewrite below produces a sensible effect string for
-# (out prints, in blocks on input, nop/end don't touch registers/memory at
-# all) -- those four get a hand-written effect string instead.
-_EFFECT_OVERRIDES = {
-    5: "output ← a",     # out a
-    23: "a ← input",     # in a
-    68: "(no effect)",        # nop
-    81: "(halt)",             # end
-}
+#: Every value ``effect`` can take. A renderer maps these to its own wording
+#: (the TUI and the web build are not written in the same language, and the
+#: web build's is not English), so this set -- not the wording -- is the
+#: contract. ``OPCODE_HELP[opcode]['pseudocode']`` still holds the English
+#: "d = mem[d]" form for a renderer that wants an operational gloss.
+EFFECT_KEYS = frozenset({
+    # the eight executable opcodes, keyed by their OPCODE_NAMES mnemonic
+    "jmp", "out", "in", "rotr", "mov", "crz", "nop", "end",
+    # a printable cell whose (raw + addr) % 94 is none of those eight: the
+    # machine skips it and carries on, so a renderer says "treated as nop"
+    "unknown_opcode",
+    # a cell outside 33..126: execution does not skip it, it *stops* there,
+    # which is a different sentence entirely
+    "illegal",
+})
+
+#: `effect` was previously a display string ("d <- mem[d]"). It is now a key,
+#: because that string was English -- baking one natural language into the
+#: layer that both renderers share makes the other renderer either wrong or
+#: forced to reverse-engineer text back into meaning.
+#:
+#: The three non-executing cases stay distinguishable through this field
+#: alone. `legal` plus `mnemonic == "???"` can already tell them apart, but
+#: only if every renderer independently knows that rule; naming them here
+#: means a renderer's lookup table is total over EFFECT_KEYS and needs no
+#: second field to disambiguate.
 
 
-def _effect_for_opcode(opcode: Optional[int]) -> str:
-    """Derive the one-line "effect" string for a legal opcode.
+def _effect_key(opcode: Optional[int]) -> str:
+    """The semantic key for one disassembly row.
 
-    NOTE ON SPEC WORDING: §3.2 says effect is "derived from
-    OPCODE_HELP[opcode]['syntax']", but its own examples ("d <- mem[d]",
-    "c <- mem[d]") are actually OPCODE_HELP[opcode]['pseudocode'] with '='
-    rewritten to an arrow -- 'mov'/'jmp' pseudocode is exactly 'd = mem[d]'
-    / 'c = mem[d]', while their 'syntax' strings are 'mov d, [d]' / 'jmp [d]'
-    and don't match. This implementation follows the examples (pseudocode),
-    not the prose (syntax); flagged for the spec to be reconciled.
+    `opcode` is None exactly when the cell is not a legal instruction
+    character (33..126) -- ``MalbolgeDebugger.disassemble`` sets it that way.
     """
     if opcode is None:
-        return ""
-    if opcode in _EFFECT_OVERRIDES:
-        return _EFFECT_OVERRIDES[opcode]
-    help_ = OPCODE_HELP.get(opcode)
-    if help_ is None:
-        return "???"
-    lines = help_["pseudocode"].split("\n")
-    return "; ".join(line.replace(" = ", " ← ", 1) for line in lines)
+        return "illegal"
+    return OPCODE_NAMES.get(opcode, "unknown_opcode")
 
 
 def build(dbg: MalbolgeDebugger, *, count: int = 11) -> Dict[str, Any]:
@@ -63,7 +73,7 @@ def build(dbg: MalbolgeDebugger, *, count: int = 11) -> Dict[str, Any]:
             "legal": legal,
             "opcode": r["opcode"],
             "mnemonic": r["mnemonic"],
-            "effect": _effect_for_opcode(r["opcode"]) if legal else "",
+            "effect": _effect_key(r["opcode"]),
             "is_current": r["is_current"],
             "has_breakpoint": r["has_breakpoint"],
         })

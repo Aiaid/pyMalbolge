@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "variant": "original",
+  "step_limit": 100000000,
+  "programs": [
+    {
+      "name": "99bottles",
+      "file": "99bottles.mal",
+      "bytes": 22807,
+      "cells": 22561,
+      "steps": 13802605,
+      "truncated": false,
+      "stop_reason": "end",
+      "reads_input": false,
+      "output": "99 bottles of beer on the wall,\n99 bottles of beer,\nTake one down, pass it around,\n98 bottles of beer on the wall.\n\n98 bottles of beer on the wall,\n98 bottles of beer,\nTake one down, pass it around,\n9",
+      "output_len": 11459,
+      "output_truncated": true
+    },
+    {
+      "name": "cat",
+      "file": "cat.mal",
+      "bytes": 474,
+      "cells": 458,
+      "steps": 340,
+      "truncated": false,
+      "stop_reason": "input_exhausted",
+      "reads_input": true,
+      "output": "",
+      "output_len": 0,
+      "output_truncated": false
+    },
+    {
+      "name": "cat2",
+      "file": "cat2.mal",
+      "bytes": 66,
+      "cells": 62,
+      "steps": 33,
+      "truncated": false,
+      "stop_reason": "input_exhausted",
+      "reads_input": true,
+      "output": "",
+      "output_len": 0,
+      "output_truncated": false
+    },
+    {
+      "name": "hello",
+      "file": "hello.mal",
+      "bytes": 65,
+      "cells": 64,
+      "steps": 39,
+      "truncated": false,
+      "stop_reason": "end",
+      "reads_input": false,
+      "output": "Hello World!",
+      "output_len": 12,
+      "output_truncated": false
+    },
+    {
+      "name": "quine",
+      "file": "quine.mal",
+      "bytes": 59851,
+      "cells": 59032,
+      "steps": 69547436,
+      "truncated": false,
+      "stop_reason": "end",
+      "reads_input": false,
+      "output": "bt&A@?>=<;49876543210/.-,+*)('&%$#\"!~}|<zyxwvutmlU0B{Qlxwvu('%^po[m_B]{U\nyxvvuUTrppomml}|{zyxwvu'%%^]o[mlk{yyxvvuQs0ppo,+*)('&%$#\"!~}vuz]xwvutsrk\npSnmlkjihgfeH]baZ_XWV[ZSXW:9TSRQJONMLEJCHGFED'&A@?>7<}",
+      "output_len": 59852,
+      "output_truncated": true
+    },
+    {
+      "name": "truth",
+      "file": "truth.mal",
+      "bytes": 4066,
+      "cells": 4024,
+      "steps": 3836,
+      "truncated": false,
+      "stop_reason": "input_exhausted",
+      "reads_input": true,
+      "output": "",
+      "output_len": 0,
+      "output_truncated": false
+    }
+  ]
+}

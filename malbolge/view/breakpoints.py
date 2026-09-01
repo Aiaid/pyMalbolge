@@ -25,6 +25,15 @@ def build(dbg: MalbolgeDebugger) -> Dict[str, Any]:
 
     Per §3.6, ``Watchpoint`` has no ``hit_count`` today and none is
     synthesized here.
+
+    ``has_condition`` and ``condition_text`` answer different questions and
+    both are emitted. The predicate is a ``Callable`` and can never cross Rule
+    2's boundary; its source text is whatever the caller passed to
+    ``add_breakpoint(condition_text=...)``, and is ``None`` when the caller
+    gave none -- which is a legitimate state for a conditional breakpoint, not
+    an error. Nothing here tries to recover text from the callable itself
+    (``inspect.getsource`` on a lambda returns the whole enclosing line, and
+    returns nothing at all for a partial or a C-level callable).
     """
     breakpoints = [
         {
@@ -34,6 +43,7 @@ def build(dbg: MalbolgeDebugger) -> Dict[str, Any]:
             "enabled": bp.enabled,
             "temporary": bp.temporary,
             "has_condition": bp.condition is not None,
+            "condition_text": bp.condition_text,
         }
         for bp in sorted(dbg.list_breakpoints(), key=lambda bp: bp.address)
     ]

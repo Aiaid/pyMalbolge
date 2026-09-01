@@ -117,12 +117,16 @@ class TestDisasmView(unittest.TestCase):
 
         self.assertTrue(current["legal"])
         self.assertIsNotNone(current["opcode"])
-        self.assertNotEqual(current["effect"], "")
-        # jmp/mov's effect is exactly OPCODE_HELP pseudocode with '<-'.
-        if current["mnemonic"] == "jmp":
-            self.assertEqual(current["effect"], "c ← mem[d]")
-        if current["mnemonic"] == "mov":
-            self.assertEqual(current["effect"], "d ← mem[d]")
+        # `effect` is a semantic key, not display text: the wording differs
+        # per renderer (the web build's is not English), so the key set is
+        # the contract. Every row must land inside it.
+        self.assertIn(current["effect"], disasm.EFFECT_KEYS)
+        for row in view["rows"]:
+            self.assertIn(row["effect"], disasm.EFFECT_KEYS)
+        # For an executable opcode the key IS the mnemonic.
+        if current["mnemonic"] in {"jmp", "mov", "out", "in",
+                                   "rotr", "crz", "nop", "end"}:
+            self.assertEqual(current["effect"], current["mnemonic"])
 
     def test_illegal_row_is_not_legal_and_has_no_opcode(self):
         dbg = _make_dbg(MalbolgeConfig.original())
@@ -140,8 +144,14 @@ class TestDisasmView(unittest.TestCase):
         if illegal_rows:
             row = illegal_rows[0]
             self.assertIsNone(row["opcode"])
-            self.assertEqual(row["effect"], "")
             self.assertFalse(row["legal"])
+            # "illegal" and "unknown_opcode" are different sentences: the
+            # machine STOPS at an illegal cell, but skips an unknown opcode
+            # and carries on. A renderer must be able to tell them apart from
+            # this field alone.
+            self.assertEqual(row["effect"], "illegal")
+            self.assertNotIn("unknown_opcode",
+                             [r["effect"] for r in illegal_rows])
 
 
 class TestTeachingView(unittest.TestCase):
@@ -273,6 +283,99 @@ class TestBreakpointView(unittest.TestCase):
         view = breakpoints.build(dbg)
         self.assertEqual(view["breakpoints"], [])
         self.assertEqual(view["watchpoints"], [])
+
+    def test_condition_text_is_carried_through_verbatim(self):
+        # The web canvas shows the condition itself ("a==72"), which a
+        # Callable cannot supply -- so the caller passes the text and this
+        # layer must not touch it.
+        dbg = _make_dbg(MalbolgeConfig.original())
+        dbg.add_breakpoint(5, condition=lambda s: s.a == 72,
+                           condition_text="a == 72")
+        bp = breakpoints.build(dbg)["breakpoints"][0]
+        self.assertEqual(bp["condition_text"], "a == 72")
+        self.assertTrue(bp["has_condition"])
+
+    def test_condition_without_text_and_text_without_condition(self):
+        # The two fields answer different questions, so all four combinations
+        # are reachable and none of them is an error.
+        dbg = _make_dbg(MalbolgeConfig.original())
+        dbg.add_breakpoint(5, condition=lambda s: True)   # predicate, no text
+        dbg.add_breakpoint(7)                             # neither
+        by_addr = {b["addr"]: b
+                   for b in breakpoints.build(dbg)["breakpoints"]}
+
+        self.assertTrue(by_addr[5]["has_condition"])
+        self.assertIsNone(by_addr[5]["condition_text"])
+        self.assertFalse(by_addr[7]["has_condition"])
+        self.assertIsNone(by_addr[7]["condition_text"])
+
+    def test_condition_text_survives_json(self):
+        dbg = _make_dbg(MalbolgeConfig.original())
+        dbg.add_breakpoint(5, condition=lambda s: s.a == 72,
+                           condition_text="a == 72")
+        # Rule 2: the predicate must not leak into the payload, the text must.
+        payload = json.dumps(breakpoints.build(dbg))
+        self.assertIn("a == 72", payload)
+        self.assertNotIn("lambda", payload)
+
+
+class TestRegisterCharClassification(unittest.TestCase):
+    """a_char_kind / a_char_symbol -- §3.1.
+
+    A is a full ternary word (it routinely reaches five figures), so the
+    classification is of ``a % 256``: the byte ``out a`` would emit.
+    """
+
+    def _view_with_a(self, value):
+        dbg = _make_dbg(MalbolgeConfig.original())
+        dbg._a = value
+        return registers.build(dbg)
+
+    def test_printable(self):
+        view = self._view_with_a(ord("K"))
+        self.assertEqual(view["a_char_kind"], "printable")
+        self.assertEqual(view["a_char_symbol"], "K")
+
+    def test_control_character_gets_a_visible_symbol(self):
+        # The canvas shows A=7 as "␇ 控制符", not as ".".
+        view = self._view_with_a(7)
+        self.assertEqual(view["a_char_kind"], "control")
+        self.assertEqual(view["a_char_symbol"], "␇")
+        # a_char keeps its old meaning, which the TUI depends on.
+        self.assertEqual(view["a_char"], ".")
+
+    def test_delete_is_a_control_character(self):
+        view = self._view_with_a(127)
+        self.assertEqual(view["a_char_kind"], "control")
+        self.assertEqual(view["a_char_symbol"], "␡")
+
+    def test_high_byte_is_other_with_no_invented_symbol(self):
+        # 0x80..0xFF is not a character until an encoding is chosen.
+        view = self._view_with_a(200)
+        self.assertEqual(view["a_char_kind"], "other")
+        self.assertIsNone(view["a_char_symbol"])
+
+    def test_classification_is_of_the_low_byte_not_the_word(self):
+        # 29,527 % 256 == 87 -> 'W'. Classifying the word itself would fall
+        # through to "other" and lose the character entirely.
+        view = self._view_with_a(29527)
+        self.assertEqual(view["a"], 29527)
+        self.assertEqual(view["a_char_kind"], "printable")
+        self.assertEqual(view["a_char_symbol"], "W")
+
+    def test_space_differs_between_a_char_and_the_symbol(self):
+        # Deliberate: a_char uses the memory-cell bound (33..126, a space is
+        # not a legal instruction character) while the classification uses the
+        # output-byte bound (32..126, a space is an ordinary output byte).
+        view = self._view_with_a(32)
+        self.assertEqual(view["a_char"], ".")
+        self.assertEqual(view["a_char_kind"], "printable")
+        self.assertEqual(view["a_char_symbol"], " ")
+
+    def test_survives_json(self):
+        for value in (7, 32, 75, 127, 200, 29527):
+            with self.subTest(a=value):
+                json.dumps(self._view_with_a(value))
 
 
 if __name__ == "__main__":
