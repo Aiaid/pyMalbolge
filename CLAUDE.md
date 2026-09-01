@@ -79,20 +79,34 @@ uv build
 
 ### Searching the repo
 
-**`grep` here is an `rg` wrapper that honours `.gitignore` by default**, and
-`docs/research/` is gitignored (it lives in a private companion repository).
-So a plain `grep -r` over the repo silently skips every research note and
-returns a *false negative* — the hits are there, you just cannot see them.
+**`grep` here is a `ugrep` wrapper that honours `.gitignore` by default**
+(`grep --version` → `ugrep 7.8.4`), and `docs/research/` is gitignored (it
+lives in a private companion repository). So a plain `grep -r` over the repo
+silently skips every research note and returns a *false negative* — the hits
+are there, you just cannot see them.
 
 ```bash
-grep -rn "some_symbol" .                      # skips docs/research/ silently
-grep -rn --no-ignore "some_symbol" .          # searches everything
-grep -rn "some_symbol" . docs/research/       # or name the path explicitly
+grep -rn "some_symbol" .                       # skips docs/research/ silently
+grep -rn "some_symbol" . docs/research/        # name the path explicitly (simplest)
+grep -rn --no-ignore-files \
+     --exclude-dir={.git,.venv,ref,pyenv,dist} \
+     "some_symbol" .                           # or search everything
 ```
 
+The flag is `--no-ignore-files`. **`--no-ignore` is ripgrep's spelling and
+ugrep rejects it** — stdout empty, exit 2, the complaint on stderr only, so
+with `2>/dev/null` in the pipe it is indistinguishable from "no matches". The
+`--exclude-dir` part is not optional either: without it the search descends
+into `.venv/` and `ref/`.
+
+Check the exit code, not just the line count: 1 means "no matches", 2 means
+the search never ran.
+
 This matters most when checking "is this symbol/claim still referenced
-anywhere?" before deleting or rewriting something. Two separate sessions have
-each been misled by it once.
+anywhere?" before deleting or rewriting something. Three sessions have now
+been misled by it — the third being an earlier revision of this very
+paragraph, which recommended `--no-ignore` and was itself verified with
+`2>&1 | wc -l`, counting ugrep's error message as if it were search results.
 
 ## Architecture
 
