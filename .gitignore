@@ -35,3 +35,7 @@ ref/LMAO-out/
 ref/mbi
 ref/nagoya-*/
 info
+
+# Claude Design's dc-runtime bundle, re-fetchable with DesignSync. Generated
+# artifact of the design tool, not our code; preview.html does not need it.
+docs/design/*/support.js

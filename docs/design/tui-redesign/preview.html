@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>pyMalbolge TUI 重设计（本地预览）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>x-dc{display:block}</style>
+</head>
+<body>
+<x-dc>
+<meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}a{color:#2a78d6}a:hover{color:#1b5aa6}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}</style>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">TUI 重设计 — 两个方向 + 80×24 适配（基线复刻在最下方 <a class="dv-oid" href="#0a">0a</a>）</span></div>
+
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>信息密度最大化 · 单强调色 · 150×42 · 源码/热力图/时间线/命令面板</div>
+<div class="dv-card" style="width:1176px;background:#0f1115;border-color:#222833">
+<div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;color:#c9d1d9;background:#0f1115;padding:0;position:relative">
+
+<div style="display:flex;align-items:center;gap:0;background:#161a21;border-bottom:1px solid #232a35;padding:0 10px;height:26px;font-size:12px">
+<span style="color:#0f1115;background:#3fd0e0;font-weight:700;padding:0 8px">◆ maldbg</span>
+<span style="color:#5c6673;padding:0 8px">hello.mal</span>
+<span style="color:#5c6673">│</span>
+<span style="color:#8b949e;padding:0 8px">malbolge20</span>
+<span style="color:#5c6673">│</span>
+<span style="color:#4ec97a;padding:0 8px;font-weight:700">● RUNNING</span>
+<span style="color:#5c6673">│</span>
+<span style="color:#8b949e;padding:0 8px">step <span style="color:#c9d1d9">380</span></span>
+<span style="color:#8b949e;padding:0 8px">0.31 Mstep/s</span>
+<span style="flex:1"></span>
+<span style="color:#5c6673;padding:0 8px">⌘P 命令</span>
+<span style="color:#e3b341;padding:0 8px">● 2 bp</span>
+<span style="color:#c58af9;padding:0 8px">◈ 1 wp</span>
+</div>
+
+<div style="display:flex;align-items:stretch;height:452px">
+
+<div style="width:270px;border-right:1px solid #232a35;display:flex;flex-direction:column;min-width:0">
+<div style="display:flex;height:22px;font-size:11px;border-bottom:1px solid #232a35;background:#12151b">
+<span style="padding:2px 10px;background:#0f1115;color:#3fd0e0;border-right:1px solid #232a35;border-top:1px solid #3fd0e0">PYTHON</span>
+<span style="padding:2px 10px;color:#5c6673;border-right:1px solid #232a35">.mal</span>
+<span style="padding:2px 10px;color:#5c6673">.mg</span>
+</div>
+<div style="padding:6px 0;flex:1;overflow:hidden;font-size:12.5px;line-height:1.55">
+<div style="display:flex;padding:0 8px"><span style="color:#3a424e;width:26px;text-align:right">1</span><span style="width:14px"></span><span style="color:#c58af9">def</span><span style="color:#c9d1d9">&nbsp;fib(n):</span></div>
+<div style="display:flex;padding:0 8px"><span style="color:#3a424e;width:26px;text-align:right">2</span><span style="width:14px"></span><span style="color:#c9d1d9">&nbsp;&nbsp;<span style="color:#c58af9">if</span> n &lt; <span style="color:#e3b341">2</span>:</span></div>
+<div style="display:flex;padding:0 8px"><span style="color:#3a424e;width:26px;text-align:right">3</span><span style="width:14px"></span><span style="color:#c9d1d9">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#c58af9">return</span> n</span></div>
+<div style="display:flex;padding:0 8px;background:#182a2e"><span style="color:#3fd0e0;width:26px;text-align:right">4</span><span style="width:14px;color:#3fd0e0">▶</span><span style="color:#c9d1d9">&nbsp;&nbsp;<span style="color:#c58af9">return</span> fib(n-<span style="color:#e3b341">1</span>)+fib(n-<span style="color:#e3b341">2</span>)</span></div>
+<div style="display:flex;padding:0 8px"><span style="color:#3a424e;width:26px;text-align:right">5</span><span style="width:14px"></span></div>
+<div style="display:flex;padding:0 8px"><span style="color:#3a424e;width:26px;text-align:right">6</span><span style="width:14px"></span><span style="color:#c9d1d9">putchar(<span style="color:#e3b341">48</span>+fib(<span style="color:#e3b341">6</span>))</span></div>
+<div style="height:10px"></div>
+<div style="padding:0 8px 4px;color:#3a424e;font-size:11px">── 映射 ─────────────────────</div>
+<div style="padding:0 8px;color:#5c6673;font-size:11.5px">py:4 <span style="color:#3a424e">→</span> mg:call fib <span style="color:#3a424e">→</span> mb:<span style="color:#8b949e">57–812</span></div>
+<div style="padding:0 8px;color:#5c6673;font-size:11.5px">当前 C=60 落在 <span style="color:#3fd0e0">fib 序言</span></div>
+<div style="height:12px"></div>
+<div style="padding:0 8px 3px;color:#3a424e;font-size:11px">── 结构 ─────────────────────</div>
+<div style="padding:0 8px;font-size:11.5px;color:#8b949e">ƒ fib <span style="color:#5c6673">深度 3</span></div>
+<div style="padding:0 8px;font-size:11.5px;color:#8b949e">&nbsp;&nbsp;└ ƒ fib <span style="color:#5c6673">深度 2</span></div>
+<div style="padding:0 8px;font-size:11.5px;color:#3fd0e0">&nbsp;&nbsp;&nbsp;&nbsp;└ ƒ fib <span style="color:#5c6673">← 当前</span></div>
+<div style="padding:0 8px;font-size:11.5px;color:#8b949e">⟲ loop @57 <span style="color:#5c6673">迭代 12</span></div>
+</div>
+<div style="border-top:1px solid #232a35;padding:4px 8px;font-size:11.5px;background:#12151b">
+<div style="color:#3a424e;margin-bottom:2px">断点 / 监视点</div>
+<div style="color:#f0655a">● 60 <span style="color:#5c6673">mov · 命中 3</span></div>
+<div style="color:#f0655a">● 812 <span style="color:#5c6673">out · 命中 0</span></div>
+<div style="color:#c58af9">◈ mem[104] <span style="color:#5c6673">变化时</span></div>
+</div>
+</div>
+
+<div style="width:330px;border-right:1px solid #232a35;display:flex;flex-direction:column;min-width:0">
+<div style="height:22px;border-bottom:1px solid #232a35;background:#12151b;display:flex;align-items:center;padding:0 8px;font-size:11px"><span style="color:#3fd0e0">DISASM</span><span style="flex:1"></span><span style="color:#3a424e">bp  addr  ch  op        eff</span></div>
+<div style="flex:1;padding:4px 0;font-size:12.5px;line-height:1.5">
+<div style="display:flex;padding:0 8px;color:#4a535f"><span style="width:16px"></span><span style="width:44px;text-align:right">55</span><span style="width:22px;text-align:center;color:#8b949e">k</span><span style="width:46px;color:#5c6673">nop</span><span style="color:#3a424e">—</span></div>
+<div style="display:flex;padding:0 8px;color:#4a535f"><span style="width:16px"></span><span style="width:44px;text-align:right">56</span><span style="width:22px;text-align:center;color:#8b949e">j</span><span style="width:46px;color:#5c6673">nop</span><span style="color:#3a424e">—</span></div>
+<div style="display:flex;padding:0 8px;color:#4a535f"><span style="width:16px"></span><span style="width:44px;text-align:right">57</span><span style="width:22px;text-align:center;color:#8b949e">i</span><span style="width:46px;color:#5c6673">nop</span><span style="color:#3a424e">—</span></div>
+<div style="display:flex;padding:0 8px;color:#4a535f"><span style="width:16px"></span><span style="width:44px;text-align:right">58</span><span style="width:22px;text-align:center;color:#8b949e">h</span><span style="width:46px;color:#5c6673">nop</span><span style="color:#3a424e">—</span></div>
+<div style="display:flex;padding:0 8px;color:#4a535f"><span style="width:16px"></span><span style="width:44px;text-align:right">59</span><span style="width:22px;text-align:center;color:#8b949e">u</span><span style="width:46px;color:#f0655a">???</span><span style="color:#3a424e">非法 → 跳过</span></div>
+<div style="display:flex;padding:0 8px;background:#0d2b33;color:#3fd0e0;font-weight:700;border-left:2px solid #3fd0e0"><span style="width:14px;color:#f0655a">●</span><span style="width:44px;text-align:right">60</span><span style="width:22px;text-align:center">J</span><span style="width:46px">mov</span><span style="color:#7fe3ef;font-weight:400">d ← mem[d]</span></div>
+<div style="display:flex;padding:0 8px;color:#8b949e"><span style="width:16px"></span><span style="width:44px;text-align:right">61</span><span style="width:22px;text-align:center">%</span><span style="width:46px">jmp</span><span style="color:#5c6673">c ← mem[d]</span></div>
+<div style="display:flex;padding:0 8px;color:#8b949e"><span style="width:16px"></span><span style="width:44px;text-align:right">62</span><span style="width:22px;text-align:center">D</span><span style="width:46px">crz</span><span style="color:#5c6673">crazy(a,[d])</span></div>
+<div style="display:flex;padding:0 8px;color:#8b949e"><span style="width:16px"></span><span style="width:44px;text-align:right">63</span><span style="width:22px;text-align:center">o</span><span style="width:46px">out</span><span style="color:#5c6673">putchar(a%256)</span></div>
+<div style="display:flex;padding:0 8px;color:#8b949e"><span style="width:16px"></span><span style="width:44px;text-align:right">64</span><span style="width:22px;text-align:center">*</span><span style="width:46px">rotr</span><span style="color:#5c6673">rot [d] → a</span></div>
+<div style="display:flex;padding:0 8px;color:#4a535f"><span style="width:16px"></span><span style="width:44px;text-align:right">65</span><span style="width:22px;text-align:center;color:#8b949e">p</span><span style="width:46px;color:#5c6673">nop</span><span style="color:#3a424e">—</span></div>
+<div style="display:flex;padding:0 8px;color:#4a535f"><span style="width:16px"></span><span style="width:44px;text-align:right">66</span><span style="width:22px;text-align:center;color:#8b949e">v</span><span style="width:46px;color:#5c6673">nop</span><span style="color:#3a424e">—</span></div>
+</div>
+<div style="border-top:1px solid #232a35;padding:5px 8px;background:#12151b">
+<div style="color:#3a424e;font-size:11px;margin-bottom:3px">寄存器</div>
+<div style="display:flex;gap:14px;font-size:13px">
+<span style="color:#5c6673">A</span><span style="color:#c9d1d9;width:52px;text-align:right">51</span><span style="color:#4ec97a">'3'</span>
+<span style="flex:1"></span><span style="color:#3a424e;font-size:11px">↑380 步历史</span>
+</div>
+<div style="display:flex;gap:14px;font-size:13px">
+<span style="color:#5c6673">C</span><span style="color:#c9d1d9;width:52px;text-align:right">60</span><span style="color:#3fd0e0">→ 61</span>
+</div>
+<div style="display:flex;gap:14px;font-size:13px">
+<span style="color:#5c6673">D</span><span style="color:#c9d1d9;width:52px;text-align:right">104</span><span style="color:#3fd0e0">→ 98</span>
+</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<div style="height:22px;border-bottom:1px solid #232a35;background:#12151b;display:flex;align-items:center;padding:0 8px;font-size:11px;gap:10px"><span style="color:#3fd0e0">MEMORY</span><span style="color:#5c6673">D=104</span><span style="color:#3a424e">写入热度</span><span style="display:flex;gap:2px;align-items:center"><span style="width:9px;height:9px;background:#1b2027"></span><span style="width:9px;height:9px;background:#1d3b45"></span><span style="width:9px;height:9px;background:#1f5a68"></span><span style="width:9px;height:9px;background:#2e8ea0"></span><span style="width:9px;height:9px;background:#3fd0e0"></span></span><span style="flex:1"></span><span style="color:#3a424e">←→ 翻页 · 0 回中</span></div>
+
+<div style="padding:6px 8px 4px;display:grid;grid-template-columns:repeat(16,1fr);gap:2px">
+<div style="grid-column:1/-1;color:#3a424e;font-size:11px;margin-bottom:2px">块 0x0000 · 96 格 · 每格 = 1 单元，亮度 = 被改写次数</div>
+<div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1f5a68"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#2e8ea0"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1f5a68"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div>
+<div style="height:15px;background:#1f5a68"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#2e8ea0"></div><div style="height:15px;background:#3fd0e0"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1f5a68"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#2e8ea0"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div>
+<div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1f5a68"></div><div style="height:15px;background:#1b2027;outline:1px solid #e3b341"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#2e8ea0"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1d3b45"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1f5a68"></div><div style="height:15px;background:#1b2027"></div><div style="height:15px;background:#1b2027"></div>
+</div>
+
+<div style="padding:2px 8px 4px;font-size:12.5px;line-height:1.45">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 10px">
+<div style="color:#4a535f"><span style="color:#3a424e">120</span> 108 'l'</div><div style="color:#4a535f"><span style="color:#3a424e">126</span> &nbsp;34 '&quot;'</div><div style="color:#4a535f"><span style="color:#3a424e">132</span> &nbsp;34 '&quot;'</div><div style="color:#4a535f"><span style="color:#3a424e">138</span> 107 'k'</div>
+<div style="color:#4a535f"><span style="color:#3a424e">121</span> &nbsp;94 '^'</div><div style="color:#4a535f"><span style="color:#3a424e">127</span> &nbsp;71 'G'</div><div style="color:#4a535f"><span style="color:#3a424e">133</span> &nbsp;71 'G'</div><div style="color:#4a535f"><span style="color:#3a424e">139</span> 111 'o'</div>
+<div style="color:#4a535f"><span style="color:#3a424e">122</span> 120 'x'</div><div style="color:#4a535f"><span style="color:#3a424e">128</span> &nbsp;63 '?'</div><div style="color:#4a535f"><span style="color:#3a424e">134</span> &nbsp;63 '?'</div><div style="color:#4a535f"><span style="color:#3a424e">140</span> &nbsp;69 'E'</div>
+<div style="color:#4a535f"><span style="color:#3a424e">123</span> 126 '~'</div><div style="color:#4a535f"><span style="color:#3a424e">129</span> &nbsp;35 '#'</div><div style="color:#4a535f"><span style="color:#3a424e">135</span> &nbsp;35 '#'</div><div style="color:#4a535f"><span style="color:#3a424e">141</span> &nbsp;82 'R'</div>
+<div style="color:#3fd0e0;font-weight:700">▶104 &nbsp;97 'a'</div><div style="color:#4a535f"><span style="color:#3a424e">130</span> &nbsp;46 '.'</div><div style="color:#e3b341"><span style="color:#a97f21">136</span> &nbsp;58 ':' <span style="font-size:10.5px">刚写</span></div><div style="color:#4a535f"><span style="color:#3a424e">142</span> 125 '}'</div>
+<div style="color:#4a535f"><span style="color:#3a424e">125</span> 103 'g'</div><div style="color:#4a535f"><span style="color:#3a424e">131</span> 105 'i'</div><div style="color:#4a535f"><span style="color:#3a424e">137</span> &nbsp;78 'N'</div><div style="color:#4a535f"><span style="color:#3a424e">143</span> 108 'l'</div>
+</div>
+</div>
+
+<div style="border-top:1px solid #232a35;padding:5px 8px;display:flex;gap:14px;align-items:flex-start">
+<div style="min-width:250px">
+<div style="color:#3a424e;font-size:11px">下一条 <span style="color:#3fd0e0">(74+60)%94 = 40 'J'</span></div>
+<div style="font-size:13px;color:#c9d1d9"><span style="color:#3fd0e0;font-weight:700">mov</span> d, [d] <span style="color:#5c6673">· d = mem[104] = 97</span></div>
+<div style="font-size:12px;color:#e3b341">encrypt mem[60]: 'J'(74) → 'F'(70)</div>
+</div>
+<div style="flex:1">
+<div style="color:#3a424e;font-size:11px">三进制 (10 trit) <span style="color:#5c6673">rotr 预览</span></div>
+<div style="display:flex;gap:3px;margin-top:2px">
+<span style="color:#5c6673;font-size:11px;width:26px">前</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">1</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">0</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">2</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">2</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">0</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">1</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">1</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">0</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">2</span><span style="width:17px;height:17px;background:#3a2f12;color:#e3b341;text-align:center;font-size:12px">1</span>
+</div>
+<div style="display:flex;gap:3px;margin-top:2px">
+<span style="color:#5c6673;font-size:11px;width:26px">后</span><span style="width:17px;height:17px;background:#3a2f12;color:#e3b341;text-align:center;font-size:12px">1</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">1</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">0</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">2</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">2</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">0</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">1</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">1</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">0</span><span style="width:17px;height:17px;background:#1b2027;color:#8b949e;text-align:center;font-size:12px">2</span>
+</div>
+</div>
+<div style="width:210px">
+<div style="color:#3a424e;font-size:11px">I/O <span style="color:#5c6673">可交互</span></div>
+<div style="font-size:12.5px;color:#c9d1d9">out(3) <span style="color:#4ec97a">123</span></div>
+<div style="font-size:12.5px;color:#c9d1d9">in(3/3) <span style="color:#5c6673">已耗尽</span></div>
+<div style="margin-top:3px;background:#161a21;border:1px solid #232a35;padding:1px 5px;font-size:12px;color:#5c6673">stdin ▏<span style="color:#3fd0e0">▋</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="border-top:1px solid #232a35;background:#12151b;padding:3px 8px;display:flex;align-items:center;gap:8px;font-size:11.5px">
+<span style="color:#5c6673">时间线</span>
+<span style="color:#3a424e">0</span>
+<span style="flex:1;position:relative;height:12px;background:#161a21;border:1px solid #232a35;display:flex;align-items:stretch">
+<span style="width:34%;background:#1f5a68"></span><span style="width:12%;background:#2e8ea0"></span><span style="width:9%;background:#1f5a68"></span><span style="width:2px;background:#3fd0e0"></span><span style="flex:1"></span><span style="position:absolute;left:22%;top:-1px;bottom:-1px;width:1px;background:#f0655a"></span><span style="position:absolute;left:57%;top:-1px;bottom:-1px;width:1px;background:#f0655a"></span><span style="position:absolute;left:41%;top:-1px;bottom:-1px;width:1px;background:#c58af9"></span>
+</span>
+<span style="color:#c9d1d9">380</span>
+<span style="color:#3a424e">/ 1.2M</span>
+<span style="color:#5c6673">↑↓ 单步</span><span style="color:#5c6673">⇧↑ ×10</span><span style="color:#5c6673">r 运行</span><span style="color:#5c6673">拖动回溯</span>
+</div>
+
+<div style="background:#0f1115;border-top:1px solid #232a35;padding:3px 8px;font-size:12.5px;display:flex;gap:8px">
+<span style="color:#3fd0e0;font-weight:700">:</span><span style="color:#c9d1d9">break 812</span><span style="color:#3fd0e0">▋</span><span style="flex:1"></span><span style="color:#5c6673">断点已设于 60 · esc 清除</span>
+</div>
+
+<div style="position:absolute;inset:0;pointer-events:none;background:none;background-size:100% 3px"></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>教学向 · 大字分步 · 焦点=当前指令 · 其余折叠</div>
+<div class="dv-card" style="width:1176px;background:#0f1115;border-color:#222833">
+<div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:14px;line-height:1.5;color:#c9d1d9;background:#0f1115;position:relative">
+
+<div style="display:flex;align-items:center;background:#161a21;border-bottom:1px solid #232a35;padding:0 12px;height:28px;font-size:12px;gap:10px">
+<span style="color:#e3b341;font-weight:700">◉ 学习模式</span>
+<span style="color:#3a424e">│</span>
+<span style="color:#8b949e">hello.mal · 第 <span style="color:#c9d1d9">380</span> 步 / 共 1.2M</span>
+<span style="flex:1"></span>
+<span style="color:#5c6673">Tab 切到工程模式</span>
+<span style="color:#5c6673">h 帮助</span>
+</div>
+
+<div style="display:flex;height:470px">
+
+<div style="flex:1;padding:14px 18px;border-right:1px solid #232a35;min-width:0">
+<div style="color:#5c6673;font-size:12px;letter-spacing:.08em">当前指令 · 地址 60</div>
+<div style="display:flex;align-items:baseline;gap:14px;margin-top:6px">
+<span style="font-size:44px;line-height:1.05;font-weight:700;color:#3fd0e0">mov</span>
+<span style="font-size:20px;color:#8b949e">d, [d]</span>
+<span style="font-size:13px;color:#5c6673">操作码 40 · 字符 'J'</span>
+</div>
+<div style="margin-top:8px;font-size:15px;color:#c9d1d9">把地址 D 处的值装进 D 自己。</div>
+
+<div style="margin-top:14px;background:#12161c;border-left:2px solid #3fd0e0;padding:8px 12px">
+<div style="color:#5c6673;font-size:12px">操作码是算出来的，不是写死的</div>
+<div style="font-size:20px;margin-top:4px">( <span style="color:#e3b341">74</span> <span style="color:#5c6673">mem[C]</span> + <span style="color:#e3b341">60</span> <span style="color:#5c6673">C</span> ) % 94 = <span style="color:#3fd0e0;font-weight:700">40</span></div>
+</div>
+
+<div style="margin-top:16px;color:#5c6673;font-size:12px;letter-spacing:.08em">这一步会发生 4 件事</div>
+<div style="margin-top:6px;display:flex;gap:10px;align-items:flex-start">
+<span style="color:#0f1115;background:#3fd0e0;width:20px;height:20px;text-align:center;font-weight:700;font-size:13px;line-height:20px">1</span>
+<span style="font-size:15px">D = mem[104] = <span style="color:#4ec97a;font-weight:700">97</span> <span style="color:#5c6673">（原来 104）</span></span>
+</div>
+<div style="margin-top:6px;display:flex;gap:10px;align-items:flex-start">
+<span style="color:#0f1115;background:#3fd0e0;width:20px;height:20px;text-align:center;font-weight:700;font-size:13px;line-height:20px">2</span>
+<span style="font-size:15px">C = 60 → <span style="color:#4ec97a;font-weight:700">61</span>，D 再自增 → <span style="color:#4ec97a;font-weight:700">98</span></span>
+</div>
+<div style="margin-top:6px;display:flex;gap:10px;align-items:flex-start">
+<span style="color:#0f1115;background:#e3b341;width:20px;height:20px;text-align:center;font-weight:700;font-size:13px;line-height:20px">3</span>
+<span style="font-size:15px">加密刚执行过的格子 mem[60]<div style="color:#8b949e;font-size:13.5px">ENCRYPT[74−33] = ENCRYPT[41] → 'J'(74) 变成 <span style="color:#e3b341">'F'(70)</span></div></span>
+</div>
+<div style="margin-top:6px;display:flex;gap:10px;align-items:flex-start">
+<span style="color:#5c6673;border:1px solid #2a323d;width:20px;height:20px;text-align:center;font-size:13px;line-height:20px">4</span>
+<span style="font-size:15px;color:#8b949e">下一条从 mem[61] 重新算操作码</span>
+</div>
+
+<div style="margin-top:16px;border-top:1px solid #1c222b;padding-top:10px;display:flex;gap:26px">
+<div>
+<div style="color:#5c6673;font-size:12px">A 累加器</div>
+<div style="font-size:24px;color:#c9d1d9">51 <span style="color:#4ec97a;font-size:16px">'3'</span></div>
+</div>
+<div>
+<div style="color:#5c6673;font-size:12px">C 代码指针</div>
+<div style="font-size:24px;color:#c9d1d9">60 <span style="color:#3fd0e0;font-size:16px">→61</span></div>
+</div>
+<div>
+<div style="color:#5c6673;font-size:12px">D 数据指针</div>
+<div style="font-size:24px;color:#c9d1d9">104 <span style="color:#3fd0e0;font-size:16px">→98</span></div>
+</div>
+<div style="flex:1"></div>
+<div>
+<div style="color:#5c6673;font-size:12px">已输出</div>
+<div style="font-size:24px;color:#4ec97a">123</div>
+</div>
+</div>
+</div>
+
+<div style="width:400px;display:flex;flex-direction:column;min-width:0">
+<div style="padding:10px 14px;border-bottom:1px solid #1c222b">
+<div style="color:#5c6673;font-size:12px;letter-spacing:.08em">指令流 <span style="color:#3a424e">↑↓ 前后走</span></div>
+<div style="margin-top:5px;font-size:14px">
+<div style="color:#3a424e">58 &nbsp;h&nbsp; nop</div>
+<div style="color:#4a535f">59 &nbsp;u&nbsp; <span style="color:#7a3b36">???</span></div>
+<div style="color:#3fd0e0;font-weight:700;background:#0d2b33;padding:1px 0">▶ 60 &nbsp;J&nbsp; mov</div>
+<div style="color:#8b949e">61 &nbsp;%&nbsp; jmp</div>
+<div style="color:#3a424e">62 &nbsp;D&nbsp; crz</div>
+</div>
+</div>
+
+<div style="padding:10px 14px;border-bottom:1px solid #1c222b">
+<div style="color:#5c6673;font-size:12px;letter-spacing:.08em">D 指针在内存里的位置</div>
+<div style="margin-top:6px;display:grid;grid-template-columns:repeat(24,1fr);gap:2px">
+<div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1d3b45"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1f5a68"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1d3b45"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#3fd0e0"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1d3b45"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1f5a68"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1d3b45"></div><div style="height:12px;background:#1b2027"></div><div style="height:12px;background:#1b2027"></div>
+</div>
+<div style="margin-top:6px;font-size:13px;color:#8b949e">D=<span style="color:#3fd0e0">104</span> · 值 97 'a' · 下一跳 <span style="color:#3fd0e0">97</span></div>
+<div style="margin-top:2px;font-size:12px;color:#5c6673">按 <span style="color:#c9d1d9">m</span> 展开完整内存表</div>
+</div>
+
+<div style="padding:10px 14px;flex:1">
+<div style="color:#5c6673;font-size:12px;letter-spacing:.08em">加密表怎么改写这一格</div>
+<div style="margin-top:6px;display:flex;align-items:center;gap:8px">
+<span style="border:1px solid #2a323d;padding:2px 8px;font-size:18px;color:#c9d1d9">'J'<span style="color:#5c6673;font-size:13px"> 74</span></span>
+<span style="color:#5c6673">─ 74−33=41 →</span>
+<span style="border:1px solid #a97f21;background:#231d0e;padding:2px 8px;font-size:18px;color:#e3b341">'F'<span style="color:#a97f21;font-size:13px"> 70</span></span>
+</div>
+<div style="margin-top:8px;font-size:12px;color:#3a424e;word-break:break-all;line-height:1.6">5z]&amp;gqtyfr$(we4{WP)H-Zn,[%\3dL+Q;&gt;U!pJ<span style="color:#e3b341;background:#231d0e">S</span>72FhOA1CB6v^=I_0/8|jsb9m&lt;.TVac`uY*MK'X~xDl}REokN:#?G&quot;i@</div>
+<div style="margin-top:8px;font-size:12px;color:#5c6673">每执行一格就被替换一次 —— 这是 Malbolge 自修改的核心。</div>
+</div>
+</div>
+</div>
+
+<div style="border-top:1px solid #232a35;background:#12151b;padding:5px 12px;display:flex;align-items:center;gap:14px;font-size:13px">
+<span style="color:#0f1115;background:#3fd0e0;padding:0 8px;font-weight:700">↓ 下一步</span>
+<span style="color:#8b949e">↑ 撤销</span>
+<span style="color:#8b949e">r 连续跑</span>
+<span style="color:#8b949e">b 断点</span>
+<span style="color:#8b949e">t 三进制详解</span>
+<span style="flex:1"></span>
+<span style="color:#5c6673">状态 <span style="color:#4ec97a">运行中</span> · 下一条 <span style="color:#3fd0e0">mov</span></span>
+</div>
+
+<div style="position:absolute;inset:0;pointer-events:none;background:none;background-size:100% 3px"></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><a href="#1a">1a</a> 的 80×24 收缩态 · 面板自动折叠成标签页</div>
+<div class="dv-card" style="width:632px;background:#0f1115;border-color:#222833">
+<div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;line-height:1.45;color:#c9d1d9;background:#0f1115;position:relative">
+<div style="display:flex;align-items:center;background:#161a21;border-bottom:1px solid #232a35;padding:0 6px;height:22px;font-size:11px;gap:6px">
+<span style="color:#0f1115;background:#3fd0e0;font-weight:700;padding:0 5px">maldbg</span>
+<span style="color:#4ec97a">●</span><span style="color:#8b949e">380</span>
+<span style="color:#3a424e">│</span><span style="color:#8b949e">C 60</span><span style="color:#8b949e">D 104</span><span style="color:#8b949e">A 51</span>
+<span style="flex:1"></span><span style="color:#e3b341">●2</span><span style="color:#5c6673">⌘P</span>
+</div>
+<div style="display:flex;height:20px;border-bottom:1px solid #232a35;background:#12151b;font-size:11px">
+<span style="padding:2px 8px;color:#3fd0e0;border-top:1px solid #3fd0e0;background:#0f1115">DISASM</span>
+<span style="padding:2px 8px;color:#5c6673">MEM</span>
+<span style="padding:2px 8px;color:#5c6673">SRC</span>
+<span style="padding:2px 8px;color:#5c6673">BP</span>
+<span style="padding:2px 8px;color:#5c6673">I/O</span>
+<span style="flex:1"></span><span style="padding:2px 8px;color:#3a424e">1–5 切换</span>
+</div>
+<div style="padding:4px 6px;height:206px">
+<div style="display:flex;color:#4a535f"><span style="width:12px"></span><span style="width:38px;text-align:right">57</span><span style="width:20px;text-align:center;color:#8b949e">i</span><span style="width:40px;color:#5c6673">nop</span></div>
+<div style="display:flex;color:#4a535f"><span style="width:12px"></span><span style="width:38px;text-align:right">58</span><span style="width:20px;text-align:center;color:#8b949e">h</span><span style="width:40px;color:#5c6673">nop</span></div>
+<div style="display:flex;color:#4a535f"><span style="width:12px"></span><span style="width:38px;text-align:right">59</span><span style="width:20px;text-align:center;color:#8b949e">u</span><span style="width:40px;color:#f0655a">???</span></div>
+<div style="display:flex;background:#0d2b33;color:#3fd0e0;font-weight:700"><span style="width:12px;color:#f0655a">●</span><span style="width:38px;text-align:right">60</span><span style="width:20px;text-align:center">J</span><span style="width:40px">mov</span><span style="color:#7fe3ef;font-weight:400">d ← mem[d] = 97</span></div>
+<div style="display:flex;color:#8b949e"><span style="width:12px"></span><span style="width:38px;text-align:right">61</span><span style="width:20px;text-align:center">%</span><span style="width:40px">jmp</span></div>
+<div style="display:flex;color:#4a535f"><span style="width:12px"></span><span style="width:38px;text-align:right">62</span><span style="width:20px;text-align:center;color:#8b949e">D</span><span style="width:40px;color:#5c6673">crz</span></div>
+<div style="margin-top:6px;border-top:1px solid #1c222b;padding-top:4px;color:#3a424e;font-size:11px">下一条 <span style="color:#3fd0e0">(74+60)%94=40</span> · encrypt mem[60] 'J'→'F'</div>
+<div style="margin-top:4px;display:grid;grid-template-columns:repeat(24,1fr);gap:2px">
+<div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1d3b45"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1f5a68"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#2e8ea0"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1d3b45"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#3fd0e0"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1d3b45"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1f5a68"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1d3b45"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1b2027"></div><div style="height:10px;background:#1f5a68"></div><div style="height:10px;background:#1b2027"></div>
+</div>
+<div style="margin-top:3px;color:#5c6673;font-size:11px">内存热度缩略 · 按 2 展开</div>
+</div>
+<div style="border-top:1px solid #232a35;background:#12151b;padding:2px 6px;font-size:11px;display:flex;gap:8px">
+<span style="color:#5c6673">时间线</span>
+<span style="flex:1;height:8px;background:#161a21;border:1px solid #232a35;display:flex"><span style="width:31%;background:#1f5a68"></span><span style="width:2px;background:#3fd0e0"></span></span>
+<span style="color:#8b949e">380</span>
+</div>
+<div style="border-top:1px solid #232a35;padding:2px 6px;font-size:11.5px;display:flex;gap:8px">
+<span style="color:#3fd0e0;font-weight:700">:</span><span style="color:#5c6673">输入命令，或 ↓ 单步</span>
+</div>
+<div style="position:absolute;inset:0;pointer-events:none;background:none;background-size:100% 3px"></div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">下一步可以说：「把 <a class="dv-oid" href="#1b">1b</a> 的分步讲解塞进 <a class="dv-oid" href="#1a">1a</a> 的右下角」 · 「<a class="dv-oid" href="#1a">1a</a> 再给一版亮色主题」 · 「加一屏编译器视图（py → mg → mb 三栏）」</p>
+</section>
+
+<section class="dv-turn" id="t0">
+<div class="dv-thd"><a class="dv-tid" href="#t0">0</a><span class="dv-tname">现状复刻 — 按 <span style="font-family:ui-monospace,monospace">malbolge/debug_tui.py</span> 与 screenshots/tui.png 1:1</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="0a">
+<div class="dv-olabel"><a class="dv-oid" href="#0a">0a</a>Textual 版现状：2×4 grid，$primary/$secondary/$accent/$success 四色边框</div>
+<div class="dv-card" style="width:1100px;background:#1e1e1e;border-color:#222833">
+<div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13.5px;line-height:1.5;color:#e0e0e0;background:#1e1e1e;padding:0">
+
+<div style="background:#0178d4;color:#fff;text-align:center;padding:6px 0;font-size:15px">
+<span style="font-weight:700">pyMalbolge Debugger</span>&nbsp;&nbsp;<span style="color:#24c1d8">↓</span>:Step&nbsp;&nbsp;<span style="color:#24c1d8">↑</span>:Back&nbsp;&nbsp;<span style="color:#24c1d8">r</span>:Run&nbsp;&nbsp;<span style="color:#24c1d8">b</span>:Bp&nbsp;&nbsp;<span style="color:#24c1d8">←/→</span>:Mem&nbsp;&nbsp;<span style="color:#24c1d8">h</span>:Help&nbsp;&nbsp;<span style="color:#24c1d8">q</span>:Quit
+</div>
+
+<div style="display:flex;gap:10px;padding:10px 10px 0">
+<div style="flex:1;border:1px solid #0178d4;padding:8px 10px;min-height:212px">
+<div style="font-weight:700">Disassembly</div>
+<div style="color:#e0e0e0">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;55&nbsp;&nbsp;k&nbsp;&nbsp;nop</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;56&nbsp;&nbsp;j&nbsp;&nbsp;nop</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;57&nbsp;&nbsp;i&nbsp;&nbsp;nop</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;58&nbsp;&nbsp;h&nbsp;&nbsp;nop</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;59&nbsp;&nbsp;u&nbsp;&nbsp;???</div>
+<div style="white-space:pre;color:#4ebf4e;font-weight:700">&gt;&gt;&gt;&nbsp;&nbsp;&nbsp;&nbsp;60&nbsp;&nbsp;J&nbsp;&nbsp;mov</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;61&nbsp;&nbsp;%&nbsp;&nbsp;jmp</div>
+</div>
+<div style="flex:1;border:1px solid #0178d4;padding:8px 10px">
+<div><span style="font-weight:700">Memory @ D=104</span> <span style="color:#808080">(←→ offset: +32)</span></div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;124&nbsp;&nbsp;&nbsp;&nbsp;64 '@' │&nbsp;&nbsp;&nbsp;&nbsp;132&nbsp;&nbsp;&nbsp;&nbsp;34 '&quot;' │&nbsp;&nbsp;&nbsp;&nbsp;140&nbsp;&nbsp;&nbsp;&nbsp;69 'E'</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;125&nbsp;&nbsp;&nbsp;103 'g' │&nbsp;&nbsp;&nbsp;&nbsp;133&nbsp;&nbsp;&nbsp;&nbsp;71 'G' │&nbsp;&nbsp;&nbsp;&nbsp;141&nbsp;&nbsp;&nbsp;&nbsp;82 'R'</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;126&nbsp;&nbsp;&nbsp;&nbsp;34 '&quot;' │&nbsp;&nbsp;&nbsp;&nbsp;134&nbsp;&nbsp;&nbsp;&nbsp;63 '?' │&nbsp;&nbsp;&nbsp;&nbsp;142&nbsp;&nbsp;&nbsp;125 '}'</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;127&nbsp;&nbsp;&nbsp;&nbsp;71 'G' │&nbsp;&nbsp;&nbsp;&nbsp;135&nbsp;&nbsp;&nbsp;&nbsp;35 '#' │&nbsp;&nbsp;&nbsp;&nbsp;143&nbsp;&nbsp;&nbsp;108 'l'</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;128&nbsp;&nbsp;&nbsp;&nbsp;63 '?' │&nbsp;&nbsp;&nbsp;&nbsp;136&nbsp;&nbsp;&nbsp;&nbsp;58 ':' │&nbsp;&nbsp;&nbsp;&nbsp;144&nbsp;&nbsp;&nbsp;&nbsp;94 '^'</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;129&nbsp;&nbsp;&nbsp;&nbsp;35 '#' │&nbsp;&nbsp;&nbsp;&nbsp;137&nbsp;&nbsp;&nbsp;&nbsp;78 'N' │&nbsp;&nbsp;&nbsp;&nbsp;145&nbsp;&nbsp;&nbsp;120 'x'</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;130&nbsp;&nbsp;&nbsp;&nbsp;46 '.' │&nbsp;&nbsp;&nbsp;&nbsp;138&nbsp;&nbsp;&nbsp;107 'k' │&nbsp;&nbsp;&nbsp;&nbsp;146&nbsp;&nbsp;&nbsp;126 '~'</div>
+<div style="white-space:pre">&nbsp;&nbsp;&nbsp;&nbsp;131&nbsp;&nbsp;&nbsp;105 'i' │&nbsp;&nbsp;&nbsp;&nbsp;139&nbsp;&nbsp;&nbsp;111 'o' │&nbsp;&nbsp;&nbsp;&nbsp;147&nbsp;&nbsp;&nbsp;&nbsp;88 'X'</div>
+<div style="color:#808080;margin-top:4px">←/→ scroll&nbsp;&nbsp;0 reset</div>
+</div>
+</div>
+
+<div style="display:flex;gap:10px;padding:10px">
+<div style="flex:1;border:1px solid #e5a73c;padding:8px 10px">
+<div style="font-weight:700">Registers</div>
+<div>━━━━━━━━━━━━━━━━━━━━</div>
+<div style="white-space:pre"><span style="color:#24c1d8">A</span> = &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;51 <span style="color:#808080">'3'</span></div>
+<div style="white-space:pre"><span style="color:#24c1d8">C</span> = &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;60 <span style="color:#808080">(code)</span></div>
+<div style="white-space:pre"><span style="color:#24c1d8">D</span> = &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;104 <span style="color:#808080">(data)</span></div>
+<div>━━━━━━━━━━━━━━━━━━━━</div>
+<div>Step: 380</div>
+<div>History: 380</div>
+<div><span style="font-weight:700">Out</span>(3): 123</div>
+<div><span style="font-weight:700">In</span>(3/3): <span style="color:#4ebf4e"></span></div>
+</div>
+<div style="flex:1;border:1px solid #4ebf4e;padding:8px 10px;position:relative">
+<div style="color:#24c1d8;font-weight:700">(74+60)%94=40 <span style="color:#808080;font-weight:400">'J'</span></div>
+<div><span style="color:#4ebf4e;font-weight:700">mov</span> mov d, [d]</div>
+<div style="color:#808080">Load the value at address D into D itself.</div>
+<div>────────────────────────────────</div>
+<div style="color:#d7ba7d">Registers:</div>
+<div style="white-space:pre">&nbsp;&nbsp;C: 60 -&gt; <span style="color:#4ebf4e">61</span></div>
+<div style="white-space:pre">&nbsp;&nbsp;D: 104 -&gt; <span style="color:#4ebf4e">98</span></div>
+<div style="color:#d7ba7d">Encrypt mem[60]:</div>
+<div style="white-space:pre">&nbsp;&nbsp;ENCRYPT[74-33] = ENCRYPT[41]</div>
+<div style="white-space:pre">&nbsp;&nbsp;'J'(74) -&gt; 'F'(70)</div>
+<div><span style="color:#d7ba7d">Move:</span> d = mem[104] = 97</div>
+<div style="position:absolute;right:2px;top:6px;bottom:6px;width:6px;background:#2b2b2b"><div style="position:absolute;bottom:0;left:0;right:0;height:20px;background:#555"></div></div>
+</div>
+</div>
+
+<div style="background:#2b2b2b;padding:6px 12px">
+Status: <span style="color:#4ebf4e">RUNNING</span> | Next: <span style="color:#24c1d8">mov</span> | Breakpoint at 60
+</div>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-next">这一版的问题：四种边框色没有语义、内存只有 24 格、寄存器面板 60% 是空白、没有断点/源码/时间线。</p>
+</section>
+</x-dc>
+
+</body>
+</html>

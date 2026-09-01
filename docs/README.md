@@ -23,6 +23,8 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 | [highlevel-to-malbolge.md](design/highlevel-to-malbolge.md) | ✅ | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
 | [py2mg-backend.md](design/py2mg-backend.md) | ✅ | Design of the direct `py → .mg` backend (`--backend=direct`): frame strategy, recursion-cycle detection, size comparison against the C path |
 | [hell-assembler-design.md](design/hell-assembler-design.md) | 🧊 | Design for a Python HeLL assembler (shelved fallback route; §6 covers the GPL question) |
+| [tui-web-architecture.md](design/tui-web-architecture.md) | ✅ | Debugger UI architecture: three-layer split with a JSON-only `malbolge/view/` ViewModel shared by a Textual renderer and a (pending) Pyodide web build; the three backend APIs it needs; phasing and parallel boundaries |
+| [tui-redesign/README.md](design/tui-redesign/README.md) | ✅ | The imported TUI redesign canvas (four artboards: current-state reproduction, density-maximised, teaching-oriented, 80×24) plus an offline-viewable `preview.html` |
 
 ## upstream/ — upstream reference and archaeology
 
