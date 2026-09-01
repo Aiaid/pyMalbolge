@@ -68,7 +68,7 @@ uv run --no-sync pytest test/             # serial
 uv run --no-sync pytest test/test_mg2mc.py -q          # single module
 MALBOLGE_SLOW_TESTS=1 uv run --no-sync pytest test/    # + the gated slow cases
 ```
-571 pass / 8 skip as of 2026-09-01. Serial `unittest discover` also works
+592 pass / 8 skip as of 2026-09-01. Serial `unittest discover` also works
 (`uv run --no-sync python -m unittest discover -v test/`) but takes ~24 min,
 and `test_py2c_diagnostics.py` needs pytest importable either way.
 
@@ -79,17 +79,20 @@ uv build
 
 ### Searching the repo
 
-**`grep` here is a `ugrep` wrapper that honours `.gitignore` by default**
-(`grep --version` → `ugrep 7.8.4`), and `docs/research/` is gitignored (it
-lives in a private companion repository). So a plain `grep -r` over the repo
-silently skips every research note and returns a *false negative* — the hits
-are there, you just cannot see them.
+**`grep` in a Claude Code shell is a function wrapping `ugrep`, and the
+wrapper passes `--ignore-files`** — so searches honour `.gitignore`. That is
+the wrapper's doing, not ugrep's default; plain `ugrep` ignores `.gitignore`
+unless told otherwise. Check with `type grep` if a search behaves unexpectedly.
+
+`docs/research/` is gitignored (it lives in a private companion repository),
+so a plain `grep -r` over this repo silently skips every research note and
+returns a *false negative* — the hits are there, you just cannot see them.
 
 ```bash
 grep -rn "some_symbol" .                       # skips docs/research/ silently
 grep -rn "some_symbol" . docs/research/        # name the path explicitly (simplest)
 grep -rn --no-ignore-files \
-     --exclude-dir={.git,.venv,ref,pyenv,dist} \
+     --exclude-dir={.venv,ref,pyenv,dist} \
      "some_symbol" .                           # or search everything
 ```
 
