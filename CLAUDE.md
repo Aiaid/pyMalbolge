@@ -68,7 +68,7 @@ uv run --no-sync pytest test/             # serial
 uv run --no-sync pytest test/test_mg2mc.py -q          # single module
 MALBOLGE_SLOW_TESTS=1 uv run --no-sync pytest test/    # + the gated slow cases
 ```
-462 pass / 5 skip as of 2026-08-02. Serial `unittest discover` also works
+571 pass / 8 skip as of 2026-09-01. Serial `unittest discover` also works
 (`uv run --no-sync python -m unittest discover -v test/`) but takes ~24 min,
 and `test_py2c_diagnostics.py` needs pytest importable either way.
 
@@ -86,7 +86,8 @@ uv build
 | `malbolge/core.py` | Shared components: `MalbolgeConfig`, `SparseMemory`, `DenseMemory`, `crazy()`, `rotate()` |
 | `malbolge/malbolge.py` | Original Malbolge interpreter (10 trits) |
 | `malbolge/malbolge20.py` | Malbolge20 interpreter (20 trits, sparse memory) |
-| `malbolge/debugger.py` | Debugger with breakpoints, watchpoints, step-back |
+| `malbolge/debugger.py` | Debugger with breakpoints, watchpoints, step-back, memory write-heat, chunked run, timeline seek |
+| `malbolge/view/` | ViewModel layer: debugger state as plain JSON-serialisable data, shared by every renderer. Never imports textual. Contracts: `docs/design/tui-web-architecture.md` §3 |
 | `malbolge/compiler/py2c.py` | Python subset -> Nagoya C subset (front-end, 'c' backend) |
 | `malbolge/compiler/py2mg.py` | Python subset -> .mg directly ('direct' backend, smaller output, native double recursion) |
 | `malbolge/compiler/c2mg.py` | C subset -> .mg (pure-Python port of nagoya-highlevel, bug-for-bug) |
