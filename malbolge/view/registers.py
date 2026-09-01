@@ -51,7 +51,21 @@ def _classify_a(value: int):
     return "other", None
 
 
-def build(dbg: MalbolgeDebugger) -> Dict[str, Any]:
+#: How much of the program's output a snapshot carries, in characters.
+#:
+#: The output panel wants the actual text, but a snapshot is rebuilt on every
+#: step and crosses postMessage, so it cannot carry all of it: 99bottles.mal
+#: emits 11,459 characters and quine.mal emits its own 59,851-byte source. The
+#: *tail* is what a running program's output panel is scrolled to anyway.
+#:
+#: Truncating here rather than in each renderer is deliberate — otherwise the
+#: TUI and the web build pick different limits and disagree about what "the
+#: output" is.
+OUTPUT_TAIL_CHARS = 4096
+
+
+def build(dbg: MalbolgeDebugger, *,
+          output_tail_chars: int = OUTPUT_TAIL_CHARS) -> Dict[str, Any]:
     """Build a :class:`RegisterView` dict from the debugger's current state.
 
     ``next_a`` / ``next_c`` / ``next_d`` come from
@@ -91,6 +105,10 @@ def build(dbg: MalbolgeDebugger) -> Dict[str, Any]:
         "step": state.step_count,
         "history_size": dbg.history_size,
         "output_len": len(state.output),
+        # The text itself, tail-truncated: output_len stays the true total, so
+        # a renderer can always say "showing the last N of M".
+        "output_tail": state.output[-output_tail_chars:] if output_tail_chars else "",
+        "output_truncated": len(state.output) > output_tail_chars,
         "input_consumed": state.input_consumed,
         # No public accessor exposes total input length today (only
         # set_input() and the private self._input). Falling back to the

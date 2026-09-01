@@ -319,6 +319,60 @@ class TestBreakpointView(unittest.TestCase):
         self.assertNotIn("lambda", payload)
 
 
+class TestRegisterOutputTail(unittest.TestCase):
+    """output_tail / output_truncated -- §3.1.
+
+    The output panel needs the text, not just its length, but a snapshot is
+    rebuilt every step and crosses postMessage, so it carries the tail.
+    """
+
+    def test_short_output_is_carried_whole(self):
+        dbg = _make_dbg(MalbolgeConfig.original())
+        while not dbg.is_terminated:
+            dbg.step()
+        view = registers.build(dbg)
+
+        self.assertEqual(view["output_tail"], "Hello World!")
+        self.assertFalse(view["output_truncated"])
+        self.assertEqual(view["output_len"], len(view["output_tail"]))
+
+    def test_long_output_is_tail_truncated_but_len_stays_true(self):
+        dbg = _make_dbg(MalbolgeConfig.original())
+        while not dbg.is_terminated:
+            dbg.step()
+        view = registers.build(dbg, output_tail_chars=5)
+
+        self.assertTrue(view["output_truncated"])
+        self.assertEqual(view["output_tail"], "orld!")
+        # The total must remain honest, so a renderer can say
+        # "showing the last 5 of 12".
+        self.assertEqual(view["output_len"], 12)
+        self.assertGreater(view["output_len"], len(view["output_tail"]))
+
+    def test_no_output_yet(self):
+        dbg = _make_dbg(MalbolgeConfig.original())
+        view = registers.build(dbg)
+        self.assertEqual(view["output_tail"], "")
+        self.assertEqual(view["output_len"], 0)
+        self.assertFalse(view["output_truncated"])
+
+    def test_zero_budget_carries_nothing_but_still_reports_the_length(self):
+        dbg = _make_dbg(MalbolgeConfig.original())
+        while not dbg.is_terminated:
+            dbg.step()
+        view = registers.build(dbg, output_tail_chars=0)
+        self.assertEqual(view["output_tail"], "")
+        self.assertTrue(view["output_truncated"])
+        self.assertEqual(view["output_len"], 12)
+
+    def test_survives_json(self):
+        dbg = _make_dbg(MalbolgeConfig.original())
+        while not dbg.is_terminated:
+            dbg.step()
+        payload = json.dumps(registers.build(dbg))
+        self.assertIn("Hello World!", payload)
+
+
 class TestRegisterCharClassification(unittest.TestCase):
     """a_char_kind / a_char_symbol -- §3.1.
 

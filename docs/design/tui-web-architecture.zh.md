@@ -77,7 +77,9 @@ pytest——不需要 Textual pilot,不需要终端。这是整个项目里并�
   "next_d": int | None,
   "step": int,
   "history_size": int,
-  "output_len": int,
+  "output_len": int,               # the true total, never truncated
+  "output_tail": str,              # last OUTPUT_TAIL_CHARS of it
+  "output_truncated": bool,
   "input_consumed": int,
   "input_total": int,
   "terminated": bool,

@@ -88,7 +88,9 @@ TUI and the web build are both written against them.
   "next_d": int | None,
   "step": int,
   "history_size": int,
-  "output_len": int,
+  "output_len": int,               # the true total, never truncated
+  "output_tail": str,              # last OUTPUT_TAIL_CHARS of it
+  "output_truncated": bool,
   "input_consumed": int,
   "input_total": int,
   "terminated": bool,
