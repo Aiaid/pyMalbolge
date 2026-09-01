@@ -39,3 +39,9 @@ info
 # Claude Design's dc-runtime bundle, re-fetchable with DesignSync. Generated
 # artifact of the design tool, not our code; preview.html does not need it.
 docs/design/*/support.js
+
+# Web build: npm deps, and vendor/ which build.mjs regenerates (wheel is a
+# build artifact; the examples and manifest under it are copies of examples/).
+# Deploying runs `node web/build.mjs` first -- see web/README.md.
+web/node_modules/
+web/vendor/

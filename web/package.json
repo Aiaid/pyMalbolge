@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "pyodide": "^314.0.6"
+  },
+  "name": "malbolge-web",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Pyodide-hosted Malbolge debugger (web build)",
+  "scripts": {
+    "build": "node build.mjs",
+    "smoke": "node smoke.mjs"
+  }
+}

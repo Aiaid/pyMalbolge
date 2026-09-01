@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1a 主调试视图 · 自测</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Spectral:wght@500;600;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  html{background:#09080d}
+  body{margin:0;background:#09080d;color:#e9e6f2;
+    font-family:'Space Grotesk','Noto Sans SC',sans-serif}
+  body[data-t="light"]{background:#eae4d5;color:#2a2622}
+  .devbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    padding:10px 16px;font-size:12px;border-bottom:1px solid #2a2735;
+    background:#100e16;position:sticky;top:0;z-index:9;min-width:1592px}
+  body[data-t="light"] .devbar{background:#fdfcf8;border-color:#d8d1c0}
+  .devbar b{font-size:12px;font-weight:600;letter-spacing:.06em;color:#7d7890}
+  .devbar label{display:flex;gap:5px;align-items:center;color:#8b8798}
+  .devbar select,.devbar button{font:inherit;background:#17151f;color:#cfc9e0;
+    border:1px solid #2e2a3c;border-radius:6px;padding:4px 9px;cursor:pointer}
+  body[data-t="light"] .devbar select,body[data-t="light"] .devbar button{
+    background:#f7f4ec;color:#5a5348;border-color:#c9c1ae}
+  .devbar .note{color:#6f6a80;margin-left:auto;max-width:640px;line-height:1.5}
+  /* fill the viewport under the dev bar, with a floor so a short window
+     scrolls the document instead of crushing the panels */
+  #screen{padding:16px;display:flex;height:calc(100vh - 52px);min-height:860px}
+  #screen>*{flex:1}
+  #log{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6a80;
+    padding:8px 16px 20px;white-space:pre-wrap;min-width:1592px}
+</style>
+</head>
+<body data-t="dark">
+
+<div class="devbar">
+  <b>1a 自测</b>
+  <label>快照
+    <select id="fx"></select>
+  </label>
+  <label>主题
+    <select id="theme">
+      <option value="dark">深色</option>
+      <option value="light">浅色</option>
+    </select>
+  </label>
+  <label>热度色带
+    <select id="pal">
+      <option value="blackbody">blackbody</option>
+      <option value="toxic">toxic</option>
+      <option value="paper">paper</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="late"> 先挂载后 load</label>
+  <button id="oldworker">模拟旧快照(去 output_tail)</button>
+  <button id="reload">重载快照</button>
+  <span class="note">
+    假 session：命令不返回 Promise，一律回抛 <code>snapshot</code>／<code>progress</code>／<code>stopped</code>／<code>error</code>，
+    与 <code>bridge.js</code> 的契约一致。<code>deep</code> 验时间线不可达区间（<code>seekable</code> 下界 11,500）；
+    <code>truncated</code> 验 <code>output_truncated</code>；「先挂载后 load」验挂载早于 <code>load()</code> 时不会弹 <code>no_program</code>。
+  </span>
+</div>
+
+<div id="screen"></div>
+<div id="log"></div>
+
+<script type="module">
+import { mountDebugger, MEM_COUNT, MEM_COLS, DISASM_COUNT } from "./debugger.js";
+import { FIXTURES } from "./debugger.dev.fixtures.js";
+
+const logEl = document.getElementById("log");
+const log = (...a) => {
+  logEl.textContent = `${new Date().toISOString().slice(11, 23)}  ${a.join(" ")}\n`
+    + logEl.textContent.split("\n").slice(0, 11).join("\n");
+};
+
+/* -------------------------------------------------------------------------
+ * A fake session standing in for bridge.js. It implements the same surface:
+ * commands return nothing, every result arrives as an event. It mutates a
+ * deep copy of a real snapshot, so what the screen renders is always the
+ * shape build_snapshot() actually produces.
+ * ---------------------------------------------------------------------- */
+function makeFakeSession(name, { late = false } = {}) {
+  const base = structuredClone(FIXTURES[name]);
+  let snap = structuredClone(base);
+  let loaded = !late;
+  const bus = new Map();
+  let runTimer = null;
+  let win = { memOffset: 0, memCount: MEM_COUNT, disasmCount: DISASM_COUNT };
+
+  const emit = (type, payload) => {
+    for (const fn of bus.get(type) || []) fn(payload);
+  };
+  const send = () => emit("snapshot", structuredClone(snap));
+
+  /** Reject before `load`, the way worker.js does. */
+  const guard = (what) => {
+    if (loaded) return false;
+    log(`✗ ${what} 早于 load() → error(no_program)`);
+    emit("error", { message: "no program loaded", kind: "no_program" });
+    return true;
+  };
+
+  /** Re-centre the memory window on d + offset, the way MemoryView does. */
+  function rewindow(offset) {
+    const m = snap.memory, count = m.count;
+    const size = 59049;
+    const want = Math.max(0, Math.min(size - count, m.d + offset - (count >> 1)));
+    if (want === m.start) { m.offset = offset; return; }
+    const byAddr = new Map(m.cells.map((c) => [c.addr, c]));
+    m.cells = Array.from({ length: count }, (_, i) => {
+      const addr = want + i;
+      return byAddr.get(addr) || {
+        addr, value: 0, char: ".", heat: 0,
+        is_d: addr === m.d, is_c: addr === m.c, just_written: false,
+      };
+    });
+    m.start = want;
+    m.offset = offset;
+    m.heat_max = Math.max(0, ...m.cells.map((c) => c.heat));
+  }
+
+  function shiftStep(delta) {
+    const r = snap.registers, tl = snap.timeline;
+    const [lo, hi] = tl.seekable;
+    const next = Math.max(lo, Math.min(hi, tl.current + delta));
+    if (next === tl.current) { emit("error", { message: "已到可回溯区边界", kind: "seek" }); return; }
+    tl.current = next;
+    r.step = next;
+    tl.max_reached = Math.max(tl.max_reached, next);
+    r.history_size = Math.min(10000, next);
+    // enough motion for the eye to confirm the render path fired
+    r.c = base.registers.c + (next - base.timeline.current);
+    r.d = base.registers.d + (next - base.timeline.current);
+    r.stop_reason = "step";
+    snap.memory.c = r.c;
+    for (const c of snap.memory.cells) {
+      c.is_c = c.addr === r.c;
+      c.just_written = c.addr === r.c - 1;
+      if (c.addr === r.c - 1) c.heat += 1;
+    }
+    snap.memory.heat_max = Math.max(...snap.memory.cells.map((c) => c.heat));
+    send();
+  }
+
+  return {
+    on(type, fn) {
+      if (!bus.has(type)) bus.set(type, new Set());
+      bus.get(type).add(fn);
+      return () => bus.get(type).delete(fn);
+    },
+    step() { if (guard("step()")) return; log("→ step()"); shiftStep(+1); },
+    back() { if (guard("back()")) return; log("→ back()"); shiftStep(-1); },
+    run(chunk) {
+      log(`→ run(${chunk})`);
+      if (runTimer) return;
+      let step = snap.timeline.current;
+      const limit = snap.timeline.seekable[1];
+      runTimer = setInterval(() => {
+        step += Math.round((chunk || 5000) / 40);
+        if (step >= limit) {
+          clearInterval(runTimer); runTimer = null;
+          snap.timeline.current = limit;
+          snap.registers.step = limit;
+          snap.registers.stop_reason = "breakpoint";
+          log("← stopped(breakpoint)");
+          emit("stopped", { reason: "breakpoint", data: structuredClone(snap) });
+          return;
+        }
+        emit("progress", { step, running: true });
+      }, 90);
+    },
+    stop() {
+      log("→ stop()");
+      if (runTimer) { clearInterval(runTimer); runTimer = null; }
+      snap.registers.stop_reason = "step";
+      emit("stopped", { reason: "stopped", data: structuredClone(snap) });
+    },
+    seek(step) {
+      log(`→ seek(${step})`);
+      const [lo, hi] = snap.timeline.seekable;
+      if (step < lo || step > hi) {
+        emit("error", { message: `第 ${step} 步不在可回溯区间内`, kind: "ValueError" });
+        return;
+      }
+      shiftStep(step - snap.timeline.current);
+    },
+    breakpoint(addr, action, conditionText) {
+      log(`→ breakpoint(${addr}, ${action}${conditionText ? `, ${conditionText}` : ""})`);
+      const list = snap.breakpoints.breakpoints;
+      const i = list.findIndex((b) => b.addr === addr);
+      if (action === "toggle") {
+        if (i >= 0) list.splice(i, 1);
+        else {
+          const row = snap.disasm.rows.find((r) => r.addr === addr);
+          list.push({
+            addr, mnemonic: row ? row.mnemonic : "DATA", hit_count: 0,
+            enabled: true, temporary: false,
+            has_condition: false,                 // backend never evaluates text
+            condition_text: conditionText ?? null,
+          });
+          list.sort((a, b) => a.addr - b.addr);
+        }
+      } else if (i >= 0) {
+        list[i].enabled = action === "enable";
+      }
+      for (const r of snap.disasm.rows) {
+        r.has_breakpoint = list.some((b) => b.addr === r.addr);
+      }
+      snap.timeline.marks = [
+        ...list.map((b) => ({ addr: b.addr, kind: "breakpoint" })),
+        ...snap.breakpoints.watchpoints.map((w) => ({ addr: w.addr, kind: "watchpoint" })),
+      ].sort((a, b) => a.addr - b.addr);
+      send();
+    },
+    watchpoint(addr, action) {
+      log(`→ watchpoint(${addr}, ${action})`);
+      const list = snap.breakpoints.watchpoints;
+      const i = list.findIndex((w) => w.addr === addr);
+      if (action === "toggle") {
+        if (i >= 0) list.splice(i, 1);
+        else {
+          const cell = snap.memory.cells.find((c) => c.addr === addr);
+          list.push({ addr, enabled: true, last_value: cell ? cell.value : null });
+          list.sort((a, b) => a.addr - b.addr);
+        }
+      } else if (i >= 0) {
+        list[i].enabled = action === "enable";
+      }
+      snap.timeline.marks = [
+        ...snap.breakpoints.breakpoints.map((b) => ({ addr: b.addr, kind: "breakpoint" })),
+        ...list.map((w) => ({ addr: w.addr, kind: "watchpoint" })),
+      ].sort((a, b) => a.addr - b.addr);
+      send();
+    },
+    snapshot(opts = {}) {
+      if (guard("snapshot()")) return;
+      win = { ...win, ...opts };
+      log(`→ snapshot(memOffset=${win.memOffset}, memCount=${win.memCount})`);
+      rewindow(win.memOffset || 0);
+      send();
+    },
+    /** Only the late path calls this; it replies with the default 24 cells. */
+    load() {
+      log("→ load()");
+      loaded = true;
+      const first = structuredClone(snap);
+      first.memory = { ...first.memory, count: 24,
+                       cells: first.memory.cells.slice(0, 24) };
+      emit("snapshot", first);
+    },
+    get lastSnapshot() { return loaded ? structuredClone(snap) : null; },
+    reset() {
+      log("→ reset()");
+      if (runTimer) { clearInterval(runTimer); runTimer = null; }
+      snap = structuredClone(base);
+      snap.timeline.current = 0;
+      snap.registers.step = 0;
+      snap.registers.stop_reason = "step";
+      send();
+    },
+  };
+}
+
+/* ------------------------------------------------------------------ wiring */
+
+const fxSel = document.getElementById("fx");
+for (const k of Object.keys(FIXTURES)) {
+  const s = FIXTURES[k];
+  fxSel.appendChild(Object.assign(document.createElement("option"), {
+    value: k,
+    textContent: `${k} · 步 ${s.registers.step.toLocaleString("en-US")}`
+      + ` · seekable [${s.timeline.seekable.join(", ")}]`,
+  }));
+}
+fxSel.value = "paused";
+
+let screen = null;
+let session = null;
+function mount() {
+  if (screen) screen.destroy();
+  const name = fxSel.value;
+  const late = document.getElementById("late").checked;
+  session = makeFakeSession(name, { late });
+  screen = mountDebugger(document.getElementById("screen"), session, {
+    fileName: name === "terminated" ? "hello.mal" : "truth.mal",
+    theme: document.getElementById("theme").value,
+    palette: document.getElementById("pal").value,
+    onExplain: () => log("→ onExplain()  (canvas 1b, v1 范围之外)"),
+  });
+  window.__screen = screen;
+  window.__session = session;
+  log(`mount(${name}${late ? ", late load" : ""})`
+    + `  cells=${MEM_COUNT} cols=${MEM_COLS} disasm=${DISASM_COUNT}`);
+  // The ordering mountDebugger must survive: mount first, load afterwards.
+  if (late) setTimeout(() => session.load(), 400);
+}
+
+fxSel.onchange = mount;
+document.getElementById("theme").onchange = (e) => {
+  document.body.dataset.t = e.target.value;
+  document.getElementById("pal").value = e.target.value === "light" ? "paper" : "blackbody";
+  screen.setTheme(e.target.value);
+};
+document.getElementById("pal").onchange = (e) => screen.setPalette(e.target.value);
+document.getElementById("late").onchange = mount;
+document.getElementById("oldworker").onclick = () => {
+  // A snapshot from a worker built before `output_tail` existed: the panel
+  // must fall back to reporting the length, not render an empty terminal.
+  const snap = structuredClone(screen.state.snap);
+  delete snap.registers.output_tail;
+  delete snap.registers.output_truncated;
+  screen.applySnapshot(snap);
+  log("applySnapshot(无 output_tail) —— 旧 worker 兜底路径");
+};
+document.getElementById("reload").onclick = mount;
+
+mount();
+</script>
+</body>
+</html>

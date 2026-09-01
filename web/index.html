@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pyMalbolge 调试器</title>
+<meta name="description" content="Malbolge 单步调试器 —— 纯静态,Python 跑在 Web Worker 里,代码不离开浏览器。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  /* Base palette lifted from the design canvas's shared <style> block
+     (docs/design/web-ui-canvas/Malbolge Web.dc.html) — same background,
+     font stack and link colors used across every dark screen.
+     Colors read `--mb-*` custom properties, which the module script below
+     sets via theme.js's applyTheme(document.documentElement, "dark") before
+     anything paints. Each var()'s second argument is the literal DARK value
+     as a fallback (identical either way — this is CSS resolving lazily at
+     paint time, not a real fork in behavior), the same pattern the design
+     canvas itself uses for --acc.
+     #09080d and #1c1220 aren't in theme.js's DARK set yet (flagged to
+     team-lead to add — screen-1d-specific: page background and the hero
+     radial-gradient's inner stop) — literal until then. */
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: #09080d;
+    font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+    color: var(--mb-tx, #e9e6f2);
+  }
+  a { color: var(--mb-amb, #ffb454); text-decoration: none; }
+  a:hover { color: var(--mb-acc, #ff5c38); }
+  #app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    /* radial glow behind 1d specifically; the debugger screen paints its own
+       flat panel background over this once it mounts. */
+    background: radial-gradient(900px 480px at 50% -8%, #1c1220 0%, var(--mb-pg, #0d0c12) 58%);
+  }
+</style>
+</head>
+<body>
+<div id="app" role="main"></div>
+
+<script type="module">
+  import { mountLaunch } from "./screens/launch.js";
+  import { applyTheme } from "./theme.js";
+
+  // Writes DARK's tokens onto <html> as --mb-* custom properties (see the
+  // <style> block above and screens/launch.js's inline styles, both of which
+  // read them instead of hardcoding hex). v1 is dark-only (§5.2 scope); the
+  // light theme swap is a one-line change here once it's wanted.
+  applyTheme(document.documentElement, "dark");
+
+  const app = document.getElementById("app");
+
+  // bridge.js is another agent's deliverable and may not exist yet at any
+  // given moment during parallel development — dynamic import + fallback
+  // keeps this shell (and the launch screen) usable on its own rather than
+  // failing the whole module graph on a missing file.
+  async function loadBridge() {
+    try {
+      return await import("./bridge.js");
+    } catch (err) {
+      console.error("bridge.js unavailable:", err);
+      return null;
+    }
+  }
+
+  let launchHandle = null;
+  let debuggerMounted = false;
+
+  async function showDebugger(session) {
+    if (debuggerMounted) return;
+    debuggerMounted = true;
+    try {
+      // Same reasoning as bridge.js: web/screens/debugger.js belongs to a
+      // different agent's file boundary and this screen must not block on
+      // its existence.
+      const { mountDebugger } = await import("./screens/debugger.js");
+      app.style.background = "";
+      app.innerHTML = "";
+      mountDebugger(app, session);
+    } catch (err) {
+      console.error("debugger screen unavailable:", err);
+      app.innerHTML = `
+        <div style="margin:auto;padding:24px;max-width:520px;text-align:center;color:var(--mb-sub, #cfc9e0);font-size:14px;line-height:1.6;font-family:'Space Grotesk','Noto Sans SC',sans-serif">
+          调试视图还没有落地(<code style="color:var(--mb-amb, #ffb454)">web/screens/debugger.js</code> 缺失或加载失败)。<br/>
+          程序已经载入到调试会话里 —— 在控制台里对 <code style="color:var(--mb-amb, #ffb454)">session</code>
+          调用 <code style="color:var(--mb-amb, #ffb454)">.on('snapshot', console.log)</code> 之类的方法可以确认它在跑。
+        </div>`;
+    }
+  }
+
+  // Bridge API this shell is written against (docs/design/tui-web-architecture.md
+  // §5.2, confirmed against web/bridge.js's actual `createSession` export):
+  //   const session = await createSession({ onBoot });
+  //   session.on("snapshot", (data) => {});   // returns an unsubscribe fn — use
+  //   session.on("error", ({ message }) => {}); // it, not off(), which can't
+  //                                              // see through on()'s wrapper
+  //   session.load(source, input);              // fire-and-forget: returns
+  //                                              // undefined, completion is
+  //                                              // the "snapshot"/"error" event
+  //
+  // (Earlier during parallel development bridge.js only exported the
+  // `MalbolgeBridge` class and this shell carried an adapter for it. That was
+  // a timing gap, not a real API split — createSession() landed and matches
+  // the contract, so the adapter was dead weight and has been removed.)
+
+  /** Resolve with the next snapshot, or reject with the next error — whichever
+   * comes first. `load()` answers on the event bus, not its return value. */
+  function waitForLoadResult(session) {
+    return new Promise((resolve, reject) => {
+      const offSnapshot = session.on("snapshot", (data) => {
+        offSnapshot();
+        offError();
+        resolve(data);
+      });
+      const offError = session.on("error", (err) => {
+        offSnapshot();
+        offError();
+        reject(new Error(err?.message ?? "unknown error"));
+      });
+    });
+  }
+
+  async function boot() {
+    const bridgeModule = await loadBridge();
+
+    let session = null;
+    let sessionError = null;
+    const sessionPromise = bridgeModule
+      ? bridgeModule
+          .createSession({ onBoot: (phase) => launchHandle?.setBootPhase(phase) })
+          .then((s) => {
+            session = s;
+            // The "booting" phases (vendor/pyodide/wheel/import) never include
+            // a "ready" phase of their own — createSession() resolving IS
+            // "ready", so the launch screen's boot indicator is cleared here
+            // rather than waiting for a phase that will never arrive.
+            launchHandle?.setBootPhase("ready");
+          })
+          .catch((err) => {
+            sessionError = err;
+            console.error("createSession failed:", err);
+          })
+      : Promise.resolve();
+
+    launchHandle = await mountLaunch(app, {
+      // If bridge.js isn't here yet there is nothing to boot — say so
+      // instead of showing a progress spinner that will never resolve.
+      bootPhase: bridgeModule ? "pyodide" : "ready",
+      onLoad: async (source, input) => {
+        await sessionPromise;
+        if (!session) {
+          alert(
+            sessionError
+              ? `调试内核初始化失败:${sessionError.message}`
+              : "调试内核尚未就绪(bridge.js 还没有落地),暂时无法运行程序。",
+          );
+          return;
+        }
+        // Load before mounting, not after: screens/debugger.js reads state
+        // (registers/disasm/memory) as soon as it mounts, and mounting first
+        // races it against this load — worth a "no program loaded" banner
+        // for a frame. Loading first means mountDebugger sees an already
+        // populated session.lastSnapshot from the very first paint.
+        const resultPromise = waitForLoadResult(session);
+        session.load(source, input);
+        try {
+          await resultPromise;
+        } catch (err) {
+          console.error("session.load failed:", err);
+          alert(`载入失败:${err.message}`);
+          return;
+        }
+        await showDebugger(session);
+      },
+    });
+  }
+
+  boot();
+</script>
+</body>
+</html>
