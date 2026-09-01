@@ -2,10 +2,14 @@
 
 > [English](tui-web-architecture.md) | **中文**
 >
-> 写于 2026-08-28。为针对已导入的设计画布(`tui-redesign/`)重建调试器 UI 敲定结构,
-> 同时让浏览器构建可以从同一个核心接入。状态:**设计阶段,部分已实现** ——
-> `malbolge/view/` 或 `malbolge/tui/` 下目前还什么都没有。Roadmap 条目:
+> 写于 2026-08-28,2026-09-01 修订。为针对已导入的设计画布重建调试器 UI 敲定结构,
+> 同时让浏览器构建可以从同一个核心接入。Roadmap 条目:
 > `docs/research/roadmap.zh.md` P4「Debugger UI rebuild」。
+>
+> 2026-09-01 时的状态:`malbolge/view/` 和 `malbolge/tui/` 已**构建并测试完毕**;§4 的
+> 三个后端 API 已存在;两份设计画布都已导入(`tui-redesign/`、`web-ui-canvas/`)。剩下的是
+> 渲染层的工作——§5.1 里的 TUI 面板仍然是 ViewModel 层出现之前的产物,还在直接消费
+> debugger;而 `web/`(§5.2)已经写好规格,但尚未动工。
 
 ---
 
@@ -29,7 +33,7 @@ malbolge/debugger.py                               debug control
 malbolge/view/                     ★ ViewModel — pure Python, JSON-only
         │
         ├──▶ malbolge/tui/         Textual renderer  (canvas 1a / 1b / 1c)
-        └──▶ web/                  Pyodide + real web controls (canvas pending)
+        └──▶ web/                  Pyodide + real web controls (canvas 1a / 1d)
 ```
 
 两个渲染器共享的是**含义**("这个单元被写过 3 次"、"这一行是当前指令"、"这个断点已经命中过
@@ -64,7 +68,9 @@ pytest——不需要 Textual pilot,不需要终端。这是整个项目里并�
 
 ```python
 {
-  "a": int, "a_char": str,          # a_char: printable or "."
+  "a": int, "a_char": str,          # a_char: 33..126 or "." (memory-cell bound)
+  "a_char_kind": str,               # "printable" | "control" | "other", of a % 256
+  "a_char_symbol": str | None,      # "K", "␇", "␡"; None for 0x80..0xFF
   "c": int, "d": int,
   "next_a": int | None,             # from preview_next_instruction()
   "next_c": int | None,
@@ -93,7 +99,7 @@ pytest——不需要 Textual pilot,不需要终端。这是整个项目里并�
       "legal": bool,                # 33 <= raw <= 126
       "opcode": int | None,         # None when not legal
       "mnemonic": str,              # "???" for unknown opcodes
-      "effect": str,                # NEW: "d ← mem[d]", "c ← mem[d]", …
+      "effect": str,                # a key from EFFECT_KEYS, NOT display text
       "is_current": bool,
       "has_breakpoint": bool,
     }
@@ -189,7 +195,9 @@ web 画布是中文的,把一种自然语言烧进两个渲染器共用的层,�
 {
   "breakpoints": [
     {"addr": int, "mnemonic": str, "hit_count": int,
-     "enabled": bool, "temporary": bool, "has_condition": bool}
+     "enabled": bool, "temporary": bool,
+     "has_condition": bool,         # a predicate exists
+     "condition_text": str | None}  # what it says, if the caller supplied it
   ],
   "watchpoints": [
     {"addr": int, "enabled": bool, "last_value": int | None}
@@ -306,23 +314,90 @@ malbolge/tui/
 就不存在,自然也无从展示。构建这部分应该跟 `mb-dialect-plan.zh.md` 里的 IR 工作放在一起做,
 而不是放在这里。
 
-### 5.2 Web——`web/`(设计画布待定)
+### 5.2 Web——`web/`
 
 形态:**Pyodide,完全静态**,不需要服务端。这个包是纯 Python,不含 C 扩展,所以能原样
-加载进 Pyodide,并直接托管在 GitHub Pages 上。
+加载进 Pyodide,并直接托管在 GitHub Pages 上。设计画布:
+`docs/design/web-ui-canvas/Malbolge Web.dc.html`(共七屏;v1 构建 `1a` 主调试和 `1d` 首屏)。
 
-结构,尚未构建:
+#### 设计之前先测了
 
-- Pyodide 跑在一个 **Web Worker** 里;主线程只负责渲染。这正是规则 2 之所以关键的原因。
-- worker 恰好只暴露 §3 里的快照,加上命令接口(step / back / run / seek / breakpoint /
-  watchpoint)。
-- **v1 只支持原版 Malbolge**(59,049 个单元)。Malbolge20 那 34.8 亿单元的稀疏内存,
-  在浏览器堆上的行为需要先测出数据,才能拿来承诺。
+用 Node 托管的 Pyodide 探针跑了真实的 wheel,所以下面这些数字是实测,不是估算:
 
-刻意悬而未决的部分是:视觉语言。`tui-redesign/` 这个画布是照着终端的形状设计的——等宽字体、
-深色、80×24 约束、字符块拼出的热力图。把它原样搬到浏览器上,只会做出一个假终端网页,那还不如
-直接用 `textual-web` 把真正的 TUI 端出去。一个真正的网页构建需要自己的画布,实现要等它出来
-再说。
+| | |
+|---|---|
+| Pyodide 启动 | 1.15 秒 |
+| wheel 解包 + `import malbolge.view` | 33 毫秒 |
+| 执行速度 | **177,000 步/秒** |
+| `build_snapshot(mem_count=288)` | **0.24 毫秒**,32 KB JSON |
+
+三条推论,每条都定下了一件事:
+
+1. **快照不是瓶颈。** 0.24 毫秒意味着每秒 4000 次以上,所以时间线拖动时每个拖拽事件都
+   重建整个快照完全可行。§5.1 给 TUI 定的分级刷新在这里没有必要。
+2. **`run_chunked` 是必需的,不是优化。** `99bottles.mal` 是 1380 万步 ≈ 78 秒,
+   `quine.mal` 是 6950 万步 ≈ 6.5 分钟(见 `examples/manifest.json`)。同步的 `run()`
+   意味着页面冻结好几分钟,连停止按钮都是死的。
+3. **连续运行时不要每步推快照。** 32 KB × 步频会把 `postMessage` 打满。运行期间 worker
+   只发轻量进度,快照只在停止时或按节流间隔发送。
+
+#### 结构
+
+```
+web/
+  index.html          外壳;以 module 方式加载 bridge.js
+  bridge.js           主线程:worker 生命周期、命令 API、事件总线
+  worker.js           Pyodide 宿主;**唯一**碰 Python 的地方
+  screens/
+    launch.js         画布 1d
+    debugger.js       画布 1a
+  theme.js            画布的两套 token
+  vendor/
+    malbolge-<ver>-py3-none-any.whl     由构建脚本复制
+    manifest.json                       从 examples/ 复制
+```
+
+Pyodide 本身从 jsdelivr CDN 加载;只有 wheel 和 manifest 是自托管的。(GitHub Pages
+不施加自己的 CSP——约束已发布 Artifact 的那条 no-egress 规则不适用于这个构建。)
+
+#### Worker 协议
+
+**规范性**。两侧都照它编写;每一个 payload 都是 structured-clone 安全的,这就是规则 2
+由运行时强制、而不是靠 review 保证。
+
+主线程 → worker:
+
+| 消息 | 字段 | 说明 |
+|---|---|---|
+| `load` | `source`, `input?` | 构建 debugger;回 `snapshot` |
+| `step` / `back` | — | 单条指令;回 `snapshot` |
+| `run` | `chunk?`(默认 5000) | 开始分块执行 |
+| `stop` | — | 在两个 chunk 之间生效 |
+| `seek` | `step` | 超过 `max_step_reached` 抛 `ValueError` → `error` |
+| `breakpoint` | `addr`, `action`, `condition_text?` | `toggle` / `enable` / `disable` |
+| `watchpoint` | `addr`, `action` | |
+| `snapshot` | `memOffset?`, `memCount?`, `disasmCount?` | 显式重新请求 |
+| `reset` | — | |
+
+worker → 主线程:
+
+| 消息 | 字段 | 时机 |
+|---|---|---|
+| `ready` | `pyodideMs`, `importMs` | 启动完成 |
+| `booting` | `phase` | 启动进度,供首屏显示 |
+| `snapshot` | `data`(§3.7 的快照) | 任何状态变化之后 |
+| `progress` | `step`, `running: true` | `run` 期间,节流发送 |
+| `stopped` | `reason`, `data` | 断点 / 监视点 / 终止 / 手动停止 / 达到上限 |
+| `error` | `message`, `kind` | |
+
+所有面向 Python 的东西都只存在于 `worker.js` 里。主线程永远看不到 `PyProxy`——它收到的
+是在 Python 侧过了 `json.dumps` 的普通对象,这正是让这条边界保持诚实的做法。
+
+#### v1 范围
+
+**只支持原版 Malbolge**(59,049 个单元)。Malbolge20 那 34.8 亿单元的稀疏内存,在浏览器堆
+上的行为需要先测出数据,才能拿来承诺。`1b`、`1c`、`2a`、`2b`、`3a` 这几屏画了但不构建;
+两套主题 token 从一开始就分离出来,这样浅色主题以后是一次替换,而不是一次重写。
 
 ## 6. 阶段划分与可并行的边界
 

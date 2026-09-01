@@ -2,11 +2,16 @@
 
 > **English** | [中文](tui-web-architecture.zh.md)
 >
-> Written 2026-08-28. Decides the structure for rebuilding the debugger UI
-> against the imported design canvas (`tui-redesign/`) while keeping a browser
-> build reachable from the same core. Status: **design, partly implemented** —
-> nothing under `malbolge/view/` or `malbolge/tui/` exists yet. Roadmap entry:
+> Written 2026-08-28, revised 2026-09-01. Decides the structure for rebuilding
+> the debugger UI against the imported design canvases while keeping a browser
+> build reachable from the same core. Roadmap entry:
 > `docs/research/roadmap.md` P4 "Debugger UI rebuild".
+>
+> Status as of 2026-09-01: `malbolge/view/` and `malbolge/tui/` are **built and
+> tested**; §4's three backend APIs exist; both design canvases are imported
+> (`tui-redesign/`, `web-ui-canvas/`). What remains is the rendering work —
+> §5.1's TUI panels still predate the ViewModel layer and consume the debugger
+> directly, and `web/` (§5.2) is specified but not yet written.
 
 ---
 
@@ -33,7 +38,7 @@ malbolge/debugger.py                               debug control
 malbolge/view/                     ★ ViewModel — pure Python, JSON-only
         │
         ├──▶ malbolge/tui/         Textual renderer  (canvas 1a / 1b / 1c)
-        └──▶ web/                  Pyodide + real web controls (canvas pending)
+        └──▶ web/                  Pyodide + real web controls (canvas 1a / 1d)
 ```
 
 What the two renderers share is **meaning** ("this cell has been written 3
@@ -74,7 +79,9 @@ TUI and the web build are both written against them.
 
 ```python
 {
-  "a": int, "a_char": str,          # a_char: printable or "."
+  "a": int, "a_char": str,          # a_char: 33..126 or "." (memory-cell bound)
+  "a_char_kind": str,               # "printable" | "control" | "other", of a % 256
+  "a_char_symbol": str | None,      # "K", "␇", "␡"; None for 0x80..0xFF
   "c": int, "d": int,
   "next_a": int | None,             # from preview_next_instruction()
   "next_c": int | None,
@@ -103,7 +110,7 @@ TUI and the web build are both written against them.
       "legal": bool,                # 33 <= raw <= 126
       "opcode": int | None,         # None when not legal
       "mnemonic": str,              # "???" for unknown opcodes
-      "effect": str,                # NEW: "d ← mem[d]", "c ← mem[d]", …
+      "effect": str,                # a key from EFFECT_KEYS, NOT display text
       "is_current": bool,
       "has_breakpoint": bool,
     }
@@ -207,7 +214,9 @@ Ordering is defined by the ViewModel, not by either renderer.
 {
   "breakpoints": [
     {"addr": int, "mnemonic": str, "hit_count": int,
-     "enabled": bool, "temporary": bool, "has_condition": bool}
+     "enabled": bool, "temporary": bool,
+     "has_condition": bool,         # a predicate exists
+     "condition_text": str | None}  # what it says, if the caller supplied it
   ],
   "watchpoints": [
     {"addr": int, "enabled": bool, "last_value": int | None}
@@ -334,27 +343,99 @@ as a **placeholder marked "not wired"**: the compiler emits no line mapping or
 debug metadata, so py→mg→mb provenance does not exist to display. Building it
 belongs with the IR work in `mb-dialect-plan.md`, not here.
 
-### 5.2 Web — `web/` (design canvas pending)
+### 5.2 Web — `web/`
 
 Form: **Pyodide, fully static**, no server. The package is pure Python with no
 C extensions, so it loads into Pyodide as-is and hosts from GitHub Pages.
+Design canvas: `docs/design/web-ui-canvas/Malbolge Web.dc.html` (seven screens;
+v1 builds `1a` main debugger and `1d` launch).
 
-Structure, not yet built:
+#### Measured before designing this
 
-- Pyodide runs in a **Web Worker**; the main thread only renders. This is what
-  makes Rule 2 load-bearing.
-- The worker exposes exactly the §3 snapshot plus the command surface
-  (step / back / run / seek / breakpoint / watchpoint).
-- **v1 supports original Malbolge only** (59,049 cells). Malbolge20's 3.48
-  billion-cell sparse memory needs its browser-heap behaviour measured before
-  being promised.
+A Node-hosted Pyodide probe ran the real wheel, so the numbers below are
+observed rather than assumed:
 
-Deliberately open until a design canvas exists: the visual language. The
-`tui-redesign/` canvas is terminal-shaped — monospace, dark, 80×24 constraints,
-character-block heat maps. Transplanting that to a browser produces a fake
-terminal on a web page, which would be strictly worse than just serving the
-real TUI over `textual-web`. A genuine web build needs its own canvas, and the
-implementation waits for it.
+| | |
+|---|---|
+| Pyodide boot | 1.15 s |
+| wheel unpack + `import malbolge.view` | 33 ms |
+| execution | **177,000 steps/s** |
+| `build_snapshot(mem_count=288)` | **0.24 ms**, 32 KB of JSON |
+
+Three consequences, each of which decided something:
+
+1. **Snapshots are not a bottleneck.** 0.24 ms is >4000/s, so timeline
+   scrubbing may rebuild the whole snapshot per drag event. The tiered
+   refresh §5.1 specifies for the TUI is unnecessary here.
+2. **`run_chunked` is mandatory, not an optimisation.** `99bottles.mal` is
+   13.8M steps ≈ 78 s and `quine.mal` is 69.5M ≈ 6.5 min (`examples/manifest.json`).
+   A synchronous `run()` is a minutes-long frozen page with a dead stop button.
+3. **Do not push a snapshot per step while running.** 32 KB × step rate
+   saturates `postMessage`. While running, the worker sends lightweight
+   progress and a snapshot only on stop or on a throttled interval.
+
+#### Structure
+
+```
+web/
+  index.html          shell; loads bridge.js as a module
+  bridge.js           main thread: worker lifecycle, command API, event bus
+  worker.js           Pyodide host; the ONLY place Python is touched
+  screens/
+    launch.js         canvas 1d
+    debugger.js       canvas 1a
+  theme.js            the canvas's two token sets
+  vendor/
+    malbolge-<ver>-py3-none-any.whl     copied by the build script
+    manifest.json                       copied from examples/
+```
+
+Pyodide itself loads from the jsdelivr CDN; only the wheel and the manifest
+are self-hosted. (GitHub Pages imposes no CSP of its own — the no-egress rule
+that governs published Artifacts does not apply to this build.)
+
+#### Worker protocol
+
+Normative. Both sides are written against it; every payload is
+structured-clone-safe, which is Rule 2 enforced by the runtime rather than by
+review.
+
+Main thread → worker:
+
+| message | fields | notes |
+|---|---|---|
+| `load` | `source`, `input?` | build a debugger; replies `snapshot` |
+| `step` / `back` | — | one instruction; replies `snapshot` |
+| `run` | `chunk?` (default 5000) | starts chunked execution |
+| `stop` | — | honoured between chunks |
+| `seek` | `step` | `ValueError` past `max_step_reached` → `error` |
+| `breakpoint` | `addr`, `action`, `condition_text?` | `toggle` / `enable` / `disable` |
+| `watchpoint` | `addr`, `action` | |
+| `snapshot` | `memOffset?`, `memCount?`, `disasmCount?` | explicit re-request |
+| `reset` | — | |
+
+Worker → main thread:
+
+| message | fields | when |
+|---|---|---|
+| `ready` | `pyodideMs`, `importMs` | boot finished |
+| `booting` | `phase` | boot progress, for the launch screen |
+| `snapshot` | `data` (the §3.7 snapshot) | after any state change |
+| `progress` | `step`, `running: true` | during `run`, throttled |
+| `stopped` | `reason`, `data` | breakpoint / watchpoint / terminated / stopped / limit |
+| `error` | `message`, `kind` | |
+
+Everything Python-facing lives in `worker.js`. The main thread never sees a
+`PyProxy` — it receives plain objects that came through `json.dumps` on the
+Python side, which is what keeps the boundary honest.
+
+#### v1 scope
+
+**Original Malbolge only** (59,049 cells). Malbolge20's 3.48-billion-cell
+sparse memory needs its browser-heap behaviour measured before being promised.
+Screens `1b`, `1c`, `2a`, `2b`, `3a` are drawn but not built; the two theme
+token sets are structured from the start so the light theme is a later swap
+rather than a later rewrite.
 
 ## 6. Phasing and parallel boundaries
 
