@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Spectral:wght@500;600;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#09080d;font-family:'Space Grotesk','Noto Sans SC',sans-serif;color:#e9e6f2}
+a{color:#ffb454;text-decoration:none}a:hover{color:#ff5c38}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</helmet>
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px 48px 12px;align-items:flex-start">
+
+<!-- ═══════════ 3a 明暗一体 · 可切换主题 ═══════════ -->
+<div id="3a" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 10px;border-radius:999px;background:#1d1a26;border:1px solid #2e2a3c;color:#a79fc0;font-size:12px;font-weight:600">3a</span><span style="font-size:13px;color:#8b8798">明暗一体:同一布局,两套主题 —— 顶栏切换,或在 Tweaks 面板里改「theme」实时预览。深色=<a href="#1a">1a</a> 仪表,浅色=<a href="#2a">2a</a> 纸面。</span></div>
+<div style="width:1560px;background:{{ T.pg }};border:1px solid {{ T.bd }};border-radius:14px;overflow:hidden;color:{{ T.tx }}" data-screen-label="3a 明暗一体">
+  <div style="display:flex;align-items:center;gap:14px;height:58px;padding:0 20px;background:{{ T.bar }};border-bottom:1px solid {{ T.barBd }}">
+    <div style="display:flex;gap:3px;align-items:flex-end;height:18px"><div style="width:4px;height:18px;border-radius:2px;background:{{ T.acc }}"></div><div style="width:4px;height:9px;border-radius:2px;background:{{ T.logo2 }}"></div><div style="width:4px;height:13px;border-radius:2px;background:{{ T.amb }}"></div></div>
+    <div style="font-family:{{ T.headFont }};font-weight:700;font-size:16px">pyMalbolge</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:{{ T.mut }};background:{{ T.in1 }};border:1px solid {{ T.in2Bd }};border-radius:6px;padding:3px 9px">hello.mb</div>
+    <div style="display:flex;gap:3px;padding:3px;border-radius:9px;background:{{ T.in1 }};border:1px solid {{ T.in2Bd }};margin-left:6px">
+      <span style="padding:4px 12px;border-radius:7px;font-size:12px;font-weight:600;background:{{ T.tglDBg }};color:{{ T.tglDTx }};cursor:pointer">☾ 深</span>
+      <span style="padding:4px 12px;border-radius:7px;font-size:12px;font-weight:600;background:{{ T.tglLBg }};color:{{ T.tglLTx }};cursor:pointer">☀ 浅</span>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="padding:7px 14px;border-radius:8px;background:{{ T.in1 }};border:1px solid {{ T.in1Bd }};font-size:13px;color:{{ T.sub }};cursor:pointer">⏮ 回退</div>
+      <div style="padding:7px 14px;border-radius:8px;background:{{ T.in1 }};border:1px solid {{ T.in1Bd }};font-size:13px;color:{{ T.sub }};cursor:pointer">⏭ 单步</div>
+      <div style="padding:7px 18px;border-radius:8px;background:{{ T.acc }};color:{{ T.accTx }};font-size:13px;font-weight:600;cursor:pointer">▶ 继续</div>
+      <div style="padding:7px 12px;border-radius:8px;background:{{ T.in1 }};border:1px solid {{ T.in1Bd }};font-size:13px;color:{{ T.mut }};cursor:pointer">⏩ ×1000</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">步 1,281,332</div><div style="font-size:11px;color:{{ T.faint }}">历史 10,000 / 10,000 · 输入 0/0</div></div>
+    <div style="padding:5px 12px;border-radius:999px;background:color-mix(in oklab,{{ T.acc }} 12%,{{ T.bar }});border:1px solid color-mix(in oklab,{{ T.acc }} 40%,{{ T.bar }});color:{{ T.accSoft }};font-size:12px;font-weight:600">⏸ 断点 @00041 · 第 3 次</div>
+  </div>
+  <div style="display:grid;grid-template-columns:430px 1fr 300px;gap:14px;padding:14px">
+    <div style="background:{{ T.pn }};border:1px solid {{ T.pnBd }};border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid {{ T.hd }}">
+        <div style="font-family:{{ T.headFont }};font-size:11.5px;letter-spacing:.16em;color:{{ T.mut }};font-weight:600">反汇编</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:{{ T.dim }}">00030–00045 · 跟随 C <span style="color:{{ T.acc }}">◉</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:24px 58px 30px 40px 44px 1fr;padding:6px 14px 2px;font-size:10px;letter-spacing:.1em;color:{{ T.ghost }}"><span></span><span>地址</span><span>字符</span><span>原值</span><span>助记符</span><span>效果</span></div>
+      <div style="display:flex;flex-direction:column;padding:2px 6px 8px">
+        <sc-for list="{{ dsmT }}" as="r" hint-placeholder-count="8">
+          <div style="display:grid;grid-template-columns:24px 58px 30px 40px 44px 1fr;align-items:center;padding:4px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:{{ r.bg }};border-left:2px solid {{ r.edge }}">
+            <span style="color:{{ T.acc }};font-size:11px">{{ r.gut }}</span>
+            <span style="color:{{ r.addrC }}">{{ r.addr5 }}</span>
+            <span style="color:{{ r.mnC }}">{{ r.ch }}</span>
+            <span style="color:{{ T.faint }}">{{ r.raw }}</span>
+            <span style="color:{{ r.opC }};font-weight:600">{{ r.mn }}</span>
+            <span style="color:{{ r.fxC }};font-size:11.5px">{{ r.fx }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:auto;padding:10px 14px;border-top:1px solid {{ T.hd }};font-size:11px;color:{{ T.dim }}">点击行首打点断点 · 双击地址跳转 · <span style="color:{{ T.amb }}">'w'+37 已是第 3 代密文</span></div>
+    </div>
+    <div style="background:{{ T.pn }};border:1px solid {{ T.pnBd }};border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid {{ T.hd }}">
+        <div style="font-family:{{ T.headFont }};font-size:11.5px;letter-spacing:.16em;color:{{ T.mut }};font-weight:600">内存 · 写入热度</div>
+        <div style="display:flex;gap:8px;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:{{ T.dim }}">
+          <span style="padding:2px 8px;border-radius:5px;background:{{ T.in1 }};border:1px solid {{ T.in2Bd }}">18240–18527</span>
+          <span style="padding:2px 8px;border-radius:5px;background:{{ T.dChip }};border:1px solid {{ T.dChipBd }};color:{{ T.dChipTx }}">跟随 D</span>
+          <span style="padding:2px 8px;border-radius:5px;background:{{ T.in1 }};border:1px solid {{ T.in2Bd }};color:{{ T.mut }}">C=00037 窗外 ↖</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;padding:14px">
+        <div style="display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:{{ T.ghost }};text-align:right">
+          <sc-for list="{{ rowLabels }}" as="rl" hint-placeholder-count="4"><div style="height:22px;line-height:22px">{{ rl }}</div></sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(24,22px);gap:3px">
+          <sc-for list="{{ cellsT }}" as="cc" hint-placeholder-count="48">
+            <div style="width:22px;height:22px;border-radius:4px;background:{{ cc.bg }};box-shadow:{{ cc.ring }};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:{{ cc.tagC }};cursor:pointer">{{ cc.tag }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:0 14px 12px;margin-left:52px">
+        <span style="font-size:10.5px;color:{{ T.dim }}">冷</span>
+        <div style="flex:1;height:8px;border-radius:4px;background:{{ legendT }}"></div>
+        <span style="font-size:10.5px;color:{{ T.dim }}">热 · 峰值 213 次</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:{{ T.dChipTx }}"><span style="width:10px;height:10px;border-radius:3px;box-shadow:0 0 0 2px {{ T.dChipTx }} inset"></span>D 指针</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-top:1px solid {{ T.hd }};font-family:'IBM Plex Mono',monospace;font-size:12px">
+        <span style="color:{{ T.faint }};font-size:11px">已选</span><span>mem[18291]</span><span style="color:{{ T.sub }}">= 29524</span><span style="color:{{ T.dim }}">'.' 不可打印</span><span style="color:{{ T.amb }}">写入 213 次</span><span style="margin-left:auto;color:{{ T.dChipTx }}">= D</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:{{ T.pn }};border:1px solid {{ T.pnBd }};border-radius:10px;padding:14px">
+        <div style="font-family:{{ T.headFont }};font-size:11.5px;letter-spacing:.16em;color:{{ T.mut }};font-weight:600;margin-bottom:10px">寄存器</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ regsT }}" as="rg" hint-placeholder-count="3">
+            <div style="display:flex;align-items:baseline;gap:10px;padding:8px 10px;border-radius:8px;background:{{ T.in1 }};border:1px solid {{ T.in2Bd }}">
+              <span style="font-weight:700;font-size:14px;color:{{ rg.c }};width:14px">{{ rg.n }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600">{{ rg.v }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:{{ T.faint }}">→ {{ rg.next }}</span>
+              <span style="margin-left:auto;font-size:10.5px;color:{{ T.dim }}">{{ rg.sub }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:{{ T.pn }};border:1px solid {{ T.pnBd }};border-radius:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-family:{{ T.headFont }};font-size:11.5px;letter-spacing:.16em;color:{{ T.mut }};font-weight:600">下一步预演</span><span style="font-size:11px;color:{{ T.amb }};cursor:pointer">展开讲解 ↗</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+          <sc-for list="{{ prevT }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;gap:8px;align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:{{ p.c }}"></span><span style="color:{{ T.sub }}">{{ p.t }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:{{ T.pn }};border:1px solid {{ T.pnBd }};border-radius:10px;padding:14px;flex:1">
+        <div style="font-family:{{ T.headFont }};font-size:11.5px;letter-spacing:.16em;color:{{ T.mut }};font-weight:600;margin-bottom:10px">断点 · 监视点</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ bpsT }}" as="b" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:{{ T.in1 }};border:1px solid {{ T.in2Bd }};font-family:'IBM Plex Mono',monospace;font-size:11.5px;opacity:{{ b.op }}">
+              <span style="color:{{ b.dotC }}">{{ b.dot }}</span>
+              <span>{{ b.addr }}</span>
+              <span style="color:{{ T.faint }}">{{ b.mn }}</span>
+              <span style="color:{{ T.amb }};font-size:10.5px">{{ b.tag }}</span>
+              <span style="margin-left:auto;color:{{ T.dim }};font-size:10.5px">{{ b.hits }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:14px;padding:0 14px 14px">
+    <div style="background:{{ T.pn }};border:1px solid {{ T.pnBd }};border-radius:10px;padding:14px 16px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px">
+        <span style="font-family:{{ T.headFont }};font-size:11.5px;letter-spacing:.16em;color:{{ T.mut }};font-weight:600">时间线</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:{{ T.sub }}">全程 1,284,503 步 · 当前 1,281,332 · 已回溯 3,171</span>
+        <span style="margin-left:auto;font-size:11px;color:{{ T.dim }}">灰纹区历史已丢弃,不可拖拽</span>
+      </div>
+      <div style="position:relative;height:22px;border-radius:5px;overflow:hidden;background:{{ T.hatch }}">
+        <div style="position:absolute;left:8%;top:0;bottom:0;width:1px;background:{{ T.mark }}"></div>
+        <div style="position:absolute;left:8%;top:-1px;font-size:9px;color:{{ T.dim }};padding-left:3px">bp@41 首次命中</div>
+        <div style="position:absolute;left:47%;top:0;bottom:0;width:1px;background:{{ T.mark }}"></div>
+        <div style="position:absolute;right:0;top:0;bottom:0;width:10px;background:{{ T.acc }}"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;height:16px"><div style="width:100%;height:100%;position:relative"><div style="position:absolute;right:0;top:0;width:100%;height:100%;clip-path:polygon(99.2% 0,100% 0,100% 100%,0 100%);background:color-mix(in oklab,{{ T.acc }} 10%,transparent)"></div></div></div>
+      <div style="position:relative;height:44px;border-radius:8px;background:{{ T.tlBg }};border:1px solid {{ T.tlBd }}">
+        <div style="position:absolute;inset:0;border-radius:8px;background:repeating-linear-gradient(90deg,transparent 0 19.6%,{{ T.tick }} 19.6% 20%)"></div>
+        <div style="position:absolute;left:0;top:0;bottom:0;width:68.3%;border-radius:8px 0 0 8px;background:linear-gradient(90deg,color-mix(in oklab,{{ T.acc }} 5%,transparent),color-mix(in oklab,{{ T.acc }} 15%,transparent))"></div>
+        <div style="position:absolute;left:45.5%;top:0;bottom:0;width:2px;background:{{ T.grn }}"></div>
+        <div style="position:absolute;left:45.5%;bottom:-16px;font-size:9.5px;color:{{ T.grn }};transform:translateX(-50%)">wp@18305 触发</div>
+        <div style="position:absolute;left:68.3%;top:-7px;bottom:-7px;width:16px;transform:translateX(-50%);border-radius:6px;background:{{ T.acc }};box-shadow:0 0 0 3px color-mix(in oklab,{{ T.acc }} 25%,transparent),0 4px 12px rgba(0,0,0,.35);cursor:grab;display:flex;align-items:center;justify-content:center"><span style="width:2px;height:16px;border-radius:1px;background:{{ T.knobIn }};box-shadow:4px 0 0 {{ T.knobIn }},-4px 0 0 {{ T.knobIn }}"></span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:18px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:{{ T.dim }}">
+        <span>1,274,504 <span style="color:{{ T.ghost }}">· 可回溯区起点(最近 10,000 步)</span></span><span style="color:{{ T.sub }}">▲ 1,281,332</span><span>1,284,503 · 最新 ▶</span>
+      </div>
+    </div>
+    <div style="background:{{ T.pn }};border:1px solid {{ T.pnBd }};border-radius:10px;padding:14px 16px;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-family:{{ T.headFont }};font-size:11.5px;letter-spacing:.16em;color:{{ T.mut }};font-weight:600">输出</span><span style="font-size:11px;color:{{ T.dim }}">12 字符</span></div>
+      <div style="flex:1;background:{{ T.outBg }};border:1px solid {{ T.outBd }};border-radius:7px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:{{ T.outTx }}">Hello, World<span style="display:inline-block;width:8px;height:16px;background:{{ T.cur }};vertical-align:-3px;margin-left:2px;animation:pulse 1.2s infinite"></span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════ 2a 浅色·纸面仪器 主调试视图 ═══════════ -->
+<div id="2a" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 10px;border-radius:999px;background:#1d1a26;border:1px solid #2e2a3c;color:#a79fc0;font-size:12px;font-weight:600">2a</span><span style="font-size:13px;color:#8b8798">另一方向:纸面仪器 · 学术浅色 · 主调试视图</span></div>
+<div style="width:1560px;background:#f5f2ea;border:1px solid #d8d1c0;border-radius:14px;overflow:hidden;color:#2a2622" data-screen-label="2a 浅色主调试视图">
+  <div style="display:flex;align-items:center;gap:14px;height:58px;padding:0 20px;background:#fdfcf8;border-bottom:1px solid #d8d1c0">
+    <div style="display:flex;gap:3px;align-items:flex-end;height:18px"><div style="width:4px;height:18px;border-radius:2px;background:#b03a26"></div><div style="width:4px;height:9px;border-radius:2px;background:#c9c1ae"></div><div style="width:4px;height:13px;border-radius:2px;background:#c07a1e"></div></div>
+    <div style="font-family:'Spectral','Noto Serif SC',serif;font-weight:700;font-size:17px">pyMalbolge</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5a5348;background:#f0ece1;border:1px solid #ddd6c6;border-radius:6px;padding:3px 9px">hello.mb</div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="padding:7px 14px;border-radius:8px;background:#fdfcf8;border:1px solid #c9c1ae;font-size:13px;color:#2a2622;cursor:pointer">⏮ 回退</div>
+      <div style="padding:7px 14px;border-radius:8px;background:#fdfcf8;border:1px solid #c9c1ae;font-size:13px;color:#2a2622;cursor:pointer">⏭ 单步</div>
+      <div style="padding:7px 18px;border-radius:8px;background:#b03a26;color:#fdf6ee;font-size:13px;font-weight:600;cursor:pointer">▶ 继续</div>
+      <div style="padding:7px 12px;border-radius:8px;background:#fdfcf8;border:1px solid #c9c1ae;font-size:13px;color:#8a8272;cursor:pointer">⏩ ×1000</div>
+      <div style="padding:7px 12px;border-radius:8px;background:#fdfcf8;border:1px solid #c9c1ae;font-size:13px;color:#8a8272;cursor:pointer">⟲ 重置</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">步 1,281,332</div><div style="font-size:11px;color:#a89e8a">历史 10,000 / 10,000 · 输入 0/0</div></div>
+    <div style="padding:5px 12px;border-radius:999px;background:color-mix(in oklab,#b03a26 10%,#fdfcf8);border:1px solid color-mix(in oklab,#b03a26 35%,#fdfcf8);color:#b03a26;font-size:12px;font-weight:600">⏸ 断点 @00041 · 第 3 次</div>
+  </div>
+  <div style="display:grid;grid-template-columns:430px 1fr 300px;gap:14px;padding:14px">
+    <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eae4d5">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600">反汇编</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a89e8a">00030–00045 · 跟随 C <span style="color:#b03a26">◉</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:24px 58px 30px 40px 44px 1fr;padding:6px 14px 2px;font-size:10px;letter-spacing:.1em;color:#b5ac97"><span></span><span>地址</span><span>字符</span><span>原值</span><span>助记符</span><span>效果</span></div>
+      <div style="display:flex;flex-direction:column;padding:2px 6px 8px">
+        <sc-for list="{{ disasmL }}" as="r" hint-placeholder-count="8">
+          <div style="display:grid;grid-template-columns:24px 58px 30px 40px 44px 1fr;align-items:center;padding:4px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:{{ r.bg }};border-left:2px solid {{ r.edge }}">
+            <span style="color:#b03a26;font-size:11px">{{ r.gut }}</span>
+            <span style="color:{{ r.addrC }}">{{ r.addr5 }}</span>
+            <span style="color:{{ r.mnC }}">{{ r.ch }}</span>
+            <span style="color:#a89e8a">{{ r.raw }}</span>
+            <span style="color:{{ r.opC }};font-weight:600">{{ r.mn }}</span>
+            <span style="color:{{ r.fxC }};font-size:11.5px">{{ r.fx }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:auto;padding:10px 14px;border-top:1px solid #eae4d5;font-size:11px;color:#a89e8a">点击行首打点断点 · 双击地址跳转 · <span style="color:#c07a1e">'w'+37 已是第 3 代密文</span></div>
+    </div>
+    <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eae4d5">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600">内存 · 写入热度</div>
+        <div style="display:flex;gap:8px;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a89e8a">
+          <span style="padding:2px 8px;border-radius:5px;background:#f0ece1;border:1px solid #ddd6c6">18240–18527</span>
+          <span style="padding:2px 8px;border-radius:5px;background:color-mix(in oklab,#1e7f8c 10%,#fdfcf8);border:1px solid #b9d4d8;color:#1e7f8c">跟随 D</span>
+          <span style="padding:2px 8px;border-radius:5px;background:#f0ece1;border:1px solid #ddd6c6;color:#8a8272">C=00037 窗外 ↖</span>
+        </div>
+      </div>
+      <div style="position:relative;display:flex;gap:10px;padding:14px">
+        <div style="display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#b5ac97;text-align:right">
+          <sc-for list="{{ rowLabels }}" as="rl" hint-placeholder-count="4"><div style="height:22px;line-height:22px">{{ rl }}</div></sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(24,22px);gap:3px">
+          <sc-for list="{{ cells24L }}" as="cc" hint-placeholder-count="48">
+            <div style="width:22px;height:22px;border-radius:4px;background:{{ cc.bg }};box-shadow:{{ cc.ring }};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:{{ cc.tagC }};cursor:pointer">{{ cc.tag }}</div>
+          </sc-for>
+        </div>
+        <div style="position:absolute;left:236px;top:154px;z-index:3;background:#2a2622;border:1px solid #4a4438;border-radius:9px;padding:10px 12px;box-shadow:0 12px 28px rgba(42,38,34,.35);width:196px;color:#f0ece1">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600">mem[18350]</div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin-top:6px;font-size:11px;color:#c2bba9">
+            <span>值</span><span style="font-family:'IBM Plex Mono',monospace;color:#f0ece1">29281 · 不可打印</span>
+            <span>写入</span><span style="font-family:'IBM Plex Mono',monospace;color:#e8a04c">86 次</span>
+            <span>距 D</span><span style="font-family:'IBM Plex Mono',monospace;color:#7fc7cf">+59</span>
+            <span>监视</span><span style="color:#a3d17c">✓ wp 已布设</span>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid #4a4438;font-size:10.5px;color:#8a8272">点击固定 · ⇧点击设监视点</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:0 14px 12px;margin-left:52px">
+        <span style="font-size:10.5px;color:#a89e8a">冷</span>
+        <div style="flex:1;height:8px;border-radius:4px;background:{{ legendGradL }}"></div>
+        <span style="font-size:10.5px;color:#a89e8a">热 · 峰值 213 次</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:#1e7f8c"><span style="width:10px;height:10px;border-radius:3px;box-shadow:0 0 0 2px #1e7f8c inset"></span>D 指针</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-top:1px solid #eae4d5;font-family:'IBM Plex Mono',monospace;font-size:12px">
+        <span style="color:#a89e8a;font-size:11px">已选</span><span>mem[18291]</span><span style="color:#5a5348">= 29524</span><span style="color:#a89e8a">'.' 不可打印</span><span style="color:#c07a1e">写入 213 次</span><span style="margin-left:auto;color:#1e7f8c">= D</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:14px">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600;margin-bottom:10px">寄存器</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ regsL }}" as="rg" hint-placeholder-count="3">
+            <div style="display:flex;align-items:baseline;gap:10px;padding:8px 10px;border-radius:8px;background:#f7f4ec;border:1px solid #e5dfd0">
+              <span style="font-weight:700;font-size:14px;color:{{ rg.c }};width:14px">{{ rg.n }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600">{{ rg.v }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#a89e8a">→ {{ rg.next }}</span>
+              <span style="margin-left:auto;font-size:10.5px;color:#b5ac97">{{ rg.sub }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600">下一步预演</span><span style="font-size:11px;color:#b03a26;cursor:pointer">进入讲解 ↗</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+          <sc-for list="{{ previewL }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;gap:8px;align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:{{ p.c }}"></span><span style="color:#5a5348">{{ p.t }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:14px;flex:1">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600;margin-bottom:10px">断点 · 监视点</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ bpsL }}" as="b" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:#f7f4ec;border:1px solid #e5dfd0;font-family:'IBM Plex Mono',monospace;font-size:11.5px;opacity:{{ b.op }}">
+              <span style="color:{{ b.dotC }}">{{ b.dot }}</span>
+              <span>{{ b.addr }}</span>
+              <span style="color:#a89e8a">{{ b.mn }}</span>
+              <span style="color:#c07a1e;font-size:10.5px">{{ b.tag }}</span>
+              <span style="margin-left:auto;color:#b5ac97;font-size:10.5px">{{ b.hits }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:14px;padding:0 14px 14px">
+    <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:14px 16px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px">
+        <span style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600">时间线</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#5a5348">全程 1,284,503 步 · 当前 1,281,332 · 已回溯 3,171</span>
+        <span style="margin-left:auto;font-size:11px;color:#a89e8a">灰纹区历史已丢弃,不可拖拽 · 需要更早状态请重置后「运行到步数」</span>
+      </div>
+      <div style="position:relative;height:22px;border-radius:5px;overflow:hidden;background:repeating-linear-gradient(-45deg,#e8e1d1 0 6px,#efe9dc 6px 12px)">
+        <div style="position:absolute;left:8%;top:0;bottom:0;width:1px;background:#b5ac97"></div>
+        <div style="position:absolute;left:8%;top:-1px;font-size:9px;color:#a89e8a;padding-left:3px">bp@41 首次命中</div>
+        <div style="position:absolute;left:47%;top:0;bottom:0;width:1px;background:#b5ac97"></div>
+        <div style="position:absolute;right:0;top:0;bottom:0;width:10px;background:linear-gradient(90deg,#c05a2a,#b03a26)"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;height:16px"><div style="width:100%;height:100%;position:relative"><div style="position:absolute;right:0;top:0;width:100%;height:100%;clip-path:polygon(99.2% 0,100% 0,100% 100%,0 100%);background:color-mix(in oklab,#b03a26 10%,transparent)"></div></div></div>
+      <div style="position:relative;height:44px;border-radius:8px;background:#fdfcf8;border:1px solid #d0c8b4">
+        <div style="position:absolute;inset:0;border-radius:8px;background:repeating-linear-gradient(90deg,transparent 0 19.6%,#eae4d5 19.6% 20%)"></div>
+        <div style="position:absolute;left:0;top:0;bottom:0;width:68.3%;border-radius:8px 0 0 8px;background:linear-gradient(90deg,color-mix(in oklab,#b03a26 5%,transparent),color-mix(in oklab,#b03a26 14%,transparent))"></div>
+        <div style="position:absolute;left:45.5%;top:0;bottom:0;width:2px;background:#4a7c2f"></div>
+        <div style="position:absolute;left:45.5%;bottom:-16px;font-size:9.5px;color:#4a7c2f;transform:translateX(-50%)">wp@18305 触发</div>
+        <div style="position:absolute;left:68.3%;top:-7px;bottom:-7px;width:16px;transform:translateX(-50%);border-radius:6px;background:#b03a26;box-shadow:0 0 0 3px color-mix(in oklab,#b03a26 22%,transparent),0 4px 12px rgba(42,38,34,.35);cursor:grab;display:flex;align-items:center;justify-content:center"><span style="width:2px;height:16px;border-radius:1px;background:#fdf6ee;box-shadow:4px 0 0 #fdf6ee,-4px 0 0 #fdf6ee"></span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:18px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#a89e8a">
+        <span>1,274,504 <span style="color:#c2bba9">· 可回溯区起点(最近 10,000 步)</span></span><span style="color:#5a5348">▲ 1,281,332</span><span>1,284,503 · 最新 ▶</span>
+      </div>
+    </div>
+    <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600">输出</span><span style="font-size:11px;color:#a89e8a">12 字符</span></div>
+      <div style="flex:1;background:#2a2622;border-radius:7px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#f0ece1">Hello, World<span style="display:inline-block;width:8px;height:16px;background:#e8a04c;vertical-align:-3px;margin-left:2px;animation:pulse 1.2s infinite"></span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ 2b 浅色·讲解独立模式 ═══════════ -->
+<div id="2b" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 10px;border-radius:999px;background:#1d1a26;border:1px solid #2e2a3c;color:#a79fc0;font-size:12px;font-weight:600">2b</span><span style="font-size:13px;color:#8b8798">纸面仪器 · 讲解作为独立模式(顶部切换)</span></div>
+<div style="width:1560px;background:#f5f2ea;border:1px solid #d8d1c0;border-radius:14px;overflow:hidden;color:#2a2622" data-screen-label="2b 浅色讲解模式">
+  <div style="display:flex;align-items:center;gap:14px;height:58px;padding:0 20px;background:#fdfcf8;border-bottom:1px solid #d8d1c0">
+    <div style="display:flex;gap:3px;align-items:flex-end;height:18px"><div style="width:4px;height:18px;border-radius:2px;background:#b03a26"></div><div style="width:4px;height:9px;border-radius:2px;background:#c9c1ae"></div><div style="width:4px;height:13px;border-radius:2px;background:#c07a1e"></div></div>
+    <div style="font-family:'Spectral','Noto Serif SC',serif;font-weight:700;font-size:17px">pyMalbolge</div>
+    <div style="display:flex;gap:3px;padding:3px;border-radius:9px;background:#f0ece1;border:1px solid #ddd6c6;margin-left:8px">
+      <span style="padding:5px 16px;border-radius:7px;font-size:12.5px;color:#8a8272;cursor:pointer">调试</span>
+      <span style="padding:5px 16px;border-radius:7px;font-size:12.5px;font-weight:600;background:#2a2622;color:#fdfcf8">讲解</span>
+    </div>
+    <div style="flex:1"></div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5a5348">步 1,281,332 → 1,281,333</div>
+    <div style="padding:7px 14px;border-radius:8px;background:#fdfcf8;border:1px solid #c9c1ae;font-size:13px;cursor:pointer">⏮ 回退</div>
+    <div style="padding:7px 18px;border-radius:8px;background:#b03a26;color:#fdf6ee;font-size:13px;font-weight:600;cursor:pointer">执行这一步 ⏭</div>
+  </div>
+  <div style="display:grid;grid-template-columns:520px 1fr;gap:14px;padding:14px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:18px 20px">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600">即将执行 · mem[00037]</div>
+        <div style="display:flex;align-items:center;gap:18px;margin-top:14px">
+          <div style="text-align:center"><div style="width:64px;height:64px;border-radius:11px;background:#f0ece1;border:1px solid #ddd6c6;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:600">w</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a89e8a;margin-top:5px">原值 119</div></div>
+          <div style="font-size:15px;color:#b5ac97">→</div>
+          <div><span style="padding:5px 16px;border-radius:999px;background:color-mix(in oklab,#c07a1e 12%,#fdfcf8);border:1px solid color-mix(in oklab,#c07a1e 40%,#fdfcf8);color:#9a6318;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600">crz</span><div style="font-size:12px;color:#8a8272;margin-top:8px;max-width:250px;line-height:1.55">对 A 和 mem[D] 做「疯狂运算」,结果同时写回两处。</div></div>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #ddd6c6">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;color:#8a8272">( mem[C] + C ) % 94</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;margin-top:4px">( <span style="color:#c07a1e">119</span> + <span style="color:#b03a26">37</span> ) % 94 = <span style="color:#4a7c2f;font-weight:600">62 → crz</span></div>
+          <div style="font-size:11.5px;color:#8a8272;margin-top:10px;line-height:1.6;text-align:center">指令由字节<b>和它所在的地址</b>共同决定 —— 同一个 'w' 换个位置就是另一条指令。</div>
+        </div>
+      </div>
+      <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:18px 20px">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600;margin-bottom:12px">执行完就把自己改掉</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+          <div style="text-align:center"><div style="width:52px;height:52px;border-radius:9px;background:#f0ece1;border:1px solid #ddd6c6;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600">w</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#a89e8a;margin-top:4px">119</div></div>
+          <div style="font-size:13px;color:#b03a26">— ENCRYPT →</div>
+          <div style="text-align:center"><div style="width:52px;height:52px;border-radius:9px;background:color-mix(in oklab,#b03a26 10%,#fdfcf8);border:1px solid color-mix(in oklab,#b03a26 40%,#fdfcf8);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:#b03a26">N</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#a89e8a;margin-top:4px">78</div></div>
+        </div>
+        <div style="margin-top:12px;font-size:11.5px;color:#8a8272;line-height:1.6">每条指令执行后,mem[C] 都会按 ENCRYPT 表替换 —— 代码每走一步就自我改写一次。下次再路过 00037,它已经是 'N',算出的将是另一条指令。</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:18px 20px">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600;margin-bottom:14px">这一步将依次发生</div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          <sc-for list="{{ eventsL }}" as="e" hint-placeholder-count="5">
+            <div style="display:flex;gap:12px;align-items:flex-start;padding:7px 0;border-left:2px solid #eae4d5;padding-left:14px;margin-left:9px;position:relative">
+              <span style="position:absolute;left:-10px;top:9px;width:18px;height:18px;border-radius:50%;background:#fdfcf8;border:1.5px solid #c9c1ae;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:600;color:#5a5348">{{ e.num }}</span>
+              <span style="flex-shrink:0;margin-top:1px;padding:1px 8px;border-radius:5px;font-size:10px;font-weight:600;background:color-mix(in oklab,{{ e.c }} 10%,#fdfcf8);border:1px solid color-mix(in oklab,{{ e.c }} 35%,#fdfcf8);color:{{ e.c }}">{{ e.label }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5a5348;line-height:1.55">{{ e.txt }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#fdfcf8;border:1px solid #ddd6c6;border-radius:10px;padding:18px 20px;flex:1">
+        <div style="font-family:'Spectral','Noto Serif SC',serif;font-size:12px;letter-spacing:.18em;color:#8a8272;font-weight:600;margin-bottom:12px">crz:逐个三进制位查表</div>
+        <div style="display:grid;grid-template-columns:74px repeat(10,1fr);gap:2px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:center">
+          <span style="text-align:right;padding-right:8px;color:#b5ac97;line-height:24px">位</span>
+          <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="color:#c2bba9;line-height:24px">t{{ t.i }}</span></sc-for>
+          <span style="text-align:right;padding-right:8px;color:#1e7f8c;line-height:24px">a=7</span>
+          <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="background:#f0ece1;border-radius:4px;line-height:24px;color:#5a5348">{{ t.a }}</span></sc-for>
+          <span style="text-align:right;padding-right:8px;color:#c07a1e;line-height:24px">mem[d]</span>
+          <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="background:#f0ece1;border-radius:4px;line-height:24px;color:#5a5348">{{ t.b }}</span></sc-for>
+          <span style="text-align:right;padding-right:8px;color:#4a7c2f;line-height:24px">结果</span>
+          <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="background:color-mix(in oklab,#4a7c2f 10%,#f0ece1);border-radius:4px;line-height:24px;color:#4a7c2f;font-weight:600">{{ t.r }}</span></sc-for>
+        </div>
+        <div style="display:flex;gap:18px;align-items:center;margin-top:16px">
+          <div style="display:grid;grid-template-columns:repeat(4,28px);gap:2px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-align:center">
+            <span style="color:#c2bba9;line-height:22px">b\a</span><span style="color:#1e7f8c;line-height:22px">0</span><span style="color:#1e7f8c;line-height:22px">1</span><span style="color:#1e7f8c;line-height:22px">2</span>
+            <span style="color:#c07a1e;line-height:22px">0</span><span style="background:#f0ece1;border-radius:3px;line-height:22px">1</span><span style="background:#f0ece1;border-radius:3px;line-height:22px">0</span><span style="background:#f0ece1;border-radius:3px;line-height:22px">0</span>
+            <span style="color:#c07a1e;line-height:22px">1</span><span style="background:color-mix(in oklab,#4a7c2f 12%,#f0ece1);border-radius:3px;line-height:22px;color:#4a7c2f">1</span><span style="background:color-mix(in oklab,#4a7c2f 12%,#f0ece1);border-radius:3px;line-height:22px;color:#4a7c2f">0</span><span style="background:color-mix(in oklab,#4a7c2f 12%,#f0ece1);border-radius:3px;line-height:22px;color:#4a7c2f">2</span>
+            <span style="color:#c07a1e;line-height:22px">2</span><span style="background:#f0ece1;border-radius:3px;line-height:22px">2</span><span style="background:#f0ece1;border-radius:3px;line-height:22px">2</span><span style="background:#f0ece1;border-radius:3px;line-height:22px">1</span>
+          </div>
+          <div style="font-size:12px;color:#8a8272;line-height:1.6">mem[d]=29524 的十个位全是 1,所以整行只用查找表的<span style="color:#4a7c2f;font-weight:600">中间一行</span>。结果 crz(7, 29524) = <span style="font-family:'IBM Plex Mono',monospace;color:#4a7c2f;font-weight:600">29526</span>。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</section>
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+<!-- ═══════════ 1a 主调试视图 ═══════════ -->
+<div id="1a" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 10px;border-radius:999px;background:#1d1a26;border:1px solid #2e2a3c;color:#a79fc0;font-size:12px;font-weight:600">1a</span><span style="font-size:13px;color:#8b8798">主调试视图 · 暂停于断点</span></div>
+<div style="width:1560px;background:#0d0c12;border:1px solid #2a2735;border-radius:14px;overflow:hidden" data-screen-label="1a 主调试视图">
+  <!-- 顶栏 -->
+  <div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid #232030;background:#100e16">
+    <div style="display:flex;gap:3px;align-items:flex-end;height:18px"><div style="width:4px;height:18px;border-radius:2px;background:var(--acc,#ff5c38)"></div><div style="width:4px;height:9px;border-radius:2px;background:#5a5470"></div><div style="width:4px;height:13px;border-radius:2px;background:#ffb454"></div></div>
+    <div style="font-weight:700;font-size:15px;letter-spacing:.02em">pyMalbolge</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#a79fc0;background:#17151f;border:1px solid #2a2735;border-radius:6px;padding:3px 9px">hello.mb</div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c;font-size:13px;color:#cfc9e0;cursor:pointer">⏮ 回退</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c;font-size:13px;color:#cfc9e0;cursor:pointer">⏭ 单步</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 18px;border-radius:8px;background:var(--acc,#ff5c38);color:#160a08;font-size:13px;font-weight:600;cursor:pointer">▶ 继续</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c;font-size:13px;color:#8b8798;cursor:pointer">⏩ ×1000</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c;font-size:13px;color:#8b8798;cursor:pointer">⟲ 重置</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">步 1,281,332</div><div style="font-size:11px;color:#7d7890">历史 10,000 / 10,000 · 输入 0/0</div></div>
+    <div style="padding:5px 12px;border-radius:999px;background:color-mix(in oklab,var(--acc,#ff5c38) 16%,transparent);border:1px solid color-mix(in oklab,var(--acc,#ff5c38) 45%,transparent);color:#ffb49e;font-size:12px;font-weight:600">⏸ 断点 @00041 · 第 3 次</div>
+  </div>
+  <!-- 主体三列 -->
+  <div style="display:grid;grid-template-columns:430px 1fr 300px;gap:14px;padding:14px">
+    <!-- 反汇编 -->
+    <div style="background:#14121a;border:1px solid #262331;border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #221f2d">
+        <div style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600">反汇编</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6a80">00030–00045 · 跟随 C <span style="color:#ffb454">◉</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:24px 58px 30px 40px 44px 1fr;padding:6px 14px 2px;font-size:10px;letter-spacing:.1em;color:#5a5470"><span></span><span>地址</span><span>字符</span><span>原值</span><span>助记符</span><span>效果</span></div>
+      <div style="display:flex;flex-direction:column;padding:2px 6px 8px">
+        <sc-for list="{{ disasm }}" as="r" hint-placeholder-count="8">
+          <div style="display:grid;grid-template-columns:24px 58px 30px 40px 44px 1fr;align-items:center;padding:4px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:{{ r.bg }};border-left:2px solid {{ r.edge }}">
+            <span style="color:var(--acc,#ff5c38);font-size:11px">{{ r.gut }}</span>
+            <span style="color:{{ r.addrC }}">{{ r.addr5 }}</span>
+            <span style="color:{{ r.mnC }}">{{ r.ch }}</span>
+            <span style="color:#7d7890">{{ r.raw }}</span>
+            <span style="color:{{ r.opC }};font-weight:600">{{ r.mn }}</span>
+            <span style="color:{{ r.fxC }};font-size:11.5px">{{ r.fx }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:auto;padding:10px 14px;border-top:1px solid #221f2d;font-size:11px;color:#6f6a80">点击行首打点断点 · 双击地址跳转 · <span style="color:#ffb454">'w'+37 已是第 3 代密文</span></div>
+    </div>
+    <!-- 内存热力图 -->
+    <div style="background:#14121a;border:1px solid #262331;border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #221f2d">
+        <div style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600">内存 · 写入热度</div>
+        <div style="display:flex;gap:8px;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6a80">
+          <span style="padding:2px 8px;border-radius:5px;background:#17151f;border:1px solid #2a2735">18240–18527</span>
+          <span style="padding:2px 8px;border-radius:5px;background:color-mix(in oklab,#4fd8e8 14%,transparent);border:1px solid #2a4a52;color:#7fe3ef">跟随 D</span>
+          <span style="padding:2px 8px;border-radius:5px;background:#17151f;border:1px solid #2a2735;color:#8b8798">C=00037 窗外 ↖</span>
+        </div>
+      </div>
+      <div style="position:relative;display:flex;gap:10px;padding:14px">
+        <div style="display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#4d4860;text-align:right">
+          <sc-for list="{{ rowLabels }}" as="rl" hint-placeholder-count="4"><div style="height:22px;line-height:22px">{{ rl }}</div></sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(24,22px);gap:3px">
+          <sc-for list="{{ cells24 }}" as="cc" hint-placeholder-count="48">
+            <div style="width:22px;height:22px;border-radius:4px;background:{{ cc.bg }};box-shadow:{{ cc.ring }};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:{{ cc.tagC }};cursor:pointer">{{ cc.tag }}</div>
+          </sc-for>
+        </div>
+        <!-- 悬停提示样例 -->
+        <div style="position:absolute;left:236px;top:154px;z-index:3;background:#1c1926;border:1px solid #3a3450;border-radius:9px;padding:10px 12px;box-shadow:0 12px 32px rgba(0,0,0,.55);width:196px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#e9e6f2">mem[18350]</div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin-top:6px;font-size:11px;color:#a79fc0">
+            <span>值</span><span style="font-family:'IBM Plex Mono',monospace;color:#e9e6f2">29281 · 不可打印</span>
+            <span>写入</span><span style="font-family:'IBM Plex Mono',monospace;color:#ffb454">86 次</span>
+            <span>距 D</span><span style="font-family:'IBM Plex Mono',monospace;color:#7fe3ef">+59</span>
+            <span>监视</span><span style="color:#8fd12f">✓ wp 已布设</span>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid #2a2735;font-size:10.5px;color:#6f6a80">点击固定 · ⇧点击设监视点</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:0 14px 12px;margin-left:52px">
+        <span style="font-size:10.5px;color:#6f6a80">冷</span>
+        <div style="flex:1;height:8px;border-radius:4px;background:{{ legendGrad }}"></div>
+        <span style="font-size:10.5px;color:#6f6a80">热 · 峰值 213 次</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:#7fe3ef"><span style="width:10px;height:10px;border-radius:3px;box-shadow:0 0 0 2px #4fd8e8 inset"></span>D 指针</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:#ffd166"><span style="width:10px;height:10px;border-radius:3px;box-shadow:0 0 0 2px #ffd166 inset"></span>本步写入</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-top:1px solid #221f2d;font-family:'IBM Plex Mono',monospace;font-size:12px">
+        <span style="color:#7d7890;font-size:11px">已选</span><span style="color:#e9e6f2">mem[18291]</span><span style="color:#a79fc0">= 29524</span><span style="color:#6f6a80">'.' 不可打印</span><span style="color:#ffb454">写入 213 次</span><span style="margin-left:auto;color:#7fe3ef">= D</span>
+      </div>
+    </div>
+    <!-- 右列 -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:#14121a;border:1px solid #262331;border-radius:10px;padding:14px">
+        <div style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600;margin-bottom:10px">寄存器</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ regs }}" as="rg" hint-placeholder-count="3">
+            <div style="display:flex;align-items:baseline;gap:10px;padding:8px 10px;border-radius:8px;background:#17151f;border:1px solid #221f2d">
+              <span style="font-weight:700;font-size:14px;color:{{ rg.c }};width:14px">{{ rg.n }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600">{{ rg.v }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#7d7890">→ {{ rg.next }}</span>
+              <span style="margin-left:auto;font-size:10.5px;color:#6f6a80">{{ rg.sub }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#14121a;border:1px solid #262331;border-radius:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600">下一步预演</span><span style="font-size:11px;color:#ffb454;cursor:pointer">展开讲解 ↗</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+          <sc-for list="{{ preview }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;gap:8px;align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:{{ p.c }}"></span><span style="color:#cfc9e0">{{ p.t }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#14121a;border:1px solid #262331;border-radius:10px;padding:14px;flex:1">
+        <div style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600;margin-bottom:10px">断点 · 监视点</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ bps }}" as="b" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:#17151f;border:1px solid #221f2d;font-family:'IBM Plex Mono',monospace;font-size:11.5px;opacity:{{ b.op }}">
+              <span style="color:{{ b.dotC }}">{{ b.dot }}</span>
+              <span style="color:#e9e6f2">{{ b.addr }}</span>
+              <span style="color:#7d7890">{{ b.mn }}</span>
+              <span style="color:#ffb454;font-size:10.5px">{{ b.tag }}</span>
+              <span style="margin-left:auto;color:#6f6a80;font-size:10.5px">{{ b.hits }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 底部:时间线 + 输出 -->
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:14px;padding:0 14px 14px">
+    <div style="background:#14121a;border:1px solid #262331;border-radius:10px;padding:14px 16px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px">
+        <span style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600">时间线</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#a79fc0">全程 1,284,503 步 · 当前 1,281,332 · 已回溯 3,171</span>
+        <span style="margin-left:auto;font-size:11px;color:#6f6a80">灰色区域历史已丢弃,不可拖拽 · 需要更早状态请重置后「运行到步数」</span>
+      </div>
+      <!-- 全程总览(按真实比例) -->
+      <div style="position:relative;height:22px;border-radius:5px;overflow:hidden;background:repeating-linear-gradient(-45deg,#1b1824 0 6px,#15131d 6px 12px)">
+        <div style="position:absolute;left:8%;top:0;bottom:0;width:1px;background:#4d4860"></div>
+        <div style="position:absolute;left:8%;top:-1px;font-size:9px;color:#5a5470;padding-left:3px">bp@41 首次命中</div>
+        <div style="position:absolute;left:47%;top:0;bottom:0;width:1px;background:#4d4860"></div>
+        <div style="position:absolute;right:0;top:0;bottom:0;width:10px;background:linear-gradient(90deg,#8c2620,var(--acc,#ff5c38))"></div>
+      </div>
+      <!-- 放大楔形 -->
+      <div style="display:flex;justify-content:flex-end;height:16px;padding-right:0"><div style="width:100%;height:100%;background:linear-gradient(to bottom,transparent,transparent),#0000;position:relative"><div style="position:absolute;right:0;top:0;width:100%;height:100%;clip-path:polygon(99.2% 0,100% 0,100% 100%,0 100%);background:color-mix(in oklab,var(--acc,#ff5c38) 12%,transparent)"></div></div></div>
+      <!-- 可回溯放大条(可拖拽) -->
+      <div style="position:relative;height:44px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c;overflow:visible">
+        <div style="position:absolute;inset:0;border-radius:8px;background:repeating-linear-gradient(90deg,transparent 0 19.6%,#221f2d 19.6% 20%)"></div>
+        <div style="position:absolute;left:0;top:0;bottom:0;width:68.3%;border-radius:8px 0 0 8px;background:linear-gradient(90deg,color-mix(in oklab,var(--acc,#ff5c38) 6%,transparent),color-mix(in oklab,var(--acc,#ff5c38) 18%,transparent))"></div>
+        <div style="position:absolute;left:45.5%;top:0;bottom:0;width:2px;background:#8fd12f"></div>
+        <div style="position:absolute;left:45.5%;bottom:-16px;font-size:9.5px;color:#8fd12f;transform:translateX(-50%)">wp@18305 触发</div>
+        <div style="position:absolute;left:68.3%;top:-7px;bottom:-7px;width:16px;transform:translateX(-50%);border-radius:6px;background:var(--acc,#ff5c38);box-shadow:0 0 0 3px color-mix(in oklab,var(--acc,#ff5c38) 30%,transparent),0 4px 14px rgba(0,0,0,.5);cursor:grab;display:flex;align-items:center;justify-content:center"><span style="width:2px;height:16px;border-radius:1px;background:#160a08;box-shadow:4px 0 0 #160a08,-4px 0 0 #160a08"></span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:18px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6f6a80">
+        <span>1,274,504 <span style="color:#4d4860">· 可回溯区起点(最近 10,000 步)</span></span><span style="color:#a79fc0">▲ 1,281,332</span><span>1,284,503 · 最新 ▶</span>
+      </div>
+    </div>
+    <div style="background:#14121a;border:1px solid #262331;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600">输出</span><span style="font-size:11px;color:#6f6a80">12 字符</span></div>
+      <div style="flex:1;background:#0d0c12;border:1px solid #221f2d;border-radius:7px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#e9e6f2">Hello, World<span style="display:inline-block;width:8px;height:16px;background:var(--acc,#ff5c38);vertical-align:-3px;margin-left:2px;animation:pulse 1.2s infinite"></span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ 1b 教学侧栏展开 ═══════════ -->
+<div id="1b" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 10px;border-radius:999px;background:#1d1a26;border:1px solid #2e2a3c;color:#a79fc0;font-size:12px;font-weight:600">1b</span><span style="font-size:13px;color:#8b8798">教学/讲解 · 主视图侧栏展开态</span></div>
+<div style="width:1560px;background:#0d0c12;border:1px solid #2a2735;border-radius:14px;overflow:hidden" data-screen-label="1b 教学视图">
+  <div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid #232030;background:#100e16">
+    <div style="display:flex;gap:3px;align-items:flex-end;height:18px"><div style="width:4px;height:18px;border-radius:2px;background:var(--acc,#ff5c38)"></div><div style="width:4px;height:9px;border-radius:2px;background:#5a5470"></div><div style="width:4px;height:13px;border-radius:2px;background:#ffb454"></div></div>
+    <div style="font-weight:700;font-size:15px">pyMalbolge</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#a79fc0;background:#17151f;border:1px solid #2a2735;border-radius:6px;padding:3px 9px">hello.mb</div>
+    <div style="flex:1"></div>
+    <div style="padding:7px 14px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c;font-size:13px;color:#cfc9e0">⏮ 回退</div>
+    <div style="padding:7px 18px;border-radius:8px;background:var(--acc,#ff5c38);color:#160a08;font-size:13px;font-weight:600">⏭ 单步(带讲解)</div>
+    <div style="flex:1"></div>
+    <div style="padding:5px 12px;border-radius:999px;background:color-mix(in oklab,#ffb454 14%,transparent);border:1px solid #4a3a22;color:#ffb454;font-size:12px;font-weight:600">✦ 讲解模式已开启</div>
+  </div>
+  <div style="display:grid;grid-template-columns:620px 1fr;gap:14px;padding:14px">
+    <!-- 左:压缩后的主视图 -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:#14121a;border:1px solid #262331;border-radius:10px;padding:14px">
+        <div style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600;margin-bottom:10px">寄存器</div>
+        <div style="display:flex;gap:10px">
+          <sc-for list="{{ regs }}" as="rg" hint-placeholder-count="3">
+            <div style="flex:1;padding:10px 12px;border-radius:8px;background:#17151f;border:1px solid #221f2d">
+              <div style="display:flex;justify-content:space-between"><span style="font-weight:700;font-size:13px;color:{{ rg.c }}">{{ rg.n }}</span><span style="font-size:10px;color:#6f6a80">{{ rg.sub }}</span></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;margin-top:4px">{{ rg.v }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#7d7890">下一步 → {{ rg.next }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#14121a;border:1px solid #262331;border-radius:10px;overflow:hidden">
+        <div style="padding:12px 14px;border-bottom:1px solid #221f2d;font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600">反汇编 · 跟随 C</div>
+        <div style="display:flex;flex-direction:column;padding:4px 6px 8px">
+          <sc-for list="{{ disasmMini }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:24px 58px 30px 44px 1fr;align-items:center;padding:5px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:{{ r.bg }};border-left:2px solid {{ r.edge }}">
+              <span style="color:var(--acc,#ff5c38);font-size:11px">{{ r.gut }}</span><span style="color:{{ r.addrC }}">{{ r.addr5 }}</span><span style="color:{{ r.mnC }}">{{ r.ch }}</span><span style="color:{{ r.opC }};font-weight:600">{{ r.mn }}</span><span style="color:{{ r.fxC }};font-size:11.5px">{{ r.fx }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#14121a;border:1px solid #262331;border-radius:10px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #221f2d"><span style="font-size:11px;letter-spacing:.14em;color:#7d7890;font-weight:600">内存 · 写入热度</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f6a80">18240–18399 · 跟随 D</span></div>
+        <div style="display:grid;grid-template-columns:repeat(16,22px);gap:3px;padding:14px;justify-content:center">
+          <sc-for list="{{ cells16 }}" as="cc" hint-placeholder-count="32">
+            <div style="width:22px;height:22px;border-radius:4px;background:{{ cc.bg }};box-shadow:{{ cc.ring }};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:{{ cc.tagC }}">{{ cc.tag }}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <!-- 右:讲解面板 -->
+    <div style="background:linear-gradient(180deg,#161320,#14121a);border:1px solid #322c44;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #2a2537">
+        <span style="font-size:13px;font-weight:700">这一步,拆开讲</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#a79fc0">步 1,281,332 → 1,281,333</span>
+        <span style="margin-left:auto;font-size:12px;color:#6f6a80;cursor:pointer">收起 ⤫</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px 18px">
+        <!-- ① 操作码 -->
+        <div style="background:#0f0d15;border:1px solid #262331;border-radius:9px;padding:14px 16px">
+          <div style="font-size:11px;letter-spacing:.14em;color:#ffb454;font-weight:600;margin-bottom:10px">① 操作码是怎么来的</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;padding:8px 0;color:#cfc9e0">( mem[C] + C ) % 94</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;color:#e9e6f2">( <span style="color:#ffb454">119</span> + <span style="color:var(--acc,#ff5c38)">37</span> ) % 94 = <span style="color:#8fd12f;font-weight:600">62</span></div>
+          <div style="text-align:center;margin-top:8px"><span style="padding:3px 12px;border-radius:999px;background:color-mix(in oklab,#8fd12f 12%,transparent);border:1px solid #3a4a26;color:#b6e07c;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600">62 → crz</span></div>
+          <div style="margin-top:10px;font-size:11.5px;color:#8b8798;line-height:1.55">指令不由字节本身决定,还取决于它<b style="color:#cfc9e0">在哪</b>:同一个 'w' 放在别的地址就是别的指令。</div>
+        </div>
+        <!-- ② 事件序列 -->
+        <div style="background:#0f0d15;border:1px solid #262331;border-radius:9px;padding:14px 16px">
+          <div style="font-size:11px;letter-spacing:.14em;color:#ffb454;font-weight:600;margin-bottom:10px">② 这一步将依次发生</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ events }}" as="e" hint-placeholder-count="5">
+              <div style="display:flex;gap:9px;align-items:flex-start">
+                <span style="flex-shrink:0;margin-top:1px;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:600;background:color-mix(in oklab,{{ e.c }} 14%,transparent);border:1px solid color-mix(in oklab,{{ e.c }} 40%,transparent);color:{{ e.c }}">{{ e.label }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#cfc9e0;line-height:1.5">{{ e.txt }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <!-- ③ 加密改写 -->
+        <div style="background:#0f0d15;border:1px solid #262331;border-radius:9px;padding:14px 16px">
+          <div style="font-size:11px;letter-spacing:.14em;color:#ffb454;font-weight:600;margin-bottom:10px">③ 执行完就把自己改掉</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:14px;padding:6px 0">
+            <div style="text-align:center"><div style="width:52px;height:52px;border-radius:9px;background:#17151f;border:1px solid #2e2a3c;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600">w</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6f6a80;margin-top:4px">119</div></div>
+            <div style="font-size:13px;color:var(--acc,#ff5c38)">— ENCRYPT →</div>
+            <div style="text-align:center"><div style="width:52px;height:52px;border-radius:9px;background:color-mix(in oklab,var(--acc,#ff5c38) 14%,transparent);border:1px solid color-mix(in oklab,var(--acc,#ff5c38) 45%,transparent);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:#ffb49e">N</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6f6a80;margin-top:4px">78</div></div>
+          </div>
+          <div style="margin-top:8px;font-size:11.5px;color:#8b8798;line-height:1.55">每条指令执行后,mem[C] 会被 ENCRYPT 表替换 —— 代码每跑一步就自我改写一次,这就是 Malbolge 难写的根源。</div>
+        </div>
+        <!-- ④ 三进制逐位 -->
+        <div style="background:#0f0d15;border:1px solid #262331;border-radius:9px;padding:14px 16px">
+          <div style="font-size:11px;letter-spacing:.14em;color:#ffb454;font-weight:600;margin-bottom:10px">④ crz:逐个三进制位查表</div>
+          <div style="display:grid;grid-template-columns:64px repeat(10,1fr);gap:2px;font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center">
+            <span style="text-align:right;padding-right:6px;color:#6f6a80;line-height:22px">位</span>
+            <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="color:#4d4860;line-height:22px">t{{ t.i }}</span></sc-for>
+            <span style="text-align:right;padding-right:6px;color:#7fe3ef;line-height:22px">a=7</span>
+            <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="background:#17151f;border-radius:4px;line-height:22px;color:#cfc9e0">{{ t.a }}</span></sc-for>
+            <span style="text-align:right;padding-right:6px;color:#ffb454;line-height:22px">mem[d]</span>
+            <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="background:#17151f;border-radius:4px;line-height:22px;color:#cfc9e0">{{ t.b }}</span></sc-for>
+            <span style="text-align:right;padding-right:6px;color:#8fd12f;line-height:22px">结果</span>
+            <sc-for list="{{ trits }}" as="t" hint-placeholder-count="10"><span style="background:color-mix(in oklab,#8fd12f 10%,#17151f);border-radius:4px;line-height:22px;color:#b6e07c;font-weight:600">{{ t.r }}</span></sc-for>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center;margin-top:12px">
+            <div style="display:grid;grid-template-columns:repeat(4,26px);gap:2px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:center">
+              <span style="color:#4d4860;line-height:20px">b\a</span><span style="color:#7fe3ef;line-height:20px">0</span><span style="color:#7fe3ef;line-height:20px">1</span><span style="color:#7fe3ef;line-height:20px">2</span>
+              <span style="color:#ffb454;line-height:20px">0</span><span style="background:#17151f;border-radius:3px;line-height:20px">1</span><span style="background:#17151f;border-radius:3px;line-height:20px">0</span><span style="background:#17151f;border-radius:3px;line-height:20px">0</span>
+              <span style="color:#ffb454;line-height:20px">1</span><span style="background:color-mix(in oklab,#8fd12f 14%,#17151f);border-radius:3px;line-height:20px;color:#b6e07c">1</span><span style="background:color-mix(in oklab,#8fd12f 14%,#17151f);border-radius:3px;line-height:20px;color:#b6e07c">0</span><span style="background:color-mix(in oklab,#8fd12f 14%,#17151f);border-radius:3px;line-height:20px;color:#b6e07c">2</span>
+              <span style="color:#ffb454;line-height:20px">2</span><span style="background:#17151f;border-radius:3px;line-height:20px">2</span><span style="background:#17151f;border-radius:3px;line-height:20px">2</span><span style="background:#17151f;border-radius:3px;line-height:20px">1</span>
+            </div>
+            <div style="font-size:11.5px;color:#8b8798;line-height:1.55">mem[d]=29524 的十个位全是 1,所以整行只查表的<span style="color:#b6e07c">中间一行</span>。结果 crz(7, 29524) = <span style="font-family:'IBM Plex Mono',monospace;color:#b6e07c">29526</span>。</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:auto;display:flex;gap:10px;padding:14px 18px;border-top:1px solid #2a2537">
+        <div style="padding:8px 16px;border-radius:8px;background:var(--acc,#ff5c38);color:#160a08;font-size:13px;font-weight:600;cursor:pointer">执行这一步 ⏭</div>
+        <div style="padding:8px 16px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c;font-size:13px;color:#cfc9e0;cursor:pointer">上一条我没看懂,回退 ⏮</div>
+        <div style="margin-left:auto;font-size:11.5px;color:#6f6a80;align-self:center">8 种指令 · 已见过 5 种</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ 1c 移动端 ═══════════ -->
+<div id="1c" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 10px;border-radius:999px;background:#1d1a26;border:1px solid #2e2a3c;color:#a79fc0;font-size:12px;font-weight:600">1c</span><span style="font-size:13px;color:#8b8798">窄屏形态 · 390px</span></div>
+<div style="width:390px;height:844px;background:#0d0c12;border:1px solid #2a2735;border-radius:24px;overflow:hidden;display:flex;flex-direction:column" data-screen-label="1c 移动端">
+  <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 10px">
+    <div style="display:flex;gap:2px;align-items:flex-end;height:14px"><div style="width:3px;height:14px;border-radius:2px;background:var(--acc,#ff5c38)"></div><div style="width:3px;height:7px;border-radius:2px;background:#5a5470"></div><div style="width:3px;height:10px;border-radius:2px;background:#ffb454"></div></div>
+    <span style="font-weight:700;font-size:14px">hello.mb</span>
+    <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#a79fc0">步 1,281,332</span>
+    <span style="padding:3px 8px;border-radius:999px;background:color-mix(in oklab,var(--acc,#ff5c38) 16%,transparent);color:#ffb49e;font-size:10.5px;font-weight:600">⏸ bp@41</span>
+  </div>
+  <div style="display:flex;gap:8px;padding:0 16px 12px">
+    <sc-for list="{{ regs }}" as="rg" hint-placeholder-count="3">
+      <div style="flex:1;padding:8px 10px;border-radius:8px;background:#14121a;border:1px solid #262331">
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:700;font-size:11px;color:{{ rg.c }}">{{ rg.n }}</span><span style="font-size:9px;color:#5a5470">→{{ rg.next }}</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;margin-top:2px">{{ rg.v }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:flex;gap:4px;margin:0 16px;padding:4px;border-radius:10px;background:#14121a;border:1px solid #262331">
+    <div style="flex:1;text-align:center;padding:8px 0;border-radius:7px;font-size:13px;color:#8b8798">反汇编</div>
+    <div style="flex:1;text-align:center;padding:8px 0;border-radius:7px;font-size:13px;font-weight:600;background:#221f2d;color:#e9e6f2">内存</div>
+    <div style="flex:1;text-align:center;padding:8px 0;border-radius:7px;font-size:13px;color:#8b8798">讲解</div>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6f6a80"><span>18252–18323 · 跟随 D</span><span>峰值 213 次</span></div>
+    <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:4px">
+      <sc-for list="{{ cellsM }}" as="cc" hint-placeholder-count="27">
+        <div style="aspect-ratio:1;border-radius:6px;background:{{ cc.bg }};box-shadow:{{ cc.ring }};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:{{ cc.tagC }}">{{ cc.tag }}</div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;background:#14121a;border:1px solid #262331;font-family:'IBM Plex Mono',monospace;font-size:12px">
+      <span style="color:#7fe3ef">D</span><span>mem[18291] = 29524</span><span style="margin-left:auto;color:#ffb454">213 次写入</span>
+    </div>
+    <div style="padding:10px 12px;border-radius:9px;background:#0d0c12;border:1px solid #221f2d;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#e9e6f2">› Hello, World<span style="display:inline-block;width:7px;height:14px;background:var(--acc,#ff5c38);vertical-align:-2px;margin-left:2px"></span></div>
+  </div>
+  <div style="padding:12px 16px 8px;border-top:1px solid #221f2d;background:#100e16">
+    <div style="position:relative;height:34px;border-radius:8px;background:#17151f;border:1px solid #2e2a3c">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:68.3%;border-radius:8px 0 0 8px;background:color-mix(in oklab,var(--acc,#ff5c38) 14%,transparent)"></div>
+      <div style="position:absolute;left:68.3%;top:-6px;bottom:-6px;width:18px;transform:translateX(-50%);border-radius:7px;background:var(--acc,#ff5c38);box-shadow:0 3px 10px rgba(0,0,0,.5)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9.5px;color:#5a5470;font-family:'IBM Plex Mono',monospace"><span>可回溯:最近 10,000 步</span><span>更早已丢弃</span></div>
+  </div>
+  <div style="display:flex;gap:10px;padding:10px 16px 22px;background:#100e16">
+    <div style="width:64px;height:48px;border-radius:12px;background:#17151f;border:1px solid #2e2a3c;display:flex;align-items:center;justify-content:center;font-size:17px;color:#cfc9e0">⏮</div>
+    <div style="flex:1;height:48px;border-radius:12px;background:var(--acc,#ff5c38);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#160a08;gap:8px">▶ 继续</div>
+    <div style="width:64px;height:48px;border-radius:12px;background:#17151f;border:1px solid #2e2a3c;display:flex;align-items:center;justify-content:center;font-size:17px;color:#cfc9e0">⏭</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ 1d 首屏 ═══════════ -->
+<div id="1d" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 10px;border-radius:999px;background:#1d1a26;border:1px solid #2e2a3c;color:#a79fc0;font-size:12px;font-weight:600">1d</span><span style="font-size:13px;color:#8b8798">首屏 · 未加载程序</span></div>
+<div style="width:1440px;height:860px;background:radial-gradient(900px 480px at 50% -8%,#1c1220 0%,#0d0c12 58%);border:1px solid #2a2735;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;align-items:center" data-screen-label="1d 首屏">
+  <div style="display:flex;flex-direction:column;align-items:center;margin-top:84px">
+    <div style="display:flex;gap:5px;align-items:flex-end;height:34px"><div style="width:8px;height:34px;border-radius:3px;background:linear-gradient(180deg,#ffb454,var(--acc,#ff5c38))"></div><div style="width:8px;height:16px;border-radius:3px;background:#5a5470"></div><div style="width:8px;height:25px;border-radius:3px;background:#ffb454"></div></div>
+    <div style="font-size:34px;font-weight:700;letter-spacing:.01em;margin-top:16px">pyMalbolge</div>
+    <div style="font-size:15px;color:#a79fc0;margin-top:6px">Malbolge 调试器 —— 一门每走一步都会自我改写的语言,现在可以单步看清它</div>
+    <div style="display:flex;gap:8px;margin-top:14px;font-size:11.5px;color:#6f6a80">
+      <span style="padding:3px 10px;border-radius:999px;border:1px solid #2a2735;background:#14121acc">纯静态 · 无服务器</span>
+      <span style="padding:3px 10px;border-radius:999px;border:1px solid #2a2735;background:#14121acc">Python 跑在 Web Worker</span>
+      <span style="padding:3px 10px;border-radius:999px;border:1px solid #2a2735;background:#14121acc">代码不离开浏览器</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:16px;margin-top:52px">
+    <sc-for list="{{ examples }}" as="ex" hint-placeholder-count="3">
+      <div style="width:240px;padding:18px 20px;border-radius:12px;background:#14121a;border:1px solid #262331;cursor:pointer" style-hover="border-color:color-mix(in oklab,var(--acc,#ff5c38) 55%,#262331);background:#171422">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:#e9e6f2">{{ ex.name }}</div>
+        <div style="font-size:12px;color:#8b8798;margin-top:6px;line-height:1.5">{{ ex.desc }}</div>
+        <div style="display:flex;gap:10px;margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6f6a80"><span>{{ ex.cells }}</span><span style="color:#ffb454">{{ ex.steps }}</span></div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="width:764px;margin-top:20px;border-radius:12px;border:1.5px dashed #3a3450;background:#12101acc;padding:26px;text-align:center" style-hover="border-color:var(--acc,#ff5c38)">
+    <div style="font-size:14px;color:#cfc9e0">拖入 <span style="font-family:'IBM Plex Mono',monospace;color:#ffb454">.mb</span> 文件,或把代码粘贴到这里</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4d4860;margin-top:10px">(=&lt;`#9]~6ZY32Vx/4Rs+0No-&amp;Jk)"Fh}|Bcy?`=*z]Kw%oG4UUS0/@-ejc(:'8dc</div>
+    <div style="display:flex;justify-content:center;gap:14px;align-items:center;margin-top:16px">
+      <div style="padding:9px 26px;border-radius:9px;background:var(--acc,#ff5c38);color:#160a08;font-size:14px;font-weight:600;cursor:pointer">载入并调试</div>
+      <span style="font-size:11.5px;color:#6f6a80">仅可打印 ASCII;空白字符会被忽略</span>
+    </div>
+  </div>
+  <div style="margin-top:auto;padding:18px;display:flex;gap:8px;align-items:center;font-size:11.5px;color:#5a5470">
+    <span style="width:7px;height:7px;border-radius:50%;background:#ffb454;animation:pulse 1.6s infinite"></span>
+    首次加载约 10 MB(Pyodide 解释器),之后离线可用 · v1 仅支持原始 Malbolge:3¹⁰ = 59,049 个内存单元
+  </div>
+</div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;深色&quot;,&quot;options&quot;:[&quot;深色&quot;,&quot;浅色&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;主题(作用于 3a)&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#ff5c38&quot;,&quot;options&quot;:[&quot;#ff5c38&quot;,&quot;#ffb454&quot;,&quot;#4fd8e8&quot;,&quot;#b48cff&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;主题(作用于第 1 轮)&quot;},&quot;heat&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;blackbody&quot;,&quot;options&quot;:[&quot;blackbody&quot;,&quot;toxic&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;主题(作用于第 1 轮)&quot;}}">
+class Component extends DCLogic {
+  componentDidMount(){ this._acc(); }
+  componentDidUpdate(){ this._acc(); }
+  _acc(){ document.body.style.setProperty('--acc', this.props.accent ?? '#ff5c38'); }
+  _lerpHex(h1,h2,t){
+    const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+    const a=p(h1),b=p(h2);
+    return '#'+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,'0')).join('');
+  }
+  _heat(t,light){
+    if(light){
+      const pal=[[0,'#efe9dc'],[0.3,'#eed9a8'],[0.6,'#dd9a4e'],[0.82,'#c05a2a'],[1,'#8c2620']];
+      for(let i=1;i<pal.length;i++){ if(t<=pal[i][0]){const [t0,c0]=pal[i-1],[t1,c1]=pal[i];return this._lerpHex(c0,c1,(t-t0)/(t1-t0));} }
+      return pal[pal.length-1][1];
+    }
+    const pal=(this.props.heat??'blackbody')==='toxic'
+      ?[[0,'#141a16'],[0.3,'#123527'],[0.6,'#2c6e33'],[0.85,'#7fbf2e'],[1,'#eaff70']]
+      :[[0,'#16141c'],[0.28,'#37152a'],[0.55,'#8c2620'],[0.8,'#ea5b22'],[1,'#ffc668']];
+    for(let i=1;i<pal.length;i++){
+      if(t<=pal[i][0]){const [t0,c0]=pal[i-1],[t1,c1]=pal[i];return this._lerpHex(c0,c1,(t-t0)/(t1-t0));}
+    }
+    return pal[pal.length-1][1];
+  }
+  _rng(seed){let s=seed>>>0;return()=>{s|=0;s=s+0x6D2B79F5|0;let x=Math.imul(s^s>>>15,1|s);x=x+Math.imul(x^x>>>7,61|x)^x;return((x^x>>>14)>>>0)/4294967296;};}
+  _cells(cols,rows,base,dAddr,hoverAddr,light){
+    const rng=this._rng(base*7+cols), out=[];
+    const dIdx=dAddr-base, hot2=base+Math.floor(cols*rows*0.72)+3;
+    for(let i=0;i<cols*rows;i++){
+      const addr=base+i;
+      const dx=(i%cols)-(dIdx%cols), dy=Math.floor(i/cols)-Math.floor(dIdx/cols);
+      const d1=Math.sqrt(dx*dx+dy*dy);
+      const j=addr-hot2, dx2=(j%cols+cols)%cols>cols/2?(j%cols)-cols:j%cols, dy2=Math.floor(j/cols);
+      const d2=Math.sqrt(dx2*dx2+dy2*dy2);
+      const t=Math.min(1,Math.exp(-d1*d1/9)+0.55*Math.exp(-d2*d2/5)+rng()*0.12);
+      const isD=addr===dAddr, isHover=addr===hoverAddr;
+      out.push({
+        bg:this._heat(t,light),
+        ring:isD?(light?'0 0 0 2px #1e7f8c inset, 0 0 0 2px #fdfcf8':'0 0 0 2px #4fd8e8 inset, 0 0 0 2px #ffd166, 0 0 14px color-mix(in oklab,var(--acc,#ff5c38) 60%,transparent)'):(isHover?(light?'0 0 0 2px #2a2622':'0 0 0 2px #cfc9e0'):'none'),
+        tag:isD?'D':'', tagC:isD?(light?'#fdfcf8':'#06272c'):'transparent'
+      });
+    }
+    return out;
+  }
+  renderVals(){
+    const opC={crz:'#ffb454',jmp:'#b48cff',out:'#7fe3ef',in:'#7fe3ef',rotr:'#ffb454',mov:'#8fd12f',nop:'#7d7890',end:'#ff8c7a'};
+    const fxMap={jmp:'c ← mem[d]',out:'输出 chr(a%256)',in:'a ← 读入字符',rotr:'a,mem[d] ← rot(mem[d])',mov:'d ← mem[d]',crz:'a,mem[d] ← crz(a,mem[d])',nop:'—',end:'终止'};
+    const raws=[[30,38,'&'],[31,106,'j'],[32,102,'f'],[33,100,'d'],[34,122,'z'],[35,33,'!'],[36,126,'~'],[37,119,'w'],[38,61,'='],[39,59,';'],[40,77,'M'],[41,40,'('],[42,14,'.'],[43,119,'w'],[44,81,'Q'],[45,89,'Y']];
+    const names={4:'jmp',5:'out',23:'in',39:'rotr',40:'mov',62:'crz',68:'nop',81:'end'};
+    const disasm=raws.map(([addr,raw,ch])=>{
+      const printable=raw>=33&&raw<=126;
+      const op=printable?(raw+addr)%94:null;
+      const mn=printable?(names[op]||'···'):'DATA';
+      const valid=printable&&names[op];
+      const cur=addr===37, bp=addr===41;
+      return {
+        addr5:String(addr).padStart(5,'0'), ch, raw:String(raw),
+        op:op===null?'—':String(op), mn,
+        fx:valid?fxMap[mn]:(printable?'视作 nop':'不可执行 · 触碰即终止'),
+        gut:cur?'▶':(bp?'●':''),
+        bg:cur?'linear-gradient(90deg,color-mix(in oklab,var(--acc,#ff5c38) 18%,transparent),transparent)':'transparent',
+        edge:cur?'var(--acc,#ff5c38)':'transparent',
+        addrC:cur?'#e9e6f2':'#7d7890',
+        mnC:valid?'#e9e6f2':'#6f6a80',
+        opC:cur?'#ffb454':(valid?(opC[mn]||'#e9e6f2'):'#4d4860'),
+        fxC:cur?'#cfc9e0':'#6f6a80'
+      };
+    });
+    const disasmMini=disasm.slice(4,12);
+    const regs=[
+      {n:'A',c:'#ffb454',v:'7',next:'29,526',sub:"ASCII ␇ 控制符"},
+      {n:'C',c:'var(--acc,#ff5c38)',v:'37',next:'38',sub:'代码指针'},
+      {n:'D',c:'#7fe3ef',v:'18,291',next:'18,292',sub:'数据指针'}
+    ];
+    const preview=[
+      {c:'#ffb454',t:'a: 7 → 29526'},
+      {c:'#ffb454',t:'mem[18291]: 29524 → 29526'},
+      {c:'var(--acc,#ff5c38)',t:"加密 mem[37]: 'w' → 'N'"},
+      {c:'#7fe3ef',t:'c → 38 · d → 18292'}
+    ];
+    const bps=[
+      {dot:'●',dotC:'var(--acc,#ff5c38)',addr:'00041',mn:'end',tag:'',hits:'命中 3',op:'1'},
+      {dot:'●',dotC:'#8b8798',addr:'12602',mn:'jmp',tag:'a==72',hits:'已停用',op:'0.55'},
+      {dot:'◌',dotC:'#ffb454',addr:'00038',mn:'out',tag:'临时',hits:'命中 0',op:'1'},
+      {dot:'◈',dotC:'#8fd12f',addr:'18305',mn:'watch',tag:'上次 29281',hits:'启用',op:'1'}
+    ];
+    const events=[
+      {label:'说明',c:'#8b8798',txt:"取指:mem[37]=119('w'),可打印 → 继续"},
+      {label:'寄存器',c:'#7fe3ef',txt:'a ← crz(7, 29524) = 29526'},
+      {label:'内存',c:'#ffb454',txt:'mem[18291]: 29524 → 29526'},
+      {label:'加密',c:'var(--acc,#ff5c38)',txt:"mem[37]: 119 'w' → 78 'N'"},
+      {label:'寄存器',c:'#7fe3ef',txt:'c ← 38,d ← 18292(双指针各 +1)'}
+    ];
+    const aT=[0,0,0,0,0,0,0,0,2,1], bT=[1,1,1,1,1,1,1,1,1,1], rT=[1,1,1,1,1,1,1,1,2,0];
+    const trits=aT.map((a,k)=>({i:9-k,a,b:bT[k],r:rT[k]}));
+    const examples=[
+      {name:'hello.mb',desc:'经典 Hello, World! —— 观察加密改写最直观的入门程序',cells:'132 单元',steps:'≈ 6.2 千步'},
+      {name:'countdown.mb',desc:'从 9 倒数到 0 —— 长循环,适合体验时间线与热力图',cells:'1,404 单元',steps:'≈ 210 万步'},
+      {name:'fib.mb',desc:'斐波那契数列 —— 有输入消耗,适合练断点与监视点',cells:'2,918 单元',steps:'≈ 48 万步'}
+    ];
+    const legendGrad=(this.props.heat??'blackbody')==='toxic'
+      ?'linear-gradient(90deg,#141a16,#123527,#2c6e33,#7fbf2e,#eaff70)'
+      :'linear-gradient(90deg,#16141c,#37152a,#8c2620,#ea5b22,#ffc668)';
+    const inkOp={crz:'#c07a1e',jmp:'#6a4fa3',out:'#1e7f8c',in:'#1e7f8c',rotr:'#c07a1e',mov:'#4a7c2f',nop:'#8a8272',end:'#b03a26'};
+    const disasmL=disasm.map(r=>({...r,
+      bg:r.gut==='▶'?'linear-gradient(90deg,color-mix(in oklab,#b03a26 12%,transparent),transparent)':'transparent',
+      edge:r.gut==='▶'?'#b03a26':'transparent',
+      addrC:r.gut==='▶'?'#2a2622':'#8a8272',
+      mnC:(r.mn==='DATA'||r.mn==='···')?'#a89e8a':'#2a2622',
+      opC:r.gut==='▶'?'#b03a26':(inkOp[r.mn]||'#a89e8a'),
+      fxC:r.gut==='▶'?'#5a5348':'#8a8272'}));
+    const regsL=regs.map((r,i)=>({...r,c:['#c07a1e','#b03a26','#1e7f8c'][i]}));
+    const previewL=preview.map((p,i)=>({...p,c:['#c07a1e','#c07a1e','#b03a26','#1e7f8c'][i]}));
+    const bpsL=bps.map(b=>({...b,dotC:b.dotC.indexOf('acc')>-1?'#b03a26':(b.dotC==='#8b8798'?'#a89e8a':(b.dotC==='#ffb454'?'#c07a1e':'#4a7c2f'))}));
+    const eventsL=events.map((e,i)=>({...e,num:i+1,c:e.c==='#8b8798'?'#8a8272':(e.c==='#7fe3ef'?'#1e7f8c':(e.c==='#ffb454'?'#c07a1e':'#b03a26'))}));
+    const legendGradL='linear-gradient(90deg,#efe9dc,#eed9a8,#dd9a4e,#c05a2a,#8c2620)';
+    const dark=(this.props.theme??'深色')!=='浅色';
+    const T=dark?{
+      name:'深色',pg:'#0d0c12',bd:'#2a2735',bar:'#100e16',barBd:'#232030',
+      pn:'#14121a',pnBd:'#262331',hd:'#221f2d',in1:'#17151f',in1Bd:'#2e2a3c',in2Bd:'#221f2d',
+      tx:'#e9e6f2',sub:'#cfc9e0',mut:'#8b8798',faint:'#7d7890',dim:'#6f6a80',ghost:'#4d4860',
+      acc:'#ff5c38',accTx:'#160a08',accSoft:'#ffb49e',amb:'#ffb454',cyn:'#7fe3ef',grn:'#8fd12f',
+      headFont:"'Space Grotesk','Noto Sans SC',sans-serif",logo2:'#5a5470',
+      hatch:'repeating-linear-gradient(-45deg,#1b1824 0 6px,#15131d 6px 12px)',
+      tlBd:'#2e2a3c',tlBg:'#17151f',tick:'#221f2d',mark:'#4d4860',
+      outBg:'#0d0c12',outBd:'#221f2d',outTx:'#e9e6f2',cur:'#ff5c38',knobIn:'#160a08',
+      dChip:'color-mix(in oklab,#4fd8e8 14%,transparent)',dChipBd:'#2a4a52',dChipTx:'#7fe3ef',
+      tglDBg:'#2e2a3c',tglDTx:'#e9e6f2',tglLBg:'transparent',tglLTx:'#8b8798'
+    }:{
+      name:'浅色',pg:'#f5f2ea',bd:'#d8d1c0',bar:'#fdfcf8',barBd:'#d8d1c0',
+      pn:'#fdfcf8',pnBd:'#ddd6c6',hd:'#eae4d5',in1:'#f7f4ec',in1Bd:'#c9c1ae',in2Bd:'#e5dfd0',
+      tx:'#2a2622',sub:'#5a5348',mut:'#8a8272',faint:'#a89e8a',dim:'#a89e8a',ghost:'#c2bba9',
+      acc:'#b03a26',accTx:'#fdf6ee',accSoft:'#b03a26',amb:'#c07a1e',cyn:'#1e7f8c',grn:'#4a7c2f',
+      headFont:"'Spectral','Noto Serif SC',serif",logo2:'#c9c1ae',
+      hatch:'repeating-linear-gradient(-45deg,#e8e1d1 0 6px,#efe9dc 6px 12px)',
+      tlBd:'#d0c8b4',tlBg:'#fdfcf8',tick:'#eae4d5',mark:'#b5ac97',
+      outBg:'#2a2622',outBd:'#2a2622',outTx:'#f0ece1',cur:'#e8a04c',knobIn:'#fdf6ee',
+      dChip:'color-mix(in oklab,#1e7f8c 10%,#fdfcf8)',dChipBd:'#b9d4d8',dChipTx:'#1e7f8c',
+      tglDBg:'transparent',tglDTx:'#8a8272',tglLBg:'#2a2622',tglLTx:'#fdfcf8'
+    };
+    return {
+      T,
+      dsmT:dark?disasm:disasmL, regsT:dark?regs:regsL, prevT:dark?preview:previewL,
+      bpsT:dark?bps:bpsL, cellsT:dark?this._cells(24,12,18240,18291,18350):this._cells(24,12,18240,18291,18350,true),
+      legendT:dark?legendGrad:legendGradL,
+      disasmL, regsL, previewL, bpsL, eventsL, legendGradL,
+      cells24L:this._cells(24,12,18240,18291,18350,true),
+      disasm, disasmMini, regs, preview, bps, events, trits, examples, legendGrad,
+      cells24:this._cells(24,12,18240,18291,18350),
+      cells16:this._cells(16,10,18240,18291,-1),
+      cellsM:this._cells(9,8,18252,18291,-1),
+      rowLabels:Array.from({length:12},(_,r)=>String(18240+r*24).padStart(5,'0'))
+    };
+  }
+}
+</script>
+</body>
+</html>
