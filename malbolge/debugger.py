@@ -13,7 +13,17 @@ Supports multiple Malbolge variants:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Dict, Callable, Optional, Tuple, Union
+from types import MappingProxyType
+from typing import (
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 import copy
 
 from .core import (
@@ -213,6 +223,10 @@ class HistoryEntry:
     step_count: int
     # Store only modified memory locations to save space
     mem_changes: Dict[int, int] = field(default_factory=dict)
+    # Number of writes this step made to each address. Usually 1 per
+    # mem_changes key, but 2 when C == D and both the crz/rotr writeback and
+    # the ENCRYPT rewrite land on the same cell.
+    write_counts: Dict[int, int] = field(default_factory=dict)
 
 
 class MalbolgeDebugger:
@@ -269,6 +283,12 @@ class MalbolgeDebugger:
         # History for step-back functionality
         self._history: List[HistoryEntry] = []
         self._max_history: int = 10000
+
+        # Cumulative write count per memory cell (see write_heat)
+        self._write_heat: Dict[int, int] = {}
+
+        # Furthest step_count ever reached on this timeline (see seek)
+        self._max_step_reached: int = 0
 
         # Callbacks
         self._on_step: Optional[Callable[[MalbolgeState], None]] = None
@@ -436,6 +456,55 @@ class MalbolgeDebugger:
         """Get number of history entries available."""
         return len(self._history)
 
+    # ==================== Memory Write Heat ====================
+
+    @property
+    def write_heat(self) -> Mapping[int, int]:
+        """
+        Cumulative write count per memory address.
+
+        Counts every assignment to mem[addr] made by execution: the crz/rotr
+        writeback and the per-step ENCRYPT rewrite. Loading the source into
+        memory is not a write.
+
+        The mapping is a read-only *live* view of the debugger's counters, so
+        it must not be iterated across a step(); snapshot it or use
+        get_write_heat() instead. Addresses that have never been written are
+        absent (rather than present with 0).
+        """
+        return MappingProxyType(self._write_heat)
+
+    def get_write_heat(self, start: int, count: int) -> List[int]:
+        """
+        Write counts for `count` cells starting at `start`.
+
+        Never-written (and out-of-range) addresses read as 0 rather than
+        raising, so a UI window can run off either end of memory.
+        """
+        if count <= 0:
+            return []
+        heat = self._write_heat
+        return [heat.get(start + i, 0) for i in range(count)]
+
+    # ==================== Timeline ====================
+
+    @property
+    def max_step_reached(self) -> int:
+        """Highest step_count ever reached since the last reset()."""
+        return self._max_step_reached
+
+    @property
+    def seekable_range(self) -> Tuple[int, int]:
+        """
+        Inclusive (low, high) range of steps seek() can reach.
+
+        `high` is max_step_reached. `low` is bounded by the history window:
+        _save_history drops the oldest entry past _max_history, so steps older
+        than that can no longer be reconstructed by stepping back.
+        """
+        low = self._history[0].step_count if self._history else self._step_count
+        return (low, self._max_step_reached)
+
     # ==================== Execution Control ====================
 
     def _save_history(self, mem_changes: Dict[int, int]) -> None:
@@ -454,6 +523,22 @@ class MalbolgeDebugger:
         )
         self._history.append(entry)
 
+    def _record_write(self, addr: int, old_value: int,
+                      mem_changes: Dict[int, int],
+                      write_counts: Dict[int, int]) -> None:
+        """
+        Book-keeping for one write to mem[addr], performed by the caller.
+
+        `mem_changes` keeps the value from *before* the first write of this
+        step (setdefault, not assignment: when C == D the crz/rotr writeback
+        and the ENCRYPT rewrite both hit one cell, and step_back must restore
+        the value from before both). `write_counts` and the write-heat counter
+        count every write, so the two stay in step through step_back().
+        """
+        mem_changes.setdefault(addr, old_value)
+        write_counts[addr] = write_counts.get(addr, 0) + 1
+        self._write_heat[addr] = self._write_heat.get(addr, 0) + 1
+
     def step(self) -> MalbolgeState:
         """Execute one instruction and return new state."""
         if self._terminated:
@@ -462,6 +547,7 @@ class MalbolgeDebugger:
 
         # Track memory changes for history
         mem_changes: Dict[int, int] = {}
+        write_counts: Dict[int, int] = {}
 
         # Save state before execution
         old_d = self._d
@@ -514,12 +600,14 @@ class MalbolgeDebugger:
                     stop_reason=StopReason.INPUT_EXHAUSTED
                 )
         elif v == 39:   # rotr[d]; mov a, [d]
-            mem_changes[self._d] = self._mem[self._d]  # Save old value
+            self._record_write(self._d, self._mem[self._d],
+                               mem_changes, write_counts)
             self._a = self._mem[self._d] = self._rotate(self._mem[self._d])
         elif v == 40:   # mov d, [d]
             self._d = self._mem[self._d]
         elif v == 62:   # crz [d], a; mov a, [d]
-            mem_changes[self._d] = self._mem[self._d]  # Save old value
+            self._record_write(self._d, self._mem[self._d],
+                               mem_changes, write_counts)
             self._a = self._mem[self._d] = self._crazy(self._a, self._mem[self._d])
         elif v == 81:   # end
             self._terminated = True
@@ -540,12 +628,14 @@ class MalbolgeDebugger:
         # Note: this happens AFTER jmp may have changed c, so we encrypt
         # the jump target, not the jmp instruction itself
         if 33 <= self._mem[self._c] <= 126:
-            mem_changes[self._c] = self._mem[self._c]  # Save old value
+            self._record_write(self._c, self._mem[self._c],
+                               mem_changes, write_counts)
             self._mem[self._c] = ENCRYPT[self._mem[self._c] - 33]
 
         # Update history with actual memory changes
         if self._history:
             self._history[-1].mem_changes = mem_changes
+            self._history[-1].write_counts = write_counts
 
         # Update pointers (with wraparound)
         # Note: c increments even after jmp, matching original behavior
@@ -553,6 +643,8 @@ class MalbolgeDebugger:
         self._d = 0 if self._d == self._config.memory_size - 1 else self._d + 1
 
         self._step_count += 1
+        if self._step_count > self._max_step_reached:
+            self._max_step_reached = self._step_count
 
         state = self.get_state()
         state = MalbolgeState(
@@ -593,20 +685,29 @@ class MalbolgeDebugger:
         for addr, old_value in entry.mem_changes.items():
             self._mem[addr] = old_value
 
+        # Undo the write heat this step contributed, so heat stays consistent
+        # with the timeline that is still reachable instead of counting work
+        # that has been undone.
+        for addr, count in entry.write_counts.items():
+            remaining = self._write_heat.get(addr, 0) - count
+            if remaining > 0:
+                self._write_heat[addr] = remaining
+            else:
+                self._write_heat.pop(addr, None)
+
         # Clear terminated flag if we stepped back
         self._terminated = False
 
         return self.get_state()
 
-    def run(self, max_steps: int = -1) -> MalbolgeState:
+    def _run_iter(self, max_steps: int = -1,
+                  chunk: int = 0) -> Iterator[MalbolgeState]:
         """
-        Run until breakpoint, watchpoint, or termination.
+        Shared engine behind run() and run_chunked().
 
-        Args:
-            max_steps: Maximum steps to execute (-1 for unlimited)
-
-        Returns:
-            State at stop point
+        Yields the current state every `chunk` executed steps (never, when
+        chunk <= 0) and always yields the stopping state last, so a caller
+        that keeps the final yielded value sees exactly what run() returns.
         """
         steps = 0
         first_step = True  # Skip breakpoint check on first iteration
@@ -634,13 +735,14 @@ class MalbolgeDebugger:
                         self._on_breakpoint(bp, state)
                     if bp.temporary:
                         self.remove_breakpoint(self._c)
-                    return state
+                    yield state
+                    return
 
             # Check watchpoints
             for addr, wp in self._watchpoints.items():
                 if wp.check(self._mem[addr]):
                     state = self.get_state()
-                    return MalbolgeState(
+                    yield MalbolgeState(
                         a=state.a, c=state.c, d=state.d,
                         raw_instruction=state.raw_instruction,
                         effective_opcode=state.effective_opcode,
@@ -650,17 +752,99 @@ class MalbolgeDebugger:
                         input_consumed=state.input_consumed,
                         stop_reason=StopReason.WATCHPOINT
                     )
+                    return
 
             self.step()
             steps += 1
             first_step = False
 
-        return self.get_state()
+            if chunk > 0 and steps % chunk == 0 and not self._terminated:
+                yield self.get_state()
+
+        yield self.get_state()
+
+    def run(self, max_steps: int = -1) -> MalbolgeState:
+        """
+        Run until breakpoint, watchpoint, or termination.
+
+        Args:
+            max_steps: Maximum steps to execute (-1 for unlimited)
+
+        Returns:
+            State at stop point
+        """
+        # _run_iter always yields at least the stopping state; the pre-loop
+        # assignment only guards against a future refactor of that guarantee.
+        state = self.get_state()
+        for state in self._run_iter(max_steps=max_steps, chunk=0):
+            pass
+        return state
+
+    def run_chunked(self, chunk: int = 5000) -> Iterator[MalbolgeState]:
+        """
+        Run like run(), yielding the current state every `chunk` steps.
+
+        The stop conditions are run()'s: breakpoint, watchpoint, termination
+        or exhausted input. The last value yielded is the stopping state, and
+        carries the same stop_reason run() would have returned.
+
+        The caller may stop iterating at any point; the debugger is left on a
+        clean instruction boundary and step()/run()/step_back() keep working.
+
+        Args:
+            chunk: Steps to execute between yields (must be positive)
+        """
+        if chunk <= 0:
+            raise ValueError(f"chunk must be positive, got {chunk}")
+        return self._run_iter(max_steps=-1, chunk=chunk)
 
     def run_to(self, address: int) -> MalbolgeState:
         """Run until reaching the specified address."""
         self.add_breakpoint(address, temporary=True)
         return self.run()
+
+    def seek(self, step: int) -> MalbolgeState:
+        """
+        Move to `step` on the current timeline and return the state there.
+
+        Walks backwards with step_back() when the target is behind the current
+        position, forwards with step() when it is ahead.
+
+        Raises:
+            ValueError: if `step` lies outside seekable_range - either past
+                max_step_reached, or so far back that _save_history has
+                already dropped the entries needed to rebuild it.
+        """
+        low, high = self.seekable_range
+        if step > high:
+            raise ValueError(
+                f"step {step} is beyond max_step_reached ({high})"
+            )
+        if step < low:
+            raise ValueError(
+                f"step {step} has dropped out of the history window "
+                f"(seekable range is {low}..{high})"
+            )
+
+        while self._step_count > step:
+            if self.step_back() is None:
+                # Unreachable while seekable_range is honoured; a guard so a
+                # bad bound degrades into an exception, not an endless loop.
+                raise ValueError(
+                    f"cannot reach step {step}: history exhausted at "
+                    f"{self._step_count}"
+                )
+
+        while self._step_count < step:
+            before = self._step_count
+            self.step()
+            if self._step_count == before:
+                raise ValueError(
+                    f"cannot reach step {step}: execution stopped at "
+                    f"{self._step_count}"
+                )
+
+        return self.get_state()
 
     def reset(self) -> None:
         """Reset execution to initial state."""
@@ -672,6 +856,8 @@ class MalbolgeDebugger:
         self._step_count = 0
         self._terminated = False
         self._history.clear()
+        self._write_heat.clear()
+        self._max_step_reached = 0
         # Restore initial memory
         self._mem = self._initial_mem.copy()
 
