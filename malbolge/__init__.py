@@ -20,10 +20,11 @@ Debugging:
     dbg.run()
 """
 
-from .malbolge import eval, interpret, initialize, crazy, rotate
+from .malbolge import eval, interpret, initialize, crazy, rotate, run
 
 from .malbolge20 import (
     eval as eval20,
+    run as run20,
     interpret as interpret20,
     initialize as initialize20,
     crazy20,
@@ -39,6 +40,7 @@ from .core import (
     TABLE_CRAZY,
     ENCRYPT,
     OPS_VALID,
+    RunResult,
 )
 
 from .debugger import (
@@ -55,12 +57,15 @@ __version__ = "1.0.0"
 __all__ = [
     # Original interpreter
     'eval',
+    'run',
     'interpret',
     'initialize',
     'crazy',
     'rotate',
     # Malbolge20 interpreter
     'eval20',
+    'run20',
+    'RunResult',
     'interpret20',
     'initialize20',
     'crazy20',

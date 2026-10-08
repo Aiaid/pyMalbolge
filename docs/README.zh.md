@@ -2,8 +2,8 @@
 
 > [English](README.md) | **中文**
 
-本目录每份文档都有中英两版:`<name>.md`(英文)与 `<name>.zh.md`(中文),
-内容保持同步;逆向工程类笔记以中文版为原稿。文档按类别分子目录存放,
+本目录叙述性文档有中英两版：`<name>.md`（英文）与 `<name>.zh.md`（中文），
+内容保持同步。机器可读测量数据由两种语言共享一份 JSON，不复制为翻译版本；逆向工程类笔记以中文版为原稿。文档按类别分子目录存放,
 双语成对移动;状态标记:✅ 现行 / 🧊 已搁置 / 📌 历史快照(保留原样,
 带取代注记)。
 
@@ -13,7 +13,7 @@
 |---|---|---|
 | [mg-spec.zh.md](specs/mg-spec.zh.md) | ✅ | `.mg` 伪指令语言规格(逆向自 `ternary`,含实验验证) |
 | [hell-spec.zh.md](specs/hell-spec.zh.md) | ✅ | HeLL 语言规格(逆向自 LMAO v0.6.0) |
-| [python-subset-spec.zh.md](specs/python-subset-spec.zh.md) | ✅ | **规范性规格**:接受的 Python 子集 v1——按 AST 节点的接受白名单、与 CPython 的分歧(D1–D17)、诊断契约、审计附录 |
+| [python-subset-spec.zh.md](specs/python-subset-spec.zh.md) | ✅ | **规范性规格**:接受的 Python 子集 v1——按 AST 节点的接受白名单、与 CPython 的分歧(D1–D19)、诊断契约、审计附录 |
 
 ## design/ — 设计与路线
 
@@ -36,7 +36,10 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
-| [perf-baseline.zh.md](notes/perf-baseline.zh.md) | ✅ | 性能剖析基线:两个热点与根因(热点 #1 已修复,热点 #2 仍开放) |
+| [perf-baseline.zh.md](notes/perf-baseline.zh.md) | 📌 | QoS 修复前性能剖析基线；运行时表示/热点描述已由紧凑周期内存与 python-qos-validation.json 取代 |
+| [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | QoS 修复前的 2026-10-08 共享测量数据：普通 Python Fibonacci、direct 编译、优化 C 参考解释器执行、CPython 对照及项目 Python CLI 的资源受限停止；双语解读见主 README |
+| [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | 历史十一组反例；由 python-qos-validation.json 结案，原证据保留 |
+| [python-qos-validation.json](notes/python-qos-validation.json) | ✅ | 最终本地验收、原生/便携 VM 证据、新旧产物、有界运行/存储、缓存与汇编测量；已配置云端 CI，尚未运行 |
 
 另有研究笔记(发现清单、设计方案 `mb-dialect-plan`、全方向 `roadmap`、
 名古屋数组解剖、生态全景调研等)保存在一个私有的配套仓库中,不属于

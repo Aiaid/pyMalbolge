@@ -25,6 +25,7 @@ Run under pytest (recommended, gives you the xfail bookkeeping):
     python3 -m pytest test_diagnostics_staged.py -v
 """
 import sys
+import re
 
 REPO = "/Users/anend/Desktop/project/pyMalbolge"
 sys.path.insert(0, REPO)
@@ -137,9 +138,9 @@ class TestAcceptedRejections:
             "only simple positional parameters")
 
     def test_kwargs_call(self):
-        self.assert_rejected(
-            "def f(a):\n    return a\nputchar(f(a=65))\n", 3,
-            "keyword arguments")
+        c = compile_python_to_c(
+            "def f(a):\n    return a\nputchar(f(a=65))\n")
+        assert "= f(65);" in c
 
     def test_float_literal(self):
         self.assert_rejected("x = 3.14\nputchar(65)\n", 1, "floating-point")
@@ -168,13 +169,14 @@ class TestAcceptedRejections:
             "a = (1, 2)\nputchar(65)\n", 1, "unsupported expression")
 
     def test_tuple_unpack_assign(self):
-        self.assert_rejected(
-            "a, b = 1, 2\nputchar(a)\n", 1, "unsupported assignment target")
+        c = compile_python_to_c("a, b = 1, 2\nputchar(a)\n")
+        assert "int a;" in c and "int b;" in c
+        assert "putchar(a);" in c
 
     def test_starred_assign_target(self):
         self.assert_rejected(
             "a, *b = 1, 2, 3\nputchar(a)\n", 1,
-            "unsupported assignment target")
+            "matching flat name targets")
 
     def test_fstring(self):
         self.assert_rejected(
@@ -311,7 +313,7 @@ class TestAcceptedRejections:
     def test_range_var_step(self):
         self.assert_rejected(
             "n = 2\nfor i in range(0, 10, n):\n    putchar(65)\n", 2,
-            "positive integer literal")
+            "nonzero integer literal")
 
     def test_getchar_with_args(self):
         self.assert_rejected(
@@ -521,7 +523,7 @@ class TestBatchOneSugar:
         supported the same way as break."""
         c = compile_python_to_c(
             "for i in range(3):\n    continue\n    putchar(65)\n")
-        assert "i += 1;" in c
+        assert re.search(r"(zzt\d+) = \1 \+ 1;", c)
 
     def test_print_call_now_accepted(self):
         """probe ID sem_print_call, FLIPPED: print() with compile-time

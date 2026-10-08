@@ -7,6 +7,7 @@ This module provides shared infrastructure for:
 - Malbolge Unshackled (unbounded, future)
 """
 
+from array import array
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional, Callable, List
@@ -91,7 +92,7 @@ def crazy(a: int, b: int, trit_width: int) -> int:
     result = 0
     d = 1
     for _ in range(trit_width):
-        result += TABLE_CRAZY[int((b / d) % 3)][int((a / d) % 3)] * d
+        result += TABLE_CRAZY[(b // d) % 3][(a // d) % 3] * d
         d *= 3
     return result
 
@@ -128,153 +129,148 @@ def _block_seed_jump_map(block_size: int) -> Dict[tuple, tuple]:
 _block_seed_jump_map._cache = {}
 
 
+class _MemoryBlock:
+    """A mutable page shared by snapshots until either owner writes it."""
+    __slots__ = ("values", "written", "shared")
+
+    def __init__(self, values, written=None):
+        self.values = values
+        self.written = written if written is not None else bytearray(len(values))
+        self.shared = False
+
+    def copy(self):
+        return _MemoryBlock(self.values[:], self.written[:])
+
+
 class SparseMemory:
-    """
-    Block-based sparse memory for large address spaces.
+    """Compact immutable source plus copy-on-write mutable pages.
 
-    Memory is divided into blocks of 3^(trit_width/2) cells (59,049 for
-    Malbolge20), following the Nagoya reference interpreter.  A block's
-    default (crazy-fill) contents are fully determined by its first two words
-    ("seeds"); seeds of far blocks are derived with a per-trit jump map, so
-    accessing any address materializes at most one block instead of filling
-    everything below it.
-
-    Explicit writes go to an overlay dict, so get_allocated_count() counts
-    written cells only and defaults stay shared between copies.
+    Source bytes cost one byte per cell, not a Python object/dict entry.
+    Instruction encryption writes into byte pages; wide data writes promote
+    just that page to uint32 (arbitrary Python integers retain a list fallback).
+    Initialization fill is an immutable periodic sequence derived from frozen
+    seeds. Reads, writes, copies, and debugger probes cannot change that fill.
     """
+    _PAGE_SIZE = 4096
 
     def __init__(self, config: MalbolgeConfig):
         self.config = config
         self.size = config.memory_size
         self.block_size = 3 ** (config.trit_width - config.trit_width // 2)
         self.num_blocks = self.size // self.block_size
-        self._data: Dict[int, int] = {}      # explicit writes (and source)
-        self._source_length: int = 0
-        # First address whose value comes from the crazy-fill rule; cells
-        # below it that are not in _data read as 0 (cells 0 and 1 default
-        # to 0 when the source is shorter than 2 cells).
-        self._fill_start: int = 2
-        self._tail_block: int = 0
-        self._default_blocks: Dict[int, List[int]] = {}  # lazily materialized
-        self._seeds: Dict[int, tuple] = {}   # block index -> (word0, word1)
+        self.initialize_source(b"")
 
-    def initialize_source(self, source_cells: List[int]) -> None:
-        """Initialize memory with source code values."""
-        for i, val in enumerate(source_cells):
-            self._data[i] = val
-        self._source_length = len(source_cells)
-        self._fill_start = max(len(source_cells), 2)
-        self._tail_block = self._fill_start // self.block_size
-        self._default_blocks = {}
-        self._seeds = {}
-
-    def _materialize_block(self, block: int) -> List[int]:
-        """Compute and cache the default (crazy-fill) contents of a block."""
-        blk = self._default_blocks.get(block)
-        if blk is not None:
-            return blk
-
-        bs = self.block_size
-        trit_width = self.config.trit_width
-        blk = [0] * bs
-
-        if block == self._tail_block:
-            # Continue the fill right after the source (cells before
-            # _fill_start stay 0 in blk; reads of source cells hit _data).
-            start = self._fill_start
-            p1 = self._data.get(start - 1, 0)
-            p2 = self._data.get(start - 2, 0)
-            for i in range(start - block * bs, bs):
-                p2, p1 = p1, crazy(p1, p2, trit_width)
-                blk[i] = p1
+    def initialize_source(self, source_cells) -> None:
+        if len(source_cells) > self.size:
+            raise ValueError("Source file is too long")
+        if isinstance(source_cells, bytes):
+            source = source_cells
+        elif isinstance(source_cells, array) or (
+                isinstance(source_cells, memoryview) and source_cells.itemsize > 1):
+            source = memoryview(array("I", source_cells).tobytes()).cast("I")
         else:
-            s0, s1 = self._seed_for_block(block)
-            blk[0], blk[1] = s0, s1
-            p2, p1 = s0, s1
-            for i in range(2, bs):
-                p2, p1 = p1, crazy(p1, p2, trit_width)
-                blk[i] = p1
+            try:
+                source = bytes(source_cells)
+            except (ValueError, OverflowError):
+                try:
+                    # Read-only compact wide-word backing, detached from callers.
+                    source = memoryview(array("I", source_cells).tobytes()).cast("I")
+                except (ValueError, OverflowError):
+                    source = tuple(source_cells)
+        self._source = source
+        self._source_length = len(source)
+        self._fill_start = max(len(source), 2)
+        self._tail_block = self._fill_start // self.block_size
+        p1 = source[-1] if len(source) > 1 else 0
+        p2 = source[-2] if len(source) > 1 else (source[0] if source else 0)
+        self._initial_tail = (p1, p2)
+        # Each trit's pair transition has at most a one-step transient and
+        # period dividing six. Detect the word-pair cycle rather than assuming
+        # a phase; this also handles empty and one-cell sources exactly.
+        seen, values = {}, []
+        while (p2, p1) not in seen:
+            seen[(p2, p1)] = len(values)
+            p2, p1 = p1, crazy(p1, p2, self.config.trit_width)
+            values.append(p1)
+        self._fill_values = tuple(values)
+        self._cycle_start = seen[(p2, p1)]
+        self._cycle_length = len(values) - self._cycle_start
+        self._blocks = {}
+        self._allocated_count = len(source)
 
-        self._default_blocks[block] = blk
-        return blk
-
-    def _seed_for_block(self, block: int) -> tuple:
-        """Seeds (first two default words) of a block past the tail block."""
-        seeds = self._seeds
-        cached = seeds.get(block)
-        if cached is not None:
-            return cached
-
-        if not seeds:
-            # Base case: derive from the last two cells of the tail block
-            # (via __getitem__, since they may be source cells in _data).
-            tail_end = (self._tail_block + 1) * self.block_size
-            last, last_but_one = self[tail_end - 1], self[tail_end - 2]
-            trit_width = self.config.trit_width
-            s0 = crazy(last, last_but_one, trit_width)
-            s1 = crazy(s0, last, trit_width)
-            seeds[self._tail_block + 1] = (s0, s1)
-
-        jump = _block_seed_jump_map(self.block_size)
-        start = max(k for k in seeds if k <= block) if any(
-            k <= block for k in seeds) else min(seeds)
-        s0, s1 = seeds[start]
-        for k in range(start, block):
-            n0 = n1 = 0
-            p = 1
-            for _ in range(self.config.trit_width):
-                u0, u1 = jump[(s0 % 3, s1 % 3)]
-                n0 += u0 * p
-                n1 += u1 * p
-                s0 //= 3
-                s1 //= 3
-                p *= 3
-            s0, s1 = n0, n1
-            seeds[k + 1] = (s0, s1)
-        return seeds[block]
-
-    def __getitem__(self, addr: int) -> int:
-        """Get memory value at address."""
-        if addr < 0 or addr >= self.size:
-            raise IndexError(f"Memory address {addr} out of range (0-{self.size-1})")
-
-        value = self._data.get(addr)
-        if value is not None:
-            return value
-
+    def _initial_value(self, addr):
+        if addr < self._source_length:
+            return self._source[addr]
         if addr < self._fill_start:
             return 0
+        offset = addr - self._fill_start
+        if offset >= len(self._fill_values):
+            offset = self._cycle_start + (offset - self._cycle_start) % self._cycle_length
+        return self._fill_values[offset]
 
-        block, offset = divmod(addr, self.block_size)
-        return self._materialize_block(block)[offset]
+    def _materialize_block(self, block):
+        """Compatibility helper: immutable initialization defaults only."""
+        start = block * self.block_size
+        return tuple(self._initial_value(i) for i in
+                     range(start, min(start + self.block_size, self.size)))
 
-    def __setitem__(self, addr: int, value: int) -> None:
-        """Set memory value at address."""
+    def _seed_for_block(self, block):
+        start = block * self.block_size
+        return self._initial_value(start), self._initial_value(start + 1)
+
+    def __getitem__(self, addr):
+        if isinstance(addr, slice):
+            return [self[i] for i in range(*addr.indices(self.size))]
         if addr < 0 or addr >= self.size:
             raise IndexError(f"Memory address {addr} out of range (0-{self.size-1})")
-        self._data[addr] = value
+        page, offset = divmod(addr, self._PAGE_SIZE)
+        block = self._blocks.get(page)
+        if block is not None:
+            return block.values[offset]
+        return self._initial_value(addr)
 
-    def __len__(self) -> int:
-        """Return logical size of memory."""
+    def __setitem__(self, addr, value):
+        if addr < 0 or addr >= self.size:
+            raise IndexError(f"Memory address {addr} out of range (0-{self.size-1})")
+        page, offset = divmod(addr, self._PAGE_SIZE)
+        block = self._blocks.get(page)
+        if block is None:
+            start = page * self._PAGE_SIZE
+            end = min(start + self._PAGE_SIZE, self.size)
+            if isinstance(self._source, bytes) and end <= self._source_length:
+                values = bytearray(self._source[start:end])
+            else:
+                initial = [self._initial_value(i) for i in range(start, end)]
+                try:
+                    values = array("I", initial)
+                except (ValueError, OverflowError):
+                    values = initial
+            block = self._blocks[page] = _MemoryBlock(values)
+        elif block.shared:
+            block = self._blocks[page] = block.copy()
+        if isinstance(block.values, bytearray) and not 0 <= value <= 255:
+            block.values = array("I", list(block.values))
+        if isinstance(block.values, array) and not 0 <= value <= 0xffffffff:
+            block.values = list(block.values)
+        block.values[offset] = value
+        if addr >= self._source_length and not block.written[offset]:
+            block.written[offset] = 1
+            self._allocated_count += 1
+
+    def __len__(self):
         return self.size
 
-    def get_allocated_count(self) -> int:
-        """Return number of explicitly written cells."""
-        return len(self._data)
+    def get_allocated_count(self):
+        """Source cells plus unique explicitly written non-source cells."""
+        return self._allocated_count
 
-    def copy(self) -> 'SparseMemory':
-        """Create a copy of this memory.
-
-        Default-fill caches are derived data shared with the copy; only the
-        write overlay is duplicated.
-        """
-        new_mem = SparseMemory(self.config)
-        new_mem._data = self._data.copy()
-        new_mem._source_length = self._source_length
-        new_mem._fill_start = self._fill_start
-        new_mem._tail_block = self._tail_block
-        new_mem._default_blocks = self._default_blocks
-        new_mem._seeds = self._seeds
+    def copy(self):
+        # No source/default-fill copy, and no copying mutable page payloads.
+        new_mem = object.__new__(SparseMemory)
+        new_mem.__dict__ = self.__dict__.copy()
+        new_mem._blocks = self._blocks.copy()
+        for block in self._blocks.values():
+            block.shared = True
         return new_mem
 
 
@@ -303,12 +299,13 @@ class DenseMemory:
         Args:
             source_cells: List of cell values from source code
         """
+        self._data = [0] * self.size
         # Copy source
         for i, val in enumerate(source_cells):
             self._data[i] = val
 
         # Fill remaining with crazy operation
-        i = len(source_cells)
+        i = max(len(source_cells), 2)
         while i < self.size:
             self._data[i] = crazy(self._data[i-1], self._data[i-2], self.config.trit_width)
             i += 1
@@ -345,33 +342,135 @@ def create_memory(config: MalbolgeConfig):
         return DenseMemory(config)
 
 
-def parse_source(source: str, config: MalbolgeConfig) -> List[int]:
+def parse_source(source, config: MalbolgeConfig):
+    """Validate source without a per-cell Python list.
+
+    Byte-valued source returns immutable bytes; legacy wide text remains a
+    compact uint32 sequence. Validation is grouped by the 94-position opcode
+    period, so normal large ASCII images are checked in C-level byte scans.
     """
-    Parse source code and validate characters.
-
-    Args:
-        source: Malbolge source code string
-        config: Malbolge configuration
-
-    Returns:
-        List of cell values
-
-    Raises:
-        ValueError: If source contains invalid characters or is too long
-    """
-    cells = []
-
-    for char in source:
-        if char in (' ', '\n', '\r', '\t'):
-            continue
-
-        i = len(cells)
-        if (ord(char) + i) % 94 not in OPS_VALID:
-            raise ValueError(f"Invalid character '{char}' at position {i}")
-
-        if i >= config.memory_size:
-            raise ValueError(f"Source file is too long (max {config.memory_size} cells)")
-
-        cells.append(ord(char))
-
+    if isinstance(source, str):
+        try:
+            raw = source.encode("latin1")
+        except UnicodeEncodeError:
+            cells = array("I")
+            for char in source:
+                if char in " \n\r\t":
+                    continue
+                i, value = len(cells), ord(char)
+                if (value + i) % 94 not in OPS_VALID:
+                    raise ValueError(f"Invalid character {char!r} at position {i}")
+                if i >= config.memory_size:
+                    raise ValueError(f"Source file is too long (max {config.memory_size} cells)")
+                cells.append(value)
+            return cells
+    else:
+        raw = bytes(source)
+    cells = raw.translate(None, b" \n\r\t")
+    if len(cells) > config.memory_size:
+        raise ValueError(f"Source file is too long (max {config.memory_size} cells)")
+    first_bad = None
+    for residue in range(min(94, len(cells))):
+        allowed = bytes(value for value in range(256)
+                        if (value + residue) % 94 in OPS_VALID)
+        column = cells[residue::94]
+        if column.translate(None, allowed):
+            for offset, value in enumerate(column):
+                if (value + residue) % 94 not in OPS_VALID:
+                    position = residue + offset * 94
+                    first_bad = position if first_bad is None else min(first_bad, position)
+                    break
+    if first_bad is not None:
+        raise ValueError(f"Invalid character {chr(cells[first_bad])!r} at position {first_bad}")
     return cells
+
+
+@dataclass(frozen=True)
+class RunResult:
+    """Byte-oriented bounded execution result, at an instruction boundary."""
+    output: bytes
+    stop_reason: str
+    steps: int
+    input_consumed: int
+    a: int
+    c: int
+    d: int
+
+    @property
+    def output_count(self):
+        return len(self.output)
+
+    def to_dict(self):
+        return {"stop_reason": self.stop_reason, "steps": self.steps,
+                "input_consumed": self.input_consumed,
+                "output_count": len(self.output), "output_hex": self.output.hex(),
+                "registers": {"a": self.a, "c": self.c, "d": self.d}}
+
+
+def run_memory(mem, config, input_data=b"", *, max_steps=None,
+               max_output=None, eof="sentinel"):
+    """Execute initialized memory with explicit byte I/O and resource bounds.
+
+    Text input is explicitly encoded as UTF-8; input consumption counts bytes.
+    Legacy eval() retains its historical Unicode-codepoint input semantics.
+    A stop instruction counts as an executed step. Invalid instructions and
+    budget/input stops do not execute the pending instruction. Output caps are
+    checked before an output instruction would exceed the allowed byte count.
+    """
+    if isinstance(input_data, str):
+        data = input_data.encode("utf8")
+    elif isinstance(input_data, (bytes, bytearray, memoryview)):
+        data = bytes(input_data)
+    else:
+        raise TypeError("input_data must be text or bytes-like")
+    for name, value in (("max_steps", max_steps), ("max_output", max_output)):
+        if value is not None and (type(value) is not int or value < 0):
+            raise ValueError(f"{name} must be a nonnegative integer or None")
+    if eof not in ("sentinel", "stop"):
+        raise ValueError("eof must be 'stop' or 'sentinel'")
+    sentinel = 59049 if config.variant == MalbolgeVariant.MALBOLGE20 else config.memory_size - 1
+    a = c = d = steps = position = 0
+    output = bytearray()
+    size, multiplier, width = config.memory_size, config.rotate_multiplier, config.trit_width
+    while True:
+        if max_steps is not None and steps >= max_steps:
+            reason = "step_limit"
+            break
+        raw = mem[c]
+        if not 33 <= raw <= 126:
+            reason = "invalid_instruction"
+            break
+        opcode = (raw + c) % 94
+        if opcode == 5 and max_output is not None and len(output) >= max_output:
+            reason = "output_limit"
+            break
+        if opcode == 23 and position >= len(data) and eof == "stop":
+            reason = "input_exhausted"
+            break
+        steps += 1
+        if opcode == 4:
+            c = mem[d]
+        elif opcode == 5:
+            output.append(a % 256)
+        elif opcode == 23:
+            if position < len(data):
+                a = data[position]
+                position += 1
+            else:
+                a = sentinel
+        elif opcode == 39:
+            value = mem[d]
+            a = mem[d] = multiplier * (value % 3) + value // 3
+        elif opcode == 40:
+            d = mem[d]
+        elif opcode == 62:
+            a = mem[d] = crazy(a, mem[d], width)
+        elif opcode == 81:
+            reason = "terminated"
+            break
+        value = mem[c]
+        if 33 <= value <= 126:
+            mem[c] = ENCRYPT[value - 33]
+        c = 0 if c == size - 1 else c + 1
+        d = 0 if d == size - 1 else d + 1
+    return RunResult(bytes(output), reason, steps, position, a, c, d)

@@ -93,6 +93,31 @@ class TestSparseMemoryAgainstBruteForce(unittest.TestCase):
         self.assertEqual(cp[50], (default_50 + 1) % 81)
 
 
+class TestInitializationSnapshot(unittest.TestCase):
+    def test_source_mutation_does_not_change_unread_defaults(self):
+        for config in (MalbolgeConfig.original(), MalbolgeConfig.malbolge20()):
+            reference = SparseMemory(config)
+            reference.initialize_source([68, 39])
+            memory = SparseMemory(config)
+            memory.initialize_source([68, 39])
+            snapshot = memory.copy()
+            memory[1] = 123
+            for address in (2, config.memory_size - 1, 1000):
+                self.assertEqual(memory[address], reference[address])
+                self.assertEqual(snapshot[address], reference[address])
+
+    def test_reinitialize_removes_old_writes_and_caches(self):
+        memory = SparseMemory(MalbolgeConfig.malbolge20())
+        memory.initialize_source([68, 39, 123])
+        memory[1000] = 123
+        memory[59050]
+        memory.initialize_source([68, 39])
+        reference = SparseMemory(memory.config)
+        reference.initialize_source([68, 39])
+        self.assertEqual(memory[1000], reference[1000])
+        self.assertEqual(memory[2], 1743392216)
+
+
 class TestNagoyaHello20(unittest.TestCase):
     """hello20.mb (Nagoya LAL toolchain output, MIT) must run to completion
     and print HelloWorld, matching the reference C interpreter."""

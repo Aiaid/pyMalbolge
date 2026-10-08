@@ -2,9 +2,10 @@
 
 > **English** | [中文](README.zh.md)
 
-Every document in this directory has both an English version (`<name>.md`) and
-a Chinese version (`<name>.zh.md`), kept in sync; the reverse-engineering notes
-were originally written in Chinese. Documents are grouped into subdirectories
+Prose documents have both an English version (`<name>.md`) and a Chinese
+version (`<name>.zh.md`), kept in sync. Machine-readable measurement data is
+shared between languages as one JSON file, without a duplicated translation.
+The reverse-engineering notes were originally written in Chinese. Documents are grouped into subdirectories
 by category; bilingual pairs always move together. Status markers: ✅ current /
 🧊 shelved / 📌 historical snapshot (kept as-is with a superseding note).
 
@@ -14,7 +15,7 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 |---|---|---|
 | [mg-spec.md](specs/mg-spec.md) | ✅ | `.mg` pseudo-instruction language spec (reverse-engineered from `ternary`, with experimental verification) |
 | [hell-spec.md](specs/hell-spec.md) | ✅ | HeLL language spec (reverse-engineered from LMAO v0.6.0) |
-| [python-subset-spec.md](specs/python-subset-spec.md) | ✅ | **Normative spec** for the accepted Python subset v1: per-AST-node acceptance whitelist, CPython divergences (D1–D17), diagnostic contract, audit appendix |
+| [python-subset-spec.md](specs/python-subset-spec.md) | ✅ | **Normative spec** for the accepted Python subset v1: per-AST-node acceptance whitelist, CPython divergences (D1–D19), diagnostic contract, audit appendix |
 
 ## design/ — designs and route decisions
 
@@ -37,7 +38,10 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 
 | Document | Status | Contents |
 |---|---|---|
-| [perf-baseline.md](notes/perf-baseline.md) | ✅ | Profiling baseline: the two hotspots and their root causes (hotspot #1 fixed, hotspot #2 still open) |
+| [perf-baseline.md](notes/perf-baseline.md) | 📌 | Pre-QoS profiling baseline; its runtime representation/hotspot description is superseded by compact periodic memory and python-qos-validation.json |
+| [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | Pre-QoS 2026-10-08 shared measurement data: ordinary-Python Fibonacci, direct compilation, optimized C reference execution, CPython comparison, and a resource-bounded project Python CLI stop; bilingual interpretation is in the main README |
+| [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | Historical 11-group counterexamples; resolved by python-qos-validation.json, original evidence retained |
+| [python-qos-validation.json](notes/python-qos-validation.json) | ✅ | Final local acceptance, native/portable VM evidence, fresh and retained artifacts, bounded runtime/storage, cache and assembly measurements; hosted CI is configured but not run |
 
 Further research notes (the findings log, the `mb-dialect-plan` design, the
 all-directions `roadmap`, the Nagoya array dissection, the ecosystem survey)

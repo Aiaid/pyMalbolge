@@ -1,0 +1,514 @@
+{
+  "date": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "path_normalization": "The local checkout prefix in captured traceback filenames is replaced by <repo>; observed errors and outcomes are otherwise unchanged.",
+  "scope": "Python frontends, value/call/control-flow semantics, sparse memory and debugger snapshots, compiler CLI, test coverage and QoL opportunities. Audit only; implementation unchanged.",
+  "fast_regression": {
+    "passed": 555,
+    "skipped": 9,
+    "subtests_passed": 361,
+    "elapsed_seconds": 23.1,
+    "excluded_modules": [
+      "test_py2c_e2e.py",
+      "test_py2mg_e2e.py",
+      "test_mg_pipeline.py",
+      "test_mc2mb.py",
+      "test_examples_manifest.py",
+      "test_hell_examples.py"
+    ],
+    "note": "This is a focused broad fast run, not a claim that every test or source program was checked."
+  },
+  "combined_semantics_source": "g = 7\n\ndef change():\n    global g\n    g = 12\n    return 3\n\ndef pair(a, b):\n    return a + b\n\ndef touch():\n    putchar(84)\n    return 1\n\nputchar(48 + (g + change()))\ng = 7\nputchar(48 + pair(g, change()))\ng = 7\ng += change()\nputchar(48 + g)\nif 0 and touch():\n    pass\nputchar(65)\nif 1 or touch():\n    pass\nputchar(66)\nif 2 < 1 < touch():\n    pass\nputchar(67)\nx = 9\nx = x > 5\nputchar(48 + x)\nlimit = 3\nfor i in range(limit):\n    putchar(65 + i)\n    limit = 0\n",
+  "combined_semantics_results": [
+    {
+      "backend": "c",
+      "expected": ":::ABC1ABC",
+      "stdout": "???ABTC0A",
+      "stderr": "",
+      "returncode": 0,
+      "elapsed_seconds": 9.364933584118262,
+      "matches": false
+    },
+    {
+      "backend": "direct",
+      "expected": ":::ABC1ABC",
+      "stdout": "???TATBTC1A",
+      "stderr": "",
+      "returncode": 0,
+      "elapsed_seconds": 3.3232723330147564,
+      "matches": false
+    }
+  ],
+  "range_source": "i = 5\nfor i in range(0, i):\n    putchar(65 + i)\nputchar(124)\nfor j in range(3):\n    putchar(65 + j)\n    j = 10\nputchar(124)\n",
+  "range_results": [
+    {
+      "backend": "direct",
+      "expected": "ABCDE|ABC|",
+      "stdout": "|A|",
+      "stderr": "",
+      "returncode": 0,
+      "compile_seconds": 7.298548708902672,
+      "elapsed_seconds": 1.029117874801159,
+      "matches": false
+    },
+    {
+      "backend": "c",
+      "expected": "ABCDE|ABC|",
+      "stdout": "|A|",
+      "stderr": "",
+      "returncode": 0,
+      "compile_seconds": 16.594280291115865,
+      "elapsed_seconds": 2.2712155419867486,
+      "matches": false
+    }
+  ],
+  "loop_final_results": [
+    {
+      "case": "loop_target_after",
+      "source": "i = 99\nfor i in range(3):\n    pass\nputchar(48+i)\n",
+      "backend": "direct",
+      "expected": "2",
+      "stdout": "3",
+      "stderr": "",
+      "returncode": 0,
+      "matches": false
+    },
+    {
+      "case": "loop_target_after",
+      "source": "i = 99\nfor i in range(3):\n    pass\nputchar(48+i)\n",
+      "backend": "c",
+      "expected": "2",
+      "stdout": "3",
+      "stderr": "",
+      "returncode": 0,
+      "matches": false
+    }
+  ],
+  "memory_and_cli": [
+    {
+      "case": "tail_mutation",
+      "expected": 1743392189,
+      "actual": 1743392188,
+      "matches": false
+    },
+    {
+      "case": "copy_cache",
+      "expected": 1743392189,
+      "actual": 1743392188,
+      "matches": false
+    },
+    {
+      "case": "reinitialize",
+      "expected": 1743392189,
+      "actual": 123,
+      "matches": false
+    },
+    {
+      "case": "write_failure",
+      "returncode": 1,
+      "stderr": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"<repo>/malbolge/__main__.py\", line 116, in <module>\n    main()\n  File \"<repo>/malbolge/__main__.py\", line 19, in main\n    compile_main(sys.argv[2:])\n  File \"<repo>/malbolge/compiler/cli.py\", line 116, in main\n    _write(args.emit_c, c_source, \"C\")\n  File \"<repo>/malbolge/compiler/cli.py\", line 43, in _write\n    with open(path, \"w\") as f:\n         ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pymalbolge-qos-audit/missing/output.c'\n",
+      "source_after": "putchar(65)\n"
+    },
+    {
+      "case": "overwrite_source",
+      "returncode": 0,
+      "stderr": "wrote /private/tmp/pymalbolge-qos-audit/hi.py (C)\n",
+      "source_after": "int main(){\n  putchar(65);\n}\n"
+    }
+  ],
+  "debugger_seed_order": [
+    {
+      "source": "D'",
+      "pre_read_before_execution": false,
+      "expected_initial_fill_at_2": 1743392216,
+      "before": null,
+      "after_step": 1743392167,
+      "after_reset": 1743392167
+    },
+    {
+      "source": "D'",
+      "pre_read_before_execution": true,
+      "expected_initial_fill_at_2": 1743392216,
+      "before": 1743392216,
+      "after_step": 1743392216,
+      "after_reset": 1743392216
+    }
+  ],
+  "acceptance_checks": [
+    {
+      "case": "conditional_binding",
+      "source": "if 0:\n    x = 65\nputchar(x)\n",
+      "backends": {
+        "c": {
+          "accepted": true,
+          "ir_bytes": 93
+        },
+        "direct": {
+          "accepted": false,
+          "error": "compile error (line 3): name 'x' may be used before assignment\n    putchar(x)"
+        }
+      }
+    },
+    {
+      "case": "loop_binding",
+      "source": "for i in range(0):\n    x = 65\nputchar(x)\n",
+      "backends": {
+        "c": {
+          "accepted": true,
+          "ir_bytes": 207
+        },
+        "direct": {
+          "accepted": false,
+          "error": "compile error (line 3): name 'x' may be used before assignment\n    putchar(x)"
+        }
+      }
+    },
+    {
+      "case": "self_initialization",
+      "source": "x = x + 1\n",
+      "backends": {
+        "c": {
+          "accepted": true,
+          "ir_bytes": 35
+        },
+        "direct": {
+          "accepted": false,
+          "error": "compile error (line 1): name 'x' may be used before assignment\n    x = x + 1"
+        }
+      }
+    },
+    {
+      "case": "self_comparison",
+      "source": "x = 9\nx = x > 5\nputchar(48 + x)\n",
+      "backends": {
+        "c": {
+          "accepted": true,
+          "ir_bytes": 114
+        },
+        "direct": {
+          "accepted": true,
+          "ir_bytes": 2765
+        }
+      }
+    },
+    {
+      "case": "boolean_value",
+      "source": "x = 5 or 7\nputchar(48 + x)\n",
+      "backends": {
+        "c": {
+          "accepted": true,
+          "ir_bytes": 208
+        },
+        "direct": {
+          "accepted": true,
+          "ir_bytes": 3338
+        }
+      }
+    },
+    {
+      "case": "negative_step",
+      "source": "for i in range(3,0,-1):\n    putchar(48+i)\n",
+      "backends": {
+        "c": {
+          "accepted": false,
+          "error": "compile error (line 1): range() step must be a positive integer literal\n    for i in range(3,0,-1):\n                       ^"
+        },
+        "direct": {
+          "accepted": false,
+          "error": "compile error (line 1): range() step must be a positive integer literal\n    for i in range(3,0,-1):"
+        }
+      }
+    },
+    {
+      "case": "function_input",
+      "source": "def read():\n    return int(input())\nprint(read())\n",
+      "backends": {
+        "c": {
+          "accepted": false,
+          "error": "compile error (line 2): int(input()) is supported only in module-level code (including loops and conditions), not inside functions\n    return int(input())\n           ^"
+        },
+        "direct": {
+          "accepted": false,
+          "error": "compile error (line 2): int(input()) is only supported in top-level code\n    return int(input())"
+        }
+      }
+    },
+    {
+      "case": "runtime_fstring",
+      "source": "x = 5\nprint(f\"{x}\")\n",
+      "backends": {
+        "c": {
+          "accepted": false,
+          "error": "compile error (line 2): f-string parts must be compile-time constant; runtime f-strings are unsupported (use separate print arguments)\n    print(f\"{x}\")\n             ^"
+        },
+        "direct": {
+          "accepted": false,
+          "error": "compile error (line 2): runtime f-strings are unsupported; pass integer values as separate print() arguments or use putchar(codepoint)\n    print(f\"{x}\")"
+        }
+      }
+    },
+    {
+      "case": "tuple_unpacking",
+      "source": "a,b=1,2\nprint(a,b)\n",
+      "backends": {
+        "c": {
+          "accepted": false,
+          "error": "compile error (line 1): unsupported assignment target: Tuple (tuple/attribute/subscript assignment is not supported)\n    a,b=1,2\n    ^"
+        },
+        "direct": {
+          "accepted": false,
+          "error": "compile error (line 2): name 'a' is not defined\n    print(a,b)"
+        }
+      }
+    }
+  ],
+  "mc_determinism_spot_checks": [
+    {
+      "seed": "0",
+      "hashes": {
+        "c": "fc337717df22fa3c171941322a85dd152fe6bbe7894ae60783515ef7741ebfc2",
+        "direct": "735aae4d9d7770f20aa06c2fe24d451b2a1e5152268e1797866076485b788d19"
+      }
+    },
+    {
+      "seed": "1",
+      "hashes": {
+        "c": "fc337717df22fa3c171941322a85dd152fe6bbe7894ae60783515ef7741ebfc2",
+        "direct": "735aae4d9d7770f20aa06c2fe24d451b2a1e5152268e1797866076485b788d19"
+      }
+    },
+    {
+      "seed": "7",
+      "hashes": {
+        "c": "fc337717df22fa3c171941322a85dd152fe6bbe7894ae60783515ef7741ebfc2",
+        "direct": "735aae4d9d7770f20aa06c2fe24d451b2a1e5152268e1797866076485b788d19"
+      }
+    },
+    {
+      "seed": "random",
+      "hashes": {
+        "c": "fc337717df22fa3c171941322a85dd152fe6bbe7894ae60783515ef7741ebfc2",
+        "direct": "735aae4d9d7770f20aa06c2fe24d451b2a1e5152268e1797866076485b788d19"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "operand_snapshot",
+      "priority": "P0",
+      "status": "native_reproduced",
+      "area": "both Python frontends",
+      "problem": "Earlier operands and function arguments remain variable locations instead of captured values when later calls mutate globals; augmented assignment has the same problem.",
+      "example": "g = 7; g + change() where change sets g=12 and returns 3",
+      "expected": 10,
+      "observed": 15,
+      "locations": [
+        "malbolge/compiler/py2mg.py:399",
+        "malbolge/compiler/py2mg.py:525",
+        "malbolge/compiler/py2c.py:379",
+        "malbolge/compiler/py2c.py:485"
+      ],
+      "proposal": "A shared value-snapshot/liveness contract for arithmetic, comparisons, calls, assignments, and future tuple lowering; differential side-effect regressions."
+    },
+    {
+      "id": "short_circuit",
+      "priority": "P0",
+      "status": "native_reproduced",
+      "area": "direct BoolOp and both chained-comparison paths",
+      "problem": "Direct and/or evaluates all operands. Both frontends evaluate every chained-comparison operand before testing earlier comparisons.",
+      "example": "if 0 and touch(): pass; if 2 < 1 < touch(): pass",
+      "expected": "touch is not called",
+      "observed": "direct invokes touch for both; c invokes touch for the chained comparison",
+      "locations": [
+        "malbolge/compiler/py2mg.py:610",
+        "malbolge/compiler/py2mg.py:662",
+        "malbolge/compiler/py2c.py:598"
+      ],
+      "classification": "Direct non-short-circuit behavior is also a documented v0 limitation; the existing claim of identical backend semantics is too broad.",
+      "proposal": "Lazy branch lowering with operands evaluated only when reached; preserve Python and/or operand-return semantics or explicitly distinguish the documented boolean-normalization contract."
+    },
+    {
+      "id": "range_iteration",
+      "priority": "P0",
+      "status": "native_reproduced",
+      "area": "both For lowerers",
+      "problem": "Range bounds are not always frozen before binding the loop target; changing a bound or assigning to the target changes iteration. Loop exit exposes the incremented target rather than Python's final target value.",
+      "examples": [
+        "limit=3; for i in range(limit): ...; limit=0",
+        "i=5; for i in range(0,i): ...",
+        "for j in range(3): ...; j=10",
+        "i=99; for i in range(3): pass; putchar(48+i)"
+      ],
+      "expected_final_loop_target": 2,
+      "observed_final_loop_target": 3,
+      "locations": [
+        "malbolge/compiler/py2mg.py:1154",
+        "malbolge/compiler/py2c.py:955"
+      ],
+      "proposal": "Capture range arguments before target binding; keep a hidden iterator independent of the visible loop variable; guard overflow and descending-range termination."
+    },
+    {
+      "id": "comparison_assignment_alias",
+      "priority": "P0",
+      "status": "native_reproduced",
+      "area": "c frontend",
+      "example": "x=9; x=x>5",
+      "expected": 1,
+      "observed": 0,
+      "problem": "The destination is zeroed as a boolean flag before its old value is read in the comparison.",
+      "locations": [
+        "malbolge/compiler/py2c.py:699"
+      ],
+      "proposal": "Evaluate the complete RHS into a fresh value before storing to the assignment destination."
+    },
+    {
+      "id": "memory_seed_snapshot",
+      "priority": "P0",
+      "status": "debugger_public_api_reproduced",
+      "area": "SparseMemory and debugger reset",
+      "problem": "Default-fill seeds are read from mutable source cells when first materialized. Shared derived caches then contaminate copies and reset snapshots. Looking at memory before a step can change later observed memory. Reinitialization also leaves old explicit cells behind.",
+      "locations": [
+        "malbolge/core.py:161",
+        "malbolge/core.py:181",
+        "malbolge/core.py:271"
+      ],
+      "proposal": "Freeze initialization seeds independently of mutations; share only caches derived from immutable initialization; clear overlays on reinitialization. Integrate with, but do not postpone correctness behind, compact memory storage."
+    },
+    {
+      "id": "definite_assignment_and_validation",
+      "priority": "P1",
+      "status": "acceptance_reproduced",
+      "area": "front-end validation contract",
+      "problem": "C accepts self-initialization and possibly-unbound names after conditionals/empty loops; direct rejects them. Direct also rejects proven constant-true binding. Both accept a global declaration after prior use that CPython rejects.",
+      "locations": [
+        "malbolge/compiler/py2c.py:672",
+        "malbolge/compiler/py2c.py:707",
+        "malbolge/compiler/py2mg.py:1282"
+      ],
+      "proposal": "Separate declarations from assigned-value state, merge branch/loop binding states, and use a Python compile-time syntax validation pass; unify the accepted-subset contract."
+    },
+    {
+      "id": "output_file_integrity",
+      "priority": "P1",
+      "status": "cli_reproduced_in_tmp_only",
+      "area": "compiler CLI",
+      "problem": "An output path may overwrite the Python input; failed output writes leak tracebacks, and output is written directly rather than replaced atomically.",
+      "locations": [
+        "malbolge/compiler/cli.py:39"
+      ],
+      "proposal": "Preflight same-file/output collisions and parent paths; write a temporary file then atomically replace; format file/encoding errors without raw traceback."
+    },
+    {
+      "id": "compact_runtime_storage",
+      "priority": "P1",
+      "status": "previous_turn_measured",
+      "area": "source parsing, SparseMemory, debugger copies",
+      "problem": "Large compiled input uses a Python list and per-address dict, and debugger initialization copies the dict. The final Fibonacci artifact could not finish under the bounded 4GiB Python CLI benchmark.",
+      "locations": [
+        "malbolge/core.py:161",
+        "malbolge/core.py:350",
+        "malbolge/debugger.py:311"
+      ],
+      "proposal": "Compact source parsing plus typed mutable blocks or byte backing with a wide-word fallback, immutable fill seeds, and copy-on-write snapshots. A naive per-cell write dict can grow again because executed instructions self-modify."
+    },
+    {
+      "id": "test_and_diagnostic_quality",
+      "priority": "P1",
+      "status": "coverage_gap_and_spot_check",
+      "area": "tests, CLI and diagnostics",
+      "problem": "Passing pure-value unit tests do not expose side-effect and iterator errors. Some e2e helpers check only stdout. Tuple-unpacking errors may point to a later use rather than the unsupported assignment.",
+      "proposal": "CPython/c/direct differential cases with side effects and cache-access order; check exit/stderr/stop reason; deterministic hash-seed canaries and original-source diagnostics.",
+      "positive_observation": "Both backends produced stable MC hashes under four PYTHONHASHSEED values in the spot check."
+    },
+    {
+      "id": "qol_language_extensions",
+      "priority": "P2",
+      "status": "currently_rejected_or_documented_divergence",
+      "area": "Python-facing language subset",
+      "items": [
+        "function-scope int(input())",
+        "runtime f-strings",
+        "fixed-arity tuple assignment and swaps",
+        "descending range and simple keyword arguments",
+        "consistent missing-return/None, runtime zero division, unsigned/signed and EOF contracts"
+      ],
+      "proposal": "Add inexpensive AST lowering after the core value/iteration contracts are fixed, rather than requiring source-level helpers or silently accepting incorrect semantics."
+    },
+    {
+      "id": "compiler_and_debugger_cost",
+      "priority": "P2",
+      "status": "code_inspection_and_isolated_measurement",
+      "area": "arithmetic helpers, compilation, history",
+      "problem": "Small constant multiplies still inject a generic helper; its bit powers are recomputed in nested loops. The compiler retains full intermediate strings. Debug history evicts via list.pop(0).",
+      "proposal": "Constant strength reduction and helper specialization, cached/streamed stages, circular history and output deltas; measure end-to-end before claiming speedups.",
+      "history_microbenchmark": {
+        "operations": 200000,
+        "history_length": 10000,
+        "list_seconds": 0.23782970802858472,
+        "deque_seconds": 0.008224999997764826,
+        "scope": "Isolated history-container maintenance, not a debugger speedup measurement."
+      }
+    }
+  ],
+  "limits": [
+    "Known layout-dependent compiler counterexamples were inspected but their gated slow reproductions were not rerun; their status after recent code-generation changes needs separate validation.",
+    "The original-Malbolge examples suite, Python-frontend large e2e suites, web/UI journeys, and every resource/termination edge case were not exhaustively verified. Assembler and compiled-fixture conformance received an additional 17 passing tests.",
+    "The new correctness counterexamples do not invalidate the previously measured Fibonacci inputs, which have separate validated artifacts."
+  ],
+  "source_hashes": {
+    "malbolge/core.py": "d4b596190824279211a3743a806f843a0c48d8215019211bae159f7640ddd7d4",
+    "malbolge/compiler/py2c.py": "40b81576cd808efca7bcd0350d19a9d665e269d2ee58b0ee9b197ccb1cc32c63",
+    "malbolge/compiler/py2mg.py": "6a3d6728a432e57db913a0a5988b24abe55cfccfe2ac6842130959ae323c9b74",
+    "malbolge/compiler/cli.py": "a4e8240e7c2f8db318bca384191f987d32cc1b99db601aacbed97d12d3bfc842",
+    "malbolge/debugger.py": "1aa4450e1a1dec6a5b87837f7f971ece0603ec7252b413334efa476f969c4114"
+  },
+  "additional_assembler_and_fixture_regression": {
+    "passed": 17,
+    "subtests_passed": 67,
+    "elapsed_seconds": 21.35,
+    "modules": [
+      "test_mc2mb.py",
+      "test_mg_pipeline.py",
+      "test_examples_manifest.py"
+    ]
+  },
+  "total_existing_tests_passed_this_audit": 572,
+  "additional_acceptance_cases": [
+    {
+      "source": "x=65\ndef f():\n    putchar(x)\n    global x\nf()\n",
+      "cpython": "SyntaxError: name x used prior to global declaration, line 4",
+      "c": "accepted",
+      "direct": "accepted"
+    },
+    {
+      "source": "if 1:\n    x = 65\nputchar(x)\n",
+      "cpython": "prints A",
+      "c": "accepted",
+      "direct": "rejected: x may be used before assignment"
+    },
+    {
+      "source": "return 5\nputchar(65)\n",
+      "cpython": "SyntaxError",
+      "c": "rejected",
+      "direct": "rejected"
+    }
+  ],
+  "resolution": {
+    "date": "2026-10-08",
+    "report": "python-qos-validation.json",
+    "groups": {
+      "operand_snapshot": "implemented_and_verified",
+      "short_circuit": "implemented_and_verified",
+      "range_iteration": "implemented_and_verified",
+      "comparison_assignment_alias": "implemented_and_verified",
+      "memory_seed_snapshot": "implemented_and_verified",
+      "definite_assignment_and_validation": "implemented_and_verified",
+      "output_file_integrity": "implemented_and_verified",
+      "compact_runtime_storage": "implemented_and_verified",
+      "test_and_diagnostic_quality": "implemented_and_verified",
+      "qol_language_extensions": "implemented_and_verified",
+      "compiler_and_debugger_cost": "implemented_and_verified"
+    },
+    "note": "Original audit evidence and source hashes above remain an immutable historical snapshot; this resolution links the verified changes."
+  }
+}

@@ -4,12 +4,14 @@
 
 > Object of specification: `malbolge/compiler/py2c.py` (the front-end that
 > translates the Python subset into the Nagoya high-level C subset, function
-> `compile_python_to_c`). This document treats the **source-level behaviour** of
-> that file as the single source of truth and checks every clause against it; it
+> `compile_python_to_c`). The original audit treats the **source-level behaviour** of
+> that file as its source of truth; the decimal I/O amendments cover both frontends. It
 > does not settle for the overview-level description in
 > `docs/design/highlevel-to-malbolge.md` §5.
-> Version: v1 (state at commit `02c0b82`, 957 lines). The diagnostic audit
-> methodology and its full results are in the appendix.
+> Version: v1, amended 2026-10-08 for runtime unsigned decimal I/O and Python QoS fixes in both
+> `py2c.py` and `py2mg.py` (§1.7–1.9). Earlier source line references and the
+> appendix audit describe the historical `02c0b82` snapshot (957 lines); they
+> are retained as historical evidence, not current source locations.
 
 ## 0. Terminology and scope
 
@@ -17,7 +19,8 @@
   raising.
 - "reject": raises `malbolge.compiler.CompileError`, carrying `lineno`/`col`
   and a readable `message`, and leaks no native Python traceback.
-- This document covers **only the py2c front-end stage**. The downstream stages
+- The original audit covers **the py2c front-end stage**; the decimal I/O
+  contract in §1.7–1.8 applies to both Python frontends. The downstream stages
   `c2mg.py` (→ .mg), `mg2mc.py` (→ .mc) and `mc2mb.py` (→ .mb) have their own
   error types (`C2MgError` etc.) and fall outside this specification. The
   diagnostic audit in the appendix does, however, flag cases where "py2c ought
@@ -39,7 +42,7 @@
 | Top-level statement form | Handling |
 |---|---|
 | `ast.FunctionDef` | Registered as a user function (see §1.3); MUST NOT appear inside the synthesized `main()` |
-| `Expr(Constant(str))` that is the **first** matching statement in the file | Module docstring, skipped (no code generated); in practice, however, this `elif` swallows *any* top-level string-constant expression statement, not just the first one — see the divergence table in §2 |
+| `Expr(Constant(str))` as the first statement | Module docstring, skipped; bare strings outside module/function docstring position are rejected |
 | `ast.Import` / `ast.ImportFrom` | Rejected: `"'import' is unsupported"` |
 | `ast.ClassDef` | Rejected: `"class definitions are unsupported"` |
 | Any other statement | Collected into `module_body` and compiled statement by statement as the body of the synthesized `main()` (subject to the statement subset in §1.2) |
@@ -56,16 +59,16 @@ below, each with its restrictions:
 
 | AST node | Method | Accepted forms and restrictions |
 |---|---|---|
-| `Assign` | `_stmt_Assign` | Targets MUST all be bare `ast.Name` (otherwise reported by target type name: "unsupported assignment target: {Tuple|Attribute|Subscript|...}"); chained `a = b = c = expr` is supported (evaluated once, copied to the remaining targets) |
-| `AnnAssign` | `_stmt_AnnAssign` | Target MUST be an `ast.Name`; the annotation itself is **entirely ignored** (no type checking); the bare form `x: int` with no initializer only declares and does not validate binding state (see divergence D9 in §2) |
-| `AugAssign` | `_stmt_AugAssign` | Target MUST be a bare `ast.Name`; operators limited to `+= -= *= //= %=` (anything else reports "unsupported augmented operator"); `/=` gets its own "true division ... unsupported" message |
-| `Expr` | `_stmt_Expr` | Only two valid payloads: a `putchar(x)` call (single argument, no keyword arguments) and any expression `lower()` accepts (evaluated, result discarded — including the pure no-op of a bare literal or bare variable name) |
+| `Assign` | `_stmt_Assign` + shared normalization | Bare-name targets or matching flat tuple-name targets with an explicit fixed-arity flat tuple RHS; tuple swaps and chained tuple-target groups are lowered to temporaries, not runtime tuple objects. The complete RHS is evaluated/captured before any target is written; ordinary chained `a = b = expr` evaluates once |
+| `AnnAssign` | `_stmt_AnnAssign` | Target MUST be a bare name; annotations are ignored. A bare `x: int` does not bind a value, and later reads must still pass definite-assignment checks |
+| `AugAssign` | `_stmt_AugAssign` | Bare-name target; `+= -= *= //= %=` only. Capture the old target value before evaluating the RHS, even if a call there mutates that variable. Runtime zero divisors follow §1.9 |
+| `Expr` | `_stmt_Expr` | `putchar(x)` and `print(...)` calls are accepted as statements; other expressions accepted by `lower()` are evaluated and discarded (including bare numeric literals and variable names) |
 | `If` | `_stmt_If` | `test` goes through condition materialisation (§1.4); `elif` is a nested `If` at the AST level and is therefore supported for free |
 | `While` | `_stmt_While` | `while...else` is not supported (rejected); the condition is evaluated once at loop entry and once at the end of each iteration of the body |
-| `For` | `_stmt_For` | Only the form `for <Name> in range(...)`; `for...else` is not supported; `range()`'s `start`/`stop` MAY be arbitrary expressions, but `step` MUST be a **compile-time positive integer literal** (`ast.Constant(int)`, non-negative, not a bool) |
-| `Return` | `_stmt_Return` | A valueless `return` emits `return 0;`; a `return` with a value emits `return <expr>;`; **the "return outside a function" check is dead code — see semantic divergence D10 in §2** |
+| `For` | `_stmt_For` | Only `for <Name> in range(...)`; no loop `else`. Bounds are evaluated/captured once, before target binding. The step MUST be a nonzero integer literal, including a negative literal. A hidden iterator isolates traversal from assignments to the visible target; empty loops preserve any prior target value, and nonempty loops leave the last value assigned by the body. Unsigned-bound/descending-limit details are in §1.9 |
+| `Return` | `_stmt_Return` | Integer-valued returns are supported. Bare `return`, `return None`, and fallthrough are permitted for discarded void calls only; scalar use of a function that may return None is rejected (§1.9). Module-level return is rejected |
 | `Pass` | `_stmt_Pass` | no-op |
-| `Global` | `_stmt_Global` | MAY only appear inside a function body (the synthesized `main()` also counts as "inside a function body", so a module-level `global x` is syntactically accepted and semantically a no-op — see §2); **does not check whether the name collides with a parameter** (divergence D12 in §2) |
+| `Global` | `_stmt_Global` | Global declarations may not conflict with parameters or follow a prior use/assignment of the same name in that scope; Python syntax validation rejects such conflicts at the original source line |
 | `Break` | `_stmt_Break` | **Accepted since batch 1 (2026-07-23)**: only inside a loop body (`while`/`for`), implemented by flag lowering (each loop containing break/continue is given two flags, `skip` and `brk`, and every statement in the loop body is wrapped in an `if(skip==0)` guard); nested loops get independent flags, and `break` terminates only the innermost loop and skips the `for` step; use outside a loop is rejected: `"'break' outside loop"` |
 | `Continue` | `_stmt_Continue` | As above; `continue` skips the rest of the current iteration, but the `for` step **still executes**; rejected outside a loop |
 | `FunctionDef` (nested) | `_stmt_FunctionDef` | Unconditionally rejected: `"nested function definitions are unsupported"` |
@@ -100,17 +103,20 @@ rejection branch: `"unsupported statement: {TypeName}"`.
   see the audit entry `sem_func_named_main_case_variant` in the appendix.
 - Redefining the same function name is rejected: `"function {!r} is already
   defined"`.
-- **Not checked**: parameter/return type annotations (ignored outright, neither
-  validated nor reported), `decorator_list` (entirely ignored, divergence D11 in
-  §2), `is_async` (`AsyncFunctionDef` is a distinct node type that does not match
-  `ast.FunctionDef` and therefore falls to the generic statement rejection of
-  §1.2).
+- Parameter/return annotations are ignored. Decorators are rejected;
+  `AsyncFunctionDef` remains unsupported. Calls support simple positional and
+  named arguments for fixed signatures; defaults and unpacking are rejected.
 - The statement subset inside a function body is the same as §1.2; nested `def`
   is not allowed (already listed in §1.2).
 - All user functions are registered **before** any function body is compiled, so
   mutual calls are not constrained by definition order in the source (including
   direct and indirect recursion); the generated C source emits a forward
   prototype for every user function.
+
+Source call spelling is case-sensitive: `foo()` does not resolve to
+`FOO()`. Case-normalized target-name collisions remain rejected at definition.
+Target-reserved function names such as `end` are rejected at the original
+source definition line, before generated target code exists.
 
 ### 1.4 Expressions
 
@@ -120,28 +126,27 @@ types not listed here (`List`, `Dict`, `Set`, `Tuple`,
 `Subscript`, `Slice`, `Starred`, `NamedExpr`, `Yield`/`YieldFrom`, `Await`,
 etc.) all fall to the generic rejection: `"unsupported expression:
 {TypeName}"`. `JoinedStr` (f-string) is the one exception: it is accepted
-**only in `print()` argument position** (all parts MUST be compile-time
-constants, see §1.7); everywhere else it keeps the "unsupported expression:
+**only in `print()` argument position** (literal text and integer-valued
+parts; conversion/format specifiers are rejected, see §1.7); everywhere else it keeps the "unsupported expression:
 JoinedStr" rejection.
 
 | AST node | Accepted form |
 |---|---|
 | `Constant` | See the constants sub-table in §1.5 |
-| `Name` (`Load` context) | Accepted once it passes `check_var_name`; **binding is not checked** (divergences D6/D7/D8/D9 in §2); other contexts such as `Store`/`Del` reaching this point report "unsupported name context" (a theoretical branch — in practice assignment targets take separate paths such as `_stmt_Assign` and never come through here) |
+| `Name` (`Load` context) | The name MUST be legal and definitely assigned at that read. Branch/loop uncertainty is checked conservatively; compile-time literal truth uses the unsigned word ring |
 | `BinOp` | See the operator sub-tables in §1.5; constant expressions that can be folded at compile time are folded directly into integer literals (mod 3**20), otherwise the expression is lowered to three-address form (at most one binary operation) |
 | `UnaryOp` | `+x` returns `lower(x)` unchanged; `not x` goes through condition materialisation; `-x`/`~x` are rejected (see §1.5) |
-| `BoolOp` (`and`/`or`) | Condition materialisation, short-circuit evaluation, implemented with nested `if/else` |
-| `Compare` | Condition materialisation; comparators limited to `< <= > >= == !=` (see §1.5); chained comparisons `a < b < c` are supported (lowered to `(a<b) && (b<c)`, each operand evaluated exactly once); `is`/`is not`/`in`/`not in` are rejected while iterating `node.ops`, i.e. **before any operand is lowered**, so an illegal operand cannot produce an unrelated error message |
+| `BoolOp` (`and`/`or`) | Lazy evaluation that returns the selected operand value, as Python does; it is not normalized to 0/1 merely because it is a boolean operation |
+| `Compare` | `< <= > >= == !=`; comparison results materialize as 0/1. Chained comparisons evaluate each reached operand once, capture shared middle values, and evaluate a later operand only if earlier comparisons passed. `is`/`is not`/`in`/`not in` remain rejected |
 | `Call` | See the built-ins in §1.7 and user function calls in §1.3 |
 | `IfExp` (`a if c else b`, new in batch 1) | Materialised as a temp plus a real two-branch `if/else`, with **lazy evaluation**: only the side effects of the selected branch (e.g. function calls) occur |
 
-**Condition materialisation**: any expression with boolean semantics
-(comparisons, boolean operations, `not`, the `test` of `while`/`if`) is never
-stored into a variable as a "comparison result value". Instead, control flow of
-the shape `flag = 0; if(cond){ flag = 1; }` materialises the result into an
-`int` variable taking the value 0 or 1. This works around the known breakage of
-the downstream C subset's `bool`/`true`/`false` type system (see
-`docs/design/highlevel-to-malbolge.md` §5, "Implementation notes").
+**Condition materialisation**: comparisons and `not` materialize integer
+0/1 when a value is required, avoiding the downstream C bool type. `and`/`or`
+retain operand-return semantics and branch lazily. In any condition, zero is
+false and a nonzero unsigned word is true. Earlier expression operands and
+call arguments are captured before later side effects can change their
+source variables.
 
 ### 1.5 Constant and operator sub-tables
 
@@ -152,9 +157,9 @@ the downstream C subset's `bool`/`true`/`false` type system (see
 | `bool` (`True`/`False`) | Folded to the integers `1`/`0` (no `bool`/`true`/`false` is emitted, see §2) |
 | `int`, `v >= 0` | Folded to `v % MOD` |
 | `int`, `v < 0` | Rejected (see the "negative numbers" paragraph below) |
-| `str` | Rejected in general expression position: `"string literals are unsupported ..."`. **Two exceptions** (batch 1): the single-character argument of `ord('c')`; string literals in `print()` argument / `sep=` / `end=` position (expanded at compile time, see §1.7). See also the docstring position rule in §1.2: the first bare string of a module or function body is silently ignored |
+| `str` | Rejected in general expression position: `"string literals are unsupported ..."`. **Three exceptions**: the single-character argument of `ord('c')`; string literals in `print()` argument / `sep=` / `end=` position (expanded at compile time, see §1.7); a literal prompt inside `int(input("prompt"))`. See also the docstring position rule in §1.2: the first bare string of a module or function body is silently ignored |
 | `float` | Rejected: `"floating-point values are unsupported"` |
-| Others (`bytes`, `complex`, `Ellipsis`, `None`, …) | Rejected, falling to the generic branch `"unsupported constant: {!r}"` |
+| Others (`bytes`, `complex`, `Ellipsis`, `None`, …) | Rejected as scalar constants; `return None` is the explicit void-return exception (§1.9) |
 
 **Binary operators (`ast.BinOp.op`)**, `_binop`/`_fold`/`_binop_emit`
 (`py2c.py:280-333`):
@@ -163,8 +168,8 @@ the downstream C subset's `bool`/`true`/`false` type system (see
 |---|---|---|
 | `+` `-` | Yes | Emitted directly as `+`/`-`; the result is reduced mod 3**20 (subtraction relies on Python `%`'s non-negative semantics, which matches the value ring naturally) |
 | `*` | Yes | Computed directly when compile-time foldable; otherwise the `zzmul` helper is injected on demand (doubling method, ~32 additions) |
-| `//` | Yes | As above, injecting `zzdiv` (long division); **during constant folding**, division by zero is rejected (`"integer division or modulo by zero"`); **at runtime** (non-constant), division by zero is not rejected — `zzdiv` is defined to return 0 (see §2) |
-| `%` | Yes | Same as `//`, injecting `zzmod`; modulo by zero is rejected during constant folding, and at runtime returns the dividend itself (`zzmod` semantics) |
+| `//` | Yes | Constant-folded or lowered to division helpers. Known zero divisors raise CompileError; a dynamic zero divisor sets the shared runtime error flag and unwinds to main (§1.9), instead of silently returning 0 |
+| `%` | Yes | Constant-folded or lowered to remainder helpers. A zero divisor follows the same compile-time/runtime error contract as `//` |
 | `/` | No | Rejected: `"true division '/' is unsupported; use floor division '//' ..."` |
 | `**` `&` `\|` `^` `<<` `>>` | No | Rejected: `"unsupported binary operator: {Pow|BitAnd|BitOr|BitXor|LShift|RShift}"` |
 
@@ -182,7 +187,8 @@ the downstream C subset's `bool`/`true`/`false` type system (see
 `< <= > >= == !=` are accepted; `is`, `is not`, `in`, `not in` are rejected
 (`"comparison operator {Is|IsNot|In|NotIn} is unsupported"`).
 
-**Negative numbers**: v1 **statically rejects** negatives on both paths —
+**Negative numbers**: outside the explicit `range()` literal-bound/step
+exceptions in §1.9, v1 **statically rejects** negatives on both paths —
 literals and the unary minus (the value ring has no notion of "negative" to
 begin with; `3 - 5` folds to a very large positive number rather than -2). There
 is no other route to producing a negative value (subtraction results themselves
@@ -216,10 +222,10 @@ parameter names, function names (function names additionally pass through
 5. Additional checks for function names: see the case-insensitive uniqueness
    check and `RESERVED_FUNCS` in §1.3.
 
-**Unrestricted** (legal) examples: `print`, `range`, `ord`, `chr`, `while_` and
-`INT` (all caps) are all legal as **variable names**; but using these built-in
-call names as **function names** leads to the "definable but not callable" trap
-— see §2 and the appendix `defects.md` B3-B6.
+**Unrestricted** (legal) variable-name examples include `print`, `range`,
+`ord`, `chr`, `input`, `while_` and `INT`. Built-in call names, including
+`input` and `int`, are reserved as user-function names; the former
+"definable but not callable" defect is fixed (D13).
 
 ### 1.7 Built-in functions (available only inside `Call` nodes)
 
@@ -233,24 +239,84 @@ computed callees)"):
 | `getchar()` | Yes | Zero arguments, no keyword arguments (otherwise `"getchar() takes no arguments"`) |
 | `ord(c)` | Yes, but `c` MUST be a **compile-time literal** and a string constant of length exactly 1 (`ast.Constant(str)`); folded to `ord(c) % MOD` at compile time | A non-literal argument reports "... (evaluated at compile time)"; length ≠ 1 reports "expects a single character" |
 | `chr(x)` | No | Rejected: `"chr() is unsupported; emit characters with putchar(codepoint)"` |
-| `print(...)` | **Partially accepted since batch 1 (2026-07-23)**: compile-time constant arguments only | Accepted: string literals, constant-foldable int expressions, f-strings whose parts are all constant (parts may be text, foldable ints, or string literals; a part with a conversion or `format_spec` is rejected); `sep=`/`end=` accept constant strings only (defaults `" "`/`"\n"`); with no arguments only `end` is emitted. Rendering: the rendered arguments are joined with `sep`, `end` is appended, and the result is emitted character by character with putchar; an int renders as the decimal form of its folded mod-3**20 value (see D17 in §2); a character codepoint > 255 is rejected. **Runtime (non-constant) arguments are rejected**, with a message pointing to putchar and noting support in a future version; `print()` used as an expression value is rejected |
+| `print(...)` | Accepted as a statement: unsigned integer expressions, string literals and basic f-strings | Mix arguments freely; f-string pieces are literal text or integer expressions, evaluated once left to right. `!r`/`!s`/`!a` and format specifications are rejected. `sep=`/`end=` MUST be static string literals (defaults `" "`/`"\n"`). All argument values are captured before this print emits text. Codepoints above 255 and expression-valued `print()` are rejected |
+| `int(input())` / `int(input("prompt"))` | Accepted in module and user-function scope | Parses unsigned ASCII decimal; optional prompt MUST be a literal string with codepoints `0..255`. No input keywords. Errors propagate through callers and are reported once by main; see §1.8–1.9 |
+| `input()` / other `int(...)` forms | Rejected | Raw string-valued input and general integer conversion are unsupported; the nested `int(input(...))` form is the only accepted conversion |
 | `range(...)` | Only as a `for` loop header | Calling `range(...)` in any other expression position is rejected: `"range() is only valid in a 'for' loop header"` |
-| User function name | Yes | MUST already be registered in `self.functions`; keyword arguments are not allowed; the argument count MUST match the parameter count exactly (otherwise "{}() takes {} argument(s) but {} given") |
+| User function name | Yes | Fixed-signature positional and simple keyword arguments; all supplied expressions are evaluated/captured in source order before values are permuted into parameter order. Missing/duplicate/unknown arguments and `*`/`**` unpacking are rejected |
 | Any other name (unregistered user function) | No | `"call to undefined function {!r}"` |
 
-**Trap** (detailed in §2 and the appendix): the six names
-`putchar`/`getchar`/`ord`/`chr`/`print`/`range` are matched in `_call()`
-**before** the check for "is this a registered user function". If a user names
-their own function `print`/`range`/`ord`/`chr` (`putchar`/`getchar` are stopped
-earlier, at registration, by `RESERVED_FUNCS`), the definition itself succeeds,
-but **every** call to it is intercepted by the built-in special case and
-produces a misleading error that has nothing to do with the name collision.
+Built-in dispatch takes precedence over user-function lookup. Definitions
+using built-in call names are rejected at registration (D13); the older
+name-shadowing trap in the appendix is a historical, fixed defect.
+
+### 1.8 Runtime unsigned decimal I/O (2026-10-08)
+
+Both frontends inject decimal helpers only when the source uses runtime
+integer output or `int(input(...))`. The source program needs no explicit
+`getchar()`/`putchar()` conversion code or helper definitions.
+
+- `print(x)` renders the current unsigned ring value in `0..3486784400`,
+  including zero, with no sign or leading zeros. Runtime expressions and
+  function-call results are supported in both module and function scope.
+  Literal strings may surround numeric arguments, for example
+  `print("result", fib(n), sep=": ")` or `print(f"result: {fib(n)}")`.
+  Basic runtime integer f-strings are supported only as print arguments;
+  conversions and format specifications remain rejected.
+- Only `int(input())` and `int(input("literal prompt"))` are input forms.
+  They may occur in expressions, loops, and conditions in module or
+  user-function scope. The optional prompt is emitted before reading,
+  with no automatic newline. Raw `input()` strings, a variable prompt,
+  `int(x)`, `int("12")`, and alternate bases are rejected.
+- Input consumes a line through LF or EOF. The value MUST contain one or
+  more ASCII digits `0..9`, with an optional leading `+` and optional
+  surrounding ASCII space, tab, vertical tab, form feed, or CR. CR is
+  whitespace, not a separate line delimiter; CRLF is accepted. Whitespace
+  between the sign and digits or within the digits is invalid. Leading
+  zeros are accepted; negative signs, underscores, Unicode digits, and
+  values above `3486784400` are rejected at runtime, without wrapping.
+- EOF after a valid value completes it. Empty input, a whitespace-only
+  line, EOF before a value, invalid syntax, or overflow emits `error\n`
+  and halts the synthesized main function after immediate error propagation
+  through any user-function callers. Later operations do not execute. Earlier
+  side effects (including an input prompt) remain.
+  There is no Python `ValueError`/`EOFError` or exception machinery, and no
+  runtime string is constructed (see D18).
+
+### 1.9 Python QoS contracts (2026-10-08)
+
+- Flat tuple assignment requires matching bare-name targets and an explicit
+  flat tuple RHS, for example `a, b = b, a`. Values are captured before stores;
+  nested tuples, starred elements, and unpacking an arbitrary expression are
+  rejected. No runtime tuple/list object is introduced.
+- Simple keyword user-function calls preserve the source evaluation order,
+  then bind values to fixed parameters. Defaults, `*args`, `**kwargs`, and
+  duplicate/missing/unknown arguments are unsupported.
+- `range()` uses a frozen start/stop and a hidden iterator. Starts and
+  nonnegative bounds live in the unsigned ring. A negative literal step is
+  allowed; descending literal stop `-1` includes zero, while a descending
+  stop below `-1` or a negative initial start is rejected. For an ascending
+  range, a negative literal stop is clamped to zero, preserving start-argument
+  side effects. A step whose magnitude is at least `3**20` yields at most one
+  value; iteration checks bounds before an unsigned update could wrap.
+- Input failure and dynamic division/remainder by zero set a shared runtime
+  error flag. Functions return immediately and callers check that flag before
+  proceeding, transitively. Main alone emits `error\n` and halts; there is no
+  Python exception object/catching machinery. Known constant zero divisors
+  may instead be rejected at compile time.
+- A function with any reachable bare/None return or fallthrough may be called
+  as a discarded statement. Its result cannot be used in integer expressions,
+  conditions, arguments, assignment, or value returns. Proven value-returning
+  paths are accepted; unreachable literal branches are evaluated using word-
+  ring truth. Internal void return zeros are not a source-level value contract.
+- General signed integers, arbitrary runtime objects/strings, general `int()`
+  conversion and raw string-valued `input()` remain outside the subset.
 
 ---
 
 ## 2. Semantic divergence table (versus CPython)
 
-> Numbering note: `D1`-`D16` in this section is this document's own divergence
+> Numbering note: `D1`-`D19` in this section is this document's own divergence
 > numbering; it is a separate scheme from `defects.md`'s independently numbered
 > `C1`-`C5` (silently-accepted defects) and `B1`-`B6` (poor-diagnostic-quality
 > defects) — `defects.md` orders defects by severity, whereas this table orders
@@ -261,10 +327,10 @@ produces a misleading error that has nothing to do with the name collision.
 | # | Topic | CPython semantics | py2c v1 semantics | Classification |
 |---|---|---|---|---|
 | D1 | Integer ring | Arbitrary-precision signed integers | All integers live in the non-negative ring `mod 3**20`; the results of `+ - *`, literals and `ord()` results are all reduced | Design divergence (documented) |
-| D2 | Negative numbers | Supported | Unary minus and negative literals are **statically rejected**; there is no legal route to producing a negative value | Design divergence (documented) |
+| D2 | Negative values | Signed values are supported | Unary minus/negative literals are statically rejected except the explicit range-bound/step forms in §1.9; runtime arithmetic values remain unsigned | Design divergence (documented) |
 | D3 | `/` vs `//`/`%` | `/` is true division returning a float; `//`/`%` use floor semantics for negatives | Only `//`/`%` exist, performing long division on non-negative integers; `/` is rejected outright | Design divergence (documented) |
-| D4 | `bool` type | A distinct type; `True`/`False` are singletons | `bool`/`true`/`false` are never emitted (the downstream type system is known to be broken); boolean literals fold to `1`/`0`; the results of comparisons and boolean operations exist only in "materialised into an int variable" form and cannot be used as a standalone type | Design divergence (works around a downstream bug, documented) |
-| D5 | `getchar`/`putchar` and EOF | No corresponding built-ins; requires `sys.stdin`/`sys.stdout` | `getchar()` reads one character encoding, `putchar(x)` writes one character according to the encoding of `x`; **the EOF return value is not specified at the py2c level** — `getchar()` merely emits a call to the downstream `getchar()` C function, and the concrete EOF semantics are decided by the runtime (Malbolge20 reference implementation: `A=59049`, per the internal research log — private, not in this repo — B1); py2c itself performs no EOF-related conversion or validation | Design divergence + documentation gap (the v1 documentation does not mention the EOF value, see the TODO in the "Version notes" section) |
+| D4 | Boolean values | A distinct bool type; comparisons return bool; and/or return selected operands | Bool literals fold to 1/0; comparisons/not materialize integer 0/1, while and/or lazily return the selected unsigned operand. No standalone runtime bool object is emitted | Design divergence (downstream bool workaround) |
+| D5 | `getchar`/`putchar` and EOF | No corresponding built-ins; requires `sys.stdin`/`sys.stdout` | Raw `getchar()`/`putchar()` remain byte I/O; the Malbolge20 EOF sentinel is `59049`. The shared decimal-input helper recognizes that sentinel explicitly (§1.8), without changing raw `getchar()` results | Design divergence (documented) |
 | D6 | Reading an unbound variable (function scope) | `NameError`/`UnboundLocalError` (at runtime) | **Fixed (2026-07-22)**: the `Name` (Load) branch of `lower(Name)` now queries a "definitely assigned" set advanced in actual compilation order (`self.bound`; reads inside functions additionally admit any name already assigned at module level, see `_is_bound`); on a miss it raises `CompileError` ("name {!r} is used before it is assigned") with the accurate original Python line number and the identifier spelled exactly as the user wrote it — see `defects.md` B1/B2 (fixed) | Fixed (2026-07-22, formerly a class-B defect) |
 | D7 | Reading an unbound variable (module scope) | Same as above | **Fixed (2026-07-22)**: same mechanism as D6; inside the synthesized `main()` there is no fallback admission of "names already assigned at module level" (because `main()` *is* the sequential execution of module-level code), so the check is strictly in declaration order | Fixed (2026-07-22, formerly a class-B defect) |
 | D8 | Augmented-assignment target MUST be bound | `x += 1` with `x` undefined is a `NameError` | **Fixed (2026-07-22)**: `_stmt_AugAssign` queries the "definitely assigned" set before generating `x += ...;` and rejects an unbound target (see `defects.md` C3, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
@@ -273,10 +339,12 @@ produces a misleading error that has nothing to do with the name collision.
 | D11 | Decorators | Actually transform the function object | **Fixed (2026-07-22)**: `_register_function` now inspects `decorator_list` and rejects any non-empty decorator list (see `defects.md` C4, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
 | D12 | `global x` where `x` is also a parameter | `SyntaxError: name 'x' is parameter and global` | **Fixed (2026-07-22)**: `_stmt_Global` now compares against `self.params` and rejects on a match (see `defects.md` C5, fixed) | Fixed (2026-07-22, formerly a class-C defect) |
 | D13 | `range(...)`/`print(...)`/`ord(...)`/`chr(...)` as user function names | Legal, shadowing the built-in; calls go to the user function | **Fixed (2026-07-22)**: `check_func_name` gained a `BUILTIN_CALL_NAMES` reserved-word check that rejects at the function **registration** stage with an accurate line number, instead of letting it through to the call site where an off-topic error would be reported (see `defects.md` B3-B6, fixed) | Fixed (2026-07-22, formerly a class-B defect) |
-| D14 | Missing `return` at the end of a function | Implicit `return None`; if the caller uses the result as an integer, a runtime `TypeError` follows | The C function body has no trailing `return` statement, which under C semantics is undefined behaviour (if the return value is used); py2c neither statically checks "does every path return" nor injects a fallback `return 0;` | Known design gap (neither a CompileError nor a silent mistranslation, but a pass-through of C undefined behaviour; clarifying it or injecting a fallback `return` is recommended for v1.x, see the "Version notes" section) |
+| D14 | Missing/bare/None return | A discarded call is allowed; scalar use may later fail depending on its result | Discarded void calls are accepted, but scalar use of any function that may return None/fall through is rejected at the original call; internal zero returns are not observable source values | Deliberately stricter subset contract (§1.9) |
 | D15 | Identifiers: non-ASCII / leading underscore | Legal (Python 3 identifier rules) | Rejected (only `[a-zA-Z][0-9a-zA-Z_]*`, entirely ASCII, is accepted) | Design divergence (downstream C lexical restriction, documented) |
 | D16 | Module docstring skipping rule | A string constant is a docstring only as the **first** statement (bare string statements elsewhere are merely evaluated and discarded — semantically equivalent but conceptually different) | **Tightened (2026-07-23, batch 1)**: only the **first** bare string of a module or function body is silently ignored as a docstring, aligning with CPython's docstring concept; bare string statements anywhere else are now **rejected** (CPython evaluates and discards them) — this moves from "over-broad acceptance" to "explicit rejection" and counts as a design divergence (a bare string has no producible effect in this subset, so rejecting beats staying silent) | Design divergence (since 2026-07-23, documented) |
 | D17 | `print()` rendering of constant integers | `print(3-5)` outputs `-2` (signed decimal) | Constant folding happens in the non-negative ring mod 3**20, so `print(3-5)` outputs `3486784398` (divergence D1 surfacing in print rendering); ordinary non-negative constants match CPython | Design divergence (a corollary of D1, documented; will disappear together with D2 once signed integers land) |
+| D18 | `int(input())` | General string input, signed arbitrary-precision conversion, Unicode digits/underscores, Python exceptions on invalid input or EOF | Only unsigned ASCII decimal forms in §1.8 are accepted, including function scope. Invalid/empty/overflow input propagates to main, which writes `error\n` and halts, with no runtime strings or Python exceptions | Design divergence (documented) |
+| D19 | Runtime zero divisor | Raises `ZeroDivisionError` | Dynamic `//` or `%` by zero propagates a flag to main, which writes `error\n` and halts; a known constant zero divisor is a compile error | Design divergence (§1.9) |
 
 **A verified "looks like a divergence, measurably isn't" counter-example**
 (methodology record): a function coexisting with a module-level global variable
@@ -342,11 +410,23 @@ into real assertions that act as a regression lock.
 
 ---
 
+The 2026-10-08 [QoS validation report](../notes/python-qos-validation.json)
+closes the [audit snapshot](../notes/python-qos-audit.json), including both
+compiler backends and portable project-VM execution. Historical appendix
+records below remain unchanged; this specification does not claim full Python
+semantics or signed/runtime-object support.
+
 ## 4. Version notes
 
-### v1 (current implementation, `py2c.py`) status
+### v1 implementation and dated amendments
 
 - See §1 for the complete accepted set and §2 for the divergence table.
+- 2026-10-08: both frontends support runtime unsigned integer `print()` and
+  `int(input([literal_prompt]))`, using on-demand shared decimal
+  helpers. Later QoS work adds function-scope input, basic runtime f-strings,
+  tuple/keyword lowering, lazy operand semantics and checked runtime errors
+  (§1.9, D14/D18/D19). Signed integers and runtime string objects remain
+  unsupported.
 - 2026-07-22: D6/D7/D8/D9/D10/D11/D12/D13 (`defects.md` C1-C5, B1-B6) were all
   fixed. How:
   - `_Compiler` gained a set of "definitely assigned" names advanced in
@@ -384,10 +464,9 @@ into real assertions that act as a regression lock.
     flipped into real assertions; the existing legal-program cases in
     `test/test_py2c.py` and `test/test_c2mg.py` are all unchanged (none of them
     relied on these formerly silently-accepted inputs).
-- D14 (missing return path) and D5 (EOF semantics undocumented at the py2c
-  level) remain "gaps" rather than confirmed mistranslations; adding a note or a
-  lightweight check in v1.x is recommended, and neither is in scope for this
-  round of fixes.
+- D14 now follows the strict possible-None result contract in §1.9. The former D5 EOF
+  documentation gap is clarified by the explicit sentinel and decimal-input
+  contract in §1.8.
 - 2026-07-23: **batch-1 syntactic sugar** was implemented in `py2c.py` (the 'c'
   backend) and `py2mg.py` (the 'direct' backend) in lock-step under the same
   semantic contract; both backends produce identical program output for the same
@@ -410,8 +489,8 @@ into real assertions that act as a regression lock.
   self-modification trap recorded in the internal research log (private, not in
   this repo), A3: flags must use branch-free accumulation plus a single SWITCH.
 
-### v2 planned items (**reserved fields** — none of the capabilities below are
-currently in the accepted set; any input attempting to use them **MUST continue
+### v2 planned items (**reserved fields** — unstruck capabilities below remain
+outside the accepted set; any input attempting to use them **MUST continue
 to be rejected under the §3 diagnostic contract** until the corresponding
 feature is actually implemented. Relaxing one of these checks before
 implementation without updating this document and the §1 accepted-set tables in
@@ -420,9 +499,10 @@ the same change counts as introducing a new class-C defect.)
 - **Signed integer semantics**: introduce an explicit two's-complement
   convention or a sign-bit representation, lifting the static rejection in the
   "negative numbers" paragraph of §1.5 and in D2 of §2.
-- **Runtime decimal `print`/`input`**: batch 1 (2026-07-23) already supports
-  **constant** print; decimal output of **runtime values** (a divmod-10 loop)
-  and `input()` parsing are still reserved and need new runtime support.
+- ~~**Runtime unsigned decimal I/O**~~ implemented 2026-10-08 for runtime
+  integer `print()` and `int(input(...))` in module/function scope, see §1.7–1.9.
+  General string-valued `input()` and signed conversion remain
+  outside the accepted set.
 - ~~**`break`/`continue`**~~ implemented in batch 1 (2026-07-23), see §1.2.
 - **Arrays / runtime strings**: `Subscript`/`Slice` and string **variables** are
   all still rejected (§1.4, §1.5; string **literals** were opened up in print/ord

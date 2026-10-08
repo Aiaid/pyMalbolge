@@ -1,6 +1,7 @@
 #!usr/bin/env python
 
 import sys
+from .core import MalbolgeConfig, RunResult, create_memory, parse_source, run_memory
 
 TABLE_CRAZY = (
     (1, 0, 0),
@@ -153,6 +154,16 @@ def eval(code, input=(), eof='stop'):
 
 # --------------------------------------------------
 
+def run(code, input_data=b"", *, max_steps=None, max_output=None,
+        eof="sentinel") -> RunResult:
+    """Run with byte I/O, explicit EOF policy, and optional resource limits."""
+    config = MalbolgeConfig.original()
+    memory = create_memory(config)
+    memory.initialize_source(parse_source(code, config))
+    return run_memory(memory, config, input_data, max_steps=max_steps,
+                      max_output=max_output, eof=eof)
+
+
 def main():
     """Command-line entry point for Malbolge interpreter."""
     if len(sys.argv) < 2:
@@ -164,8 +175,8 @@ def main():
     try:
         with open(filename, 'r') as p:
             source = p.read()
-    except IOError:
-        print('Unable to open the file')
+    except (OSError, UnicodeError) as error:
+        sys.stderr.write(f'error: cannot read {filename}: {error}\n')
         sys.exit(1)
 
     mem = [0] * POW10

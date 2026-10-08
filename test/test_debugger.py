@@ -927,3 +927,17 @@ class TestSeek(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestDebuggerFillSnapshot(unittest.TestCase):
+    def test_read_order_and_reset_do_not_change_initial_fill(self):
+        from malbolge.core import MalbolgeConfig
+        from malbolge.debugger import MalbolgeDebugger
+        for pre_read in (False, True):
+            debugger = MalbolgeDebugger("D'", config=MalbolgeConfig.malbolge20())
+            if pre_read:
+                self.assertEqual(debugger.read_memory_value(2), 1743392216)
+            debugger.step()
+            self.assertEqual(debugger.read_memory_value(2), 1743392216)
+            debugger.reset()
+            self.assertEqual(debugger.read_memory_value(2), 1743392216)

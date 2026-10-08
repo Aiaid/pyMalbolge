@@ -1,0 +1,574 @@
+{
+  "date": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "status": "verified",
+  "scope": "The eleven P0/P1/P2 finding groups from python-qos-audit.json; historical IR/layout/research roadmap directions are separate.",
+  "delegation": [
+    {
+      "worker": "C frontend",
+      "tasks": "C value/control-flow/validation/ergonomics/arithmetic lowering"
+    },
+    {
+      "worker": "Direct frontend and assembler",
+      "tasks": "Direct semantics/ergonomics plus compact byte-exact assembler storage"
+    },
+    {
+      "worker": "Runtime/debugger and documentation",
+      "tasks": "Frozen initialization, compact COW memory, bounded APIs/history, bilingual specifications"
+    },
+    {
+      "worker": "Primary integration",
+      "tasks": "Shared normalization, CLI integrity/cache/metrics, CI and integrated acceptance"
+    }
+  ],
+  "models": {
+    "policy": "Existing agents were reused; follow-up tasks cannot override their model/effort. All three inherited their configured main coding model and high reasoning."
+  },
+  "test_runs": [
+    {
+      "command": "uv run --no-sync pytest test/ -q -n 2",
+      "passed": 710,
+      "skipped": 14,
+      "subtests_passed": 532,
+      "seconds": 1423.56,
+      "note": "Full suite; later assembler/diagnostic deltas were separately covered below."
+    },
+    {
+      "command": "uv run --no-sync pytest test/ --ignore=test/test_py2c_e2e.py --ignore=test/test_py2mg_e2e.py --ignore=test/test_hell_examples.py -q -n 2",
+      "passed": 670,
+      "skipped": 15,
+      "subtests_passed": 529,
+      "seconds": 27.69,
+      "note": "Final implementation broad focused run, including compact assembler."
+    },
+    {
+      "command": "uv run --no-sync pytest test/test_cli_qos.py test/test_python_normalize.py test/test_py2mg.py test/test_py2c.py -q",
+      "passed": 207,
+      "subtests_passed": 128,
+      "seconds": 1.61
+    },
+    {
+      "command": "MALBOLGE_QOS_E2E=1 uv run --no-sync pytest test/test_qos_ci.py -q",
+      "passed": 2,
+      "subtests_passed": 2,
+      "seconds": 137.68,
+      "note": "Both compiler backends executed on the current project Python VM, with termination/stderr/output contracts."
+    },
+    {
+      "command": "uv run --no-sync pytest test/test_mc2mb.py test/test_mg_pipeline.py -q",
+      "passed": 11,
+      "subtests_passed": 40,
+      "seconds": 17.13
+    },
+    {
+      "command": "uv run --no-sync pytest test/test_mc2mb_stream.py -q",
+      "passed": 6,
+      "subtests_passed": 7
+    }
+  ],
+  "compatibility_smoke": {
+    "python_versions": [
+      "3.8.19",
+      "3.12.9",
+      "3.13.14"
+    ],
+    "contracts": "Shared tuple/f-string/keyword normalization, both frontends, bounded package API"
+  },
+  "native_direct_original_audit": [
+    {
+      "case": "semantics",
+      "mg_bytes": 19455,
+      "mb_bytes": 68620941,
+      "compile_seconds": 7.054,
+      "stdout": ":::ABC1ABC",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 2.885,
+      "expected": ":::ABC1ABC",
+      "passed": true
+    },
+    {
+      "case": "ranges",
+      "mg_bytes": 9737,
+      "mb_bytes": 27243833,
+      "compile_seconds": 2.744,
+      "stdout": "ABCDE|ABC|",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 1.175,
+      "expected": "ABCDE|ABC|",
+      "passed": true
+    },
+    {
+      "case": "loop-final",
+      "mg_bytes": 4383,
+      "mb_bytes": 13511185,
+      "compile_seconds": 1.369,
+      "stdout": "2",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.591,
+      "expected": "2",
+      "passed": true
+    }
+  ],
+  "native_direct_features": [
+    {
+      "kind": "build",
+      "case": "conveniences",
+      "mg_bytes": 56221,
+      "mb_bytes": 167310413,
+      "compile_seconds": 17.186,
+      "sha256": "e03b62b59f296e2b68d1d6f2afedca7e6a4592955016388ff147d8d873b1c417",
+      "mc_characters": 680513
+    },
+    {
+      "kind": "run",
+      "case": "conveniences",
+      "input": "",
+      "stdout": "T2:1|37|12\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 7.637,
+      "expected": "T2:1|37|12\n",
+      "passed": true
+    },
+    {
+      "kind": "build",
+      "case": "input_chain",
+      "mg_bytes": 86187,
+      "mb_bytes": 182157995,
+      "compile_seconds": 19.451,
+      "sha256": "6db6c178caaca16f1a6fd9319abb22a3dc4c74cc19b250a76089f99c691a14f9",
+      "mc_characters": 720502
+    },
+    {
+      "kind": "run",
+      "case": "input_chain",
+      "input": "7\n",
+      "stdout": "X7Z",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 7.904,
+      "expected": "X7Z",
+      "passed": true
+    },
+    {
+      "kind": "run",
+      "case": "input_chain",
+      "input": "bad\n",
+      "stdout": "error\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 7.717,
+      "expected": "error\n",
+      "passed": true
+    },
+    {
+      "kind": "build",
+      "case": "arithmetic_chain",
+      "mg_bytes": 48470,
+      "mb_bytes": 131225129,
+      "compile_seconds": 13.684,
+      "sha256": "c1783f2fa47dba28b4d0f7993013d4b23b9c92310987d3638d3d0b62b69cd336",
+      "mc_characters": 521788
+    },
+    {
+      "kind": "run",
+      "case": "arithmetic_chain",
+      "input": "D2",
+      "stdout": "3Z",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 5.32,
+      "expected": "3Z",
+      "passed": true
+    },
+    {
+      "kind": "run",
+      "case": "arithmetic_chain",
+      "input": "M2",
+      "stdout": "1Z",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 5.367,
+      "expected": "1Z",
+      "passed": true
+    },
+    {
+      "kind": "run",
+      "case": "arithmetic_chain",
+      "input": "D0",
+      "stdout": "error\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 5.36,
+      "expected": "error\n",
+      "passed": true
+    },
+    {
+      "kind": "run",
+      "case": "arithmetic_chain",
+      "input": "M0",
+      "stdout": "error\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 5.263,
+      "expected": "error\n",
+      "passed": true
+    },
+    {
+      "kind": "build",
+      "case": "boolean_values",
+      "mg_bytes": 15173,
+      "mb_bytes": 55125455,
+      "compile_seconds": 5.653,
+      "sha256": "5f99c8a3ec7692b046bc32c1f58cca5038df2dab97a6f8f84245b2c213fb290e",
+      "mc_characters": 215237
+    },
+    {
+      "kind": "run",
+      "case": "boolean_values",
+      "input": "",
+      "stdout": "5077TAB",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 2.242,
+      "expected": "5077TAB",
+      "passed": true
+    },
+    {
+      "kind": "build",
+      "case": "range_edges",
+      "mg_bytes": 19887,
+      "mb_bytes": 57854839,
+      "compile_seconds": 5.692,
+      "sha256": "bb702c956bd5e5b1fda02741c37931c332f5a7e072cf5d77937fdb2e37db7a44",
+      "mc_characters": 221663
+    },
+    {
+      "kind": "run",
+      "case": "range_edges",
+      "input": "",
+      "stdout": "A|3210|:|9",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 2.402,
+      "expected": "A|3210|:|9",
+      "passed": true
+    },
+    {
+      "kind": "build",
+      "case": "small_multiply",
+      "mg_bytes": 30403,
+      "mb_bytes": 113883445,
+      "compile_seconds": 11.489,
+      "sha256": "92e33356d358e086912b5272eb83f61a6ce46002d1dbfbcd82ce358358079e3f",
+      "mc_characters": 433911
+    },
+    {
+      "kind": "run",
+      "case": "small_multiply",
+      "input": "",
+      "stdout": "012378@T0TEEB",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 4.89,
+      "expected": "012378@T0TEEB",
+      "passed": true
+    }
+  ],
+  "native_direct_final_fib_and_input": [
+    {
+      "case": "fib",
+      "input": "0\n",
+      "expected": "0\n",
+      "stdout": "0\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "seconds": 13.047,
+      "user_cpu_seconds": 12.034,
+      "max_rss_bytes_cumulative": 5292441600,
+      "passed": true
+    },
+    {
+      "case": "fib",
+      "input": "12\n",
+      "expected": "144\n",
+      "stdout": "144\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "seconds": 20.193,
+      "user_cpu_seconds": 18.938,
+      "max_rss_bytes_cumulative": 5292441600,
+      "passed": true
+    },
+    {
+      "case": "input_chain",
+      "input": "7\n",
+      "expected": "X7Z",
+      "stdout": "X7Z",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "seconds": 5.47,
+      "user_cpu_seconds": 5.094,
+      "max_rss_bytes_cumulative": 5292441600,
+      "passed": true
+    },
+    {
+      "case": "input_chain",
+      "input": "bad\n",
+      "expected": "error\n",
+      "stdout": "error\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "seconds": 5.473,
+      "user_cpu_seconds": 4.965,
+      "max_rss_bytes_cumulative": 5292441600,
+      "passed": true
+    },
+    {
+      "case": "input_chain",
+      "input": "3486784400\n",
+      "expected": "X/Z",
+      "stdout": "X/Z",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "seconds": 6.773,
+      "user_cpu_seconds": 6.348,
+      "max_rss_bytes_cumulative": 5292441600,
+      "passed": true
+    },
+    {
+      "case": "input_chain",
+      "input": "3486784401\n",
+      "expected": "error\n",
+      "stdout": "error\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "seconds": 6.705,
+      "user_cpu_seconds": 6.25,
+      "max_rss_bytes_cumulative": 5292441600,
+      "passed": true
+    }
+  ],
+  "native_c_acceptance": {
+    "original_audit_cases": {
+      "semantics": ":::ABC1ABC",
+      "ranges": "ABCDE|ABC|",
+      "loop_final": "2",
+      "status": "all passed; exit0, empty stderr"
+    },
+    "operand_values_and_descending_range": "50783210|2",
+    "stage2_program_bytes": 621813009,
+    "stage2_compile_seconds": 332.53,
+    "stage2_runs": [
+      {
+        "input": "3\n",
+        "output": "2:1|:3:4!",
+        "native_seconds": 27.19
+      },
+      {
+        "input": "0\n",
+        "output": "error\n",
+        "native_seconds": 25.34
+      },
+      {
+        "input": "abc\n",
+        "output": "error\n",
+        "native_seconds": 24.92
+      },
+      {
+        "input": "",
+        "output": "error\n",
+        "native_seconds": 24.66
+      }
+    ],
+    "status": "all native runs exit0, stderr empty; observations reported by assigned C worker and backed by test/test_py2c_qos.py fixtures"
+  },
+  "runtime_retained_v2_same_artifact": {
+    "python_cli": {
+      "reason": "complete",
+      "seconds": 111.07598841702566,
+      "peak_rss_bytes": 908754944,
+      "returncode": 0,
+      "stdout": "0\n",
+      "stderr": "",
+      "artifact": "/private/tmp/pymalbolge-fib-benchmark-v2/fib.mb",
+      "artifact_bytes": 277965145,
+      "artifact_sha256": "8fb3450ddb660aaad5f15731f7ef96366b3d4189a96fdd7a65f00c56d7ac2969"
+    },
+    "native_reference": {
+      "reason": "complete",
+      "seconds": 11.590673750033602,
+      "peak_rss_bytes": 1165508608,
+      "returncode": 0,
+      "stdout": "0\n",
+      "stderr": ""
+    },
+    "note": "Same retained pre-QoS v2 image; this isolates runtime representation changes."
+  },
+  "current_fib_bounded_python_cli": {
+    "image": "/private/tmp/pymalbolge-qos-direct-final/fib-optimized.mb",
+    "bytes": 285466345,
+    "sha256": "792254c8f0c852780d8c0b79a7ede334d1b5785accdc555c4ac8b947712133bb",
+    "stdout": "0\n",
+    "stderr": "{\"input_consumed\": 2, \"output_count\": 2, \"registers\": {\"a\": 10, \"c\": 285465781, \"d\": 285485879}, \"seconds\": 82.40989320911467, \"steps\": 73378255, \"stop_reason\": \"terminated\", \"variant\": \"malbolge20\"}\n",
+    "returncode": 0,
+    "wall_seconds": 82.4941722501535,
+    "metrics": {
+      "input_consumed": 2,
+      "output_count": 2,
+      "registers": {
+        "a": 10,
+        "c": 285465781,
+        "d": 285485879
+      },
+      "seconds": 82.40989320911467,
+      "steps": 73378255,
+      "stop_reason": "terminated",
+      "variant": "malbolge20"
+    }
+  },
+  "current_fib_native20": {
+    "image": "/private/tmp/pymalbolge-qos-direct-final/fib-optimized.mb",
+    "bytes": 285466345,
+    "input": "20\n",
+    "expected": "6765\n",
+    "stdout": "6765\n",
+    "stderr": "",
+    "returncode": 0,
+    "seconds": 279.16925566713326,
+    "passed": true
+  },
+  "current_compiler_cache": [
+    {
+      "kind": "cold",
+      "wall_seconds": 38.17250108416192,
+      "stats": {
+        "backend": "direct",
+        "seconds": 37.974424792220816,
+        "stages": [
+          {
+            "bytes": 112792,
+            "cache_hit": false,
+            "seconds": 0.006891625002026558,
+            "stage": "py2mg"
+          },
+          {
+            "bytes": 1154325,
+            "cache_hit": false,
+            "seconds": 0.13132362510077655,
+            "stage": "mg2mc"
+          },
+          {
+            "bytes": 285466345,
+            "cache_hit": false,
+            "seconds": 37.83414245815948,
+            "stage": "mc2mb"
+          }
+        ]
+      },
+      "bytes": 285466345,
+      "sha256": "792254c8f0c852780d8c0b79a7ede334d1b5785accdc555c4ac8b947712133bb"
+    },
+    {
+      "kind": "warm",
+      "wall_seconds": 1.4148302080575377,
+      "stats": {
+        "backend": "direct",
+        "seconds": 1.2119050829205662,
+        "stages": [
+          {
+            "bytes": 285466345,
+            "cache_hit": true,
+            "seconds": 1.2118715830147266,
+            "stage": "mc2mb"
+          }
+        ]
+      },
+      "bytes": 285466345,
+      "sha256": "792254c8f0c852780d8c0b79a7ede334d1b5785accdc555c4ac8b947712133bb"
+    }
+  ],
+  "byte_exact_compact_assembler": {
+    "seconds": 35.853193,
+    "generation_seconds": 35.491882,
+    "stream_seconds": 0.361311,
+    "peak_rss_bytes": 151027712,
+    "output_bytes": 277965145,
+    "sha256": "8fb3450ddb660aaad5f15731f7ef96366b3d4189a96fdd7a65f00c56d7ac2969",
+    "source_sha256": "77205c7042e77d8297a33238f5adcba782ac4671a62fa6c88672a5d054c8ea7b",
+    "explicit_source_cells": 53381748,
+    "source_pages": 13034,
+    "packed_source_buffer_bytes": 53387264,
+    "passed": true
+  },
+  "compiler_literal_strength_reduction": {
+    "expression": "x*3 versus x*k",
+    "specialized_mc_utf8_bytes": 32223,
+    "generic_mc_utf8_bytes": 204296,
+    "reduction_percent": 84.2,
+    "literal_factors_supported": "0..16; side effects and unsigned ring wrap preserved"
+  },
+  "ci": {
+    "workflow": ".github/workflows/qos.yml",
+    "python_matrix": [
+      "3.8",
+      "3.12",
+      "3.13"
+    ],
+    "portable_semantic_differential_job": true,
+    "cloud_status": "configured locally; not pushed or executed on GitHub",
+    "official_action_sources": [
+      "https://github.com/actions/checkout",
+      "https://github.com/astral-sh/setup-uv"
+    ]
+  },
+  "contracts": {
+    "and_or": "Lazy and operand-valued; unsigned integer values remain in the documented word ring.",
+    "tuple": "Flat fixed-arity assignment with explicit tuple RHS; all RHS values captured before target stores.",
+    "fstrings": "Runtime numeric fields in print; conversion and format specifications remain rejected.",
+    "keywords": "Simple user-function keywords evaluated in source order then bound to the static signature; unpacking/defaults remain unsupported.",
+    "input_errors": "Function-scope input and dynamic zero-division errors propagate immediately to main; one error newline and normal VM termination, no Python exception objects.",
+    "none": "Void functions may be discarded as statements; possible-None results cannot be consumed as integers.",
+    "runtime_api": "run/run20 byte output, UTF-8 str input, variant-correct EOF, explicit step/output bounds and structured stop reasons; legacy eval retained."
+  },
+  "limits": [
+    "This does not implement full Python, arbitrary runtime objects/strings, signed arithmetic or arbitrary precision.",
+    "Historical layout-invariant research and gated known-failure experiments were not declared fixed; their source layouts changed and need dedicated re-characterization.",
+    "Native max_rss fields inherited from multi-child benchmarks can include compilation; only isolated runtime/assembler memory observations are interpreted as such.",
+    "The compact assembler uses slightly more CPU time than the earlier stream-only sample (35.853 versus31.875 seconds), in exchange for a much smaller representation; both preserve exactly the retained image bytes."
+  ],
+  "source_hashes": {
+    "malbolge/core.py": "37fabafcc9664b56bdc5bb4c002e3eded29fefa74ae5d2c9010ab39d9f0e6890",
+    "malbolge/debugger.py": "b33dd0db3d858b3c319bdd6227a06874ddf0f16ce7dca41d520c60782d04c198",
+    "malbolge/malbolge.py": "852ab9ae89d3f53a262d5a53eb3825f25bc1ad9944e789e48cacf7fb5a541f59",
+    "malbolge/malbolge20.py": "72c98316bea757628a4dda39f030960e9486898430bb2db8fc6d3ec88a3984a1",
+    "malbolge/__main__.py": "afa73991c233df5322ea3a9ff2c3e63e22346546bcef1029c6e659e16176af35",
+    "malbolge/compiler/python_normalize.py": "6a6716f79c54bff2bb3863f22523143662eabafb33fa2f36b27429e66040ae41",
+    "malbolge/compiler/py2c.py": "62e480c35223a084d127db76c06d7a2e5e151c4f83f103216896c3a93d6651bb",
+    "malbolge/compiler/py2mg.py": "463693653dd1b6099bdf9e0b32755018d198f1a48df2ae5351f9fa138307f763",
+    "malbolge/compiler/mc2mb.py": "78081c5f8ddcce2935553c4db00e6f4e49589c34ddc8d52e955ac5197466bf04",
+    "malbolge/compiler/cli.py": "17d77c1d7527d1978823e124882bea7d8a734b79c228c960b6f0458b204476f0"
+  }
+}

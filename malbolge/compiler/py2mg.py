@@ -38,12 +38,15 @@ Language subset (int arithmetic, ``while``, ``if``/``elif``/``else``,
 ``for``-``range``, chained comparison, boolean ops, functions incl. recursion,
 ``putchar``/``getchar``) plus batch-one syntactic sugar:
 
-* ``print(...)`` of *compile-time constants only* -- string/int literals,
-  foldable int expressions, and all-constant f-strings.  Each argument is
-  rendered (ints as unsigned mod-3**20 decimal, strings verbatim), joined by
-  ``sep`` and terminated by ``end`` (both constant strings), and emitted byte by
-  byte.  A runtime (variable) argument is rejected with a line number pointing
-  at ``putchar`` -- variable printing is a v2 feature.
+* ``print(...)`` of integer expressions, constant strings and runtime integer
+  f-strings. Integers render as unsigned mod-3**20 decimal, with constant
+  ``sep`` and ``end`` strings. Runtime formatting uses a lazily injected helper.
+* ``int(input())`` parses a decimal input line, with an optional literal prompt,
+  in module or function scope. Invalid input or runtime division/modulo by zero
+  unwinds immediately; the main context prints ``error`` and halts the program.
+* ``and``/``or`` return the selected integer operand and short-circuit. Chained
+  comparisons evaluate each reached operand once. Range arguments are captured
+  before target binding, with a hidden iterator and checked word boundaries.
 * ``ord('c')`` folds a one-character string literal to its codepoint.
 * Conditional expressions ``a if c else b`` materialise into a temp filled by
   whichever branch the condition selects (lazy: only the taken arm runs).
@@ -57,15 +60,16 @@ Language subset (int arithmetic, ``while``, ``if``/``elif``/``else``,
 
 Known v0 limitations (documented in ``docs/design/py2mg-backend.md``):
 
-* ``and``/``or`` are evaluated non-short-circuit (both sides always run).  This
-  differs from Python only when an operand has side effects; the pure-Python
-  subset's boolean operands in practice are comparisons of pure values.
 * ``while``/``for``-``else`` are unsupported.
 """
 
 import ast
 
 from . import c2mg
+from .decimal_io import ERROR_NAME, INPUT_ERROR_MESSAGE, PYTHON_HELPERS
+from .python_normalize import (
+    normalize_tree, bind_call_arguments, io_reachable_functions,
+)
 from .c2mg import (
     Variable, Block, Func, Generator,
     INT, BOOL, ARG,
@@ -78,7 +82,10 @@ __all__ = ["compile_python_to_mg", "Py2MgError"]
 MOD = 3 ** 20  # Malbolge20 value ring, 3486784401
 
 # Reserved (uppercased) function names, mirroring py2c.
-RESERVED_FUNCS = {"MAIN", "PUTCHAR", "GETCHAR", "ZZMUL", "ZZDIV", "ZZMOD"}
+RESERVED_FUNCS = {
+    "MAIN", "PUTCHAR", "GETCHAR", "ZZMUL", "ZZDIV", "ZZMOD",
+    "INT", "INPUT", "ZZREADINT", "ZZPRINTINT",
+}
 
 C_KEYWORDS = {
     "int", "bool", "true", "false", "if", "else", "while",
@@ -112,6 +119,10 @@ HELPER_SRC = {
     ),
     "ZZDIV": (
         "def zzdiv(a, b):\n"
+        "    global zzioerror\n"
+        "    if b == 0:\n"
+        "        zzioerror = 1\n"
+        "        return 0\n"
         "    q = 0\n"
         "    rem = a\n"
         "    if b != 0:\n"
@@ -127,6 +138,10 @@ HELPER_SRC = {
     ),
     "ZZMOD": (
         "def zzmod(a, b):\n"
+        "    global zzioerror\n"
+        "    if b == 0:\n"
+        "        zzioerror = 1\n"
+        "        return 0\n"
         "    rem = a\n"
         "    if b != 0:\n"
         "        while b <= rem:\n"
@@ -143,7 +158,7 @@ _OP_HELPER = {ast.Mult: "ZZMUL", ast.FloorDiv: "ZZDIV", ast.Mod: "ZZMOD"}
 # Names special-cased in a Call position; a user function may not take one of
 # these (its calls would be intercepted by the builtin dispatch -- py2c defect
 # D13/B3-B6).  putchar/getchar are additionally caught by C_KEYWORDS.
-_BUILTINS = {"putchar", "getchar", "ord", "chr", "print", "range"}
+_BUILTINS = {"putchar", "getchar", "ord", "chr", "print", "range", "int", "input"}
 
 
 class Py2MgError(Exception):
@@ -197,6 +212,8 @@ class _DirectCompiler(c2mg.Compiler):
         self._fdefs = {}             # UPPER name -> ast.FunctionDef
         self._pynames = {}           # UPPER name -> original Python name
         self._pending_helpers = []   # injected helpers awaiting compilation
+        self._compiling_helper = False
+        self._may_fail_functions = set()
 
     # -- diagnostics --------------------------------------------------------
     def err(self, msg, node):
@@ -291,6 +308,23 @@ class _DirectCompiler(c2mg.Compiler):
             return t
         return val
 
+    @staticmethod
+    def _may_call(node):
+        return any(isinstance(child, ast.Call) for child in ast.walk(node))
+
+    def _snapshot(self, value):
+        """Capture a mutable location before a later expression can change it.
+
+        Constants and owned expression temporaries already represent values.
+        Captures are deliberately inserted only across possible side effects,
+        keeping the arithmetic helpers' pure inner loops compact.
+        """
+        if isinstance(value, int) or self._is_temp(value):
+            return value
+        result = self.get_temporary_variable(INT)
+        self.copy(self.current_block, value, result)
+        return result
+
     # =======================================================================
     # Expression lowering.  Returns int (folded literal) or a Variable (INT).
     # =======================================================================
@@ -305,7 +339,9 @@ class _DirectCompiler(c2mg.Compiler):
             return self._arith(node)
         if isinstance(node, ast.UnaryOp):
             return self._unary(node)
-        if isinstance(node, (ast.BoolOp, ast.Compare)):
+        if isinstance(node, ast.BoolOp):
+            return self._boolop_value(node)
+        if isinstance(node, ast.Compare):
             return self._bool_as_int(node)
         if isinstance(node, ast.IfExp):
             return self._cond_expr(node)
@@ -393,6 +429,8 @@ class _DirectCompiler(c2mg.Compiler):
                 "true division '/' is unsupported; use floor division '//'",
                 node)
         left = self.lower(node.left)
+        if self._may_call(node.right):
+            left = self._snapshot(left)
         right = self._lower_protecting(node.right, left)
         if isinstance(left, int) and isinstance(right, int):
             return self._fold(op, left, right, node)
@@ -402,12 +440,40 @@ class _DirectCompiler(c2mg.Compiler):
             return self._add_expr(lv, rv)
         if isinstance(op, ast.Sub):
             return self._sub_expr(lv, rv)
+        if isinstance(op, ast.Mult):
+            if isinstance(left, int) and 0 <= left <= 16:
+                return self._multiply_small(right, left)
+            if isinstance(right, int) and 0 <= right <= 16:
+                return self._multiply_small(left, right)
         if type(op) in _OP_HELPER:
             f = self._ensure_helper(_OP_HELPER[type(op)])
             self._func.callees.append(f)
-            return self._do_call(f, [lv, rv], node)
+            result = self._do_call(f, [lv, rv], node)
+            if isinstance(op, (ast.FloorDiv, ast.Mod)) and not (
+                    isinstance(right, int) and right != 0):
+                self._guard_io_error(node)
+            return result
         raise self.err(
             "unsupported binary operator: {}".format(type(op).__name__), node)
+
+    def _multiply_small(self, value, factor):
+        """A short addition chain; evaluate the value even for factor zero."""
+        if factor == 0:
+            self._release_if_temp(value)
+            return 0
+        if factor == 1:
+            return value
+        base = self._as_var(value)
+        result = self.get_temporary_variable(INT)
+        self.copy(self.current_block, base, result)
+        for bit in bin(factor)[3:]:
+            duplicate = self.get_temporary_variable(INT)
+            self.copy(self.current_block, result, duplicate)
+            result = self._add_expr(result, duplicate)
+            if bit == "1":
+                result = self._add_expr(result, self._stable_operand(base))
+        self._release_if_temp(base)
+        return result
 
     def _fold(self, op, a, b, node):
         if isinstance(op, ast.Add):
@@ -441,6 +507,10 @@ class _DirectCompiler(c2mg.Compiler):
     # -- calls --------------------------------------------------------------
     def _call_value(self, node):
         fname = self._callee_name(node)
+        if fname.lower().startswith("zz") and not self._compiling_helper:
+            raise self.err(
+                "function name {!r} is reserved ('zz' prefix is internal)"
+                .format(fname), node)
         if fname == "putchar":
             raise self.err(
                 "putchar() returns nothing and cannot be used as a value", node)
@@ -448,6 +518,11 @@ class _DirectCompiler(c2mg.Compiler):
             if node.args or node.keywords:
                 raise self.err("getchar() takes no arguments", node)
             return self._getchar()
+        if fname == "int":
+            return self._read_integer(node)
+        if fname == "input":
+            raise self.err(
+                "input() is only supported as int(input())", node)
         if fname == "ord":
             return self._fold_ord(node)
         if fname == "chr":
@@ -460,28 +535,72 @@ class _DirectCompiler(c2mg.Compiler):
         if fname == "range":
             raise self.err("range() is only valid in a 'for' loop header", node)
         upper = fname.upper()
-        if upper not in self._fdefs:
+        if (upper not in self._fdefs or (not self._compiling_helper
+                and self._pynames.get(upper) != fname)):
             raise self.err(
                 "call to undefined function {!r}".format(fname), node)
-        if node.keywords:
-            raise self.err("keyword arguments are unsupported", node)
         f = self.functions[upper]
         fdef = self._fdefs[upper]
-        nparams = len(fdef.args.args)
-        if len(node.args) != nparams:
-            raise self.err(
-                "{}() takes {} argument(s) but {} given".format(
-                    fname, nparams, len(node.args)), node)
+        parameters = [arg.arg for arg in fdef.args.args]
+        ordered, indices = bind_call_arguments(node, parameters, error=self.err)
         self._func.callees.append(f)
-        argvals = self._lower_args(node.args)
-        return self._do_call(f, argvals, node)
+        values = self._lower_args(ordered)
+        argvals = [None] * len(parameters)
+        for index, value in zip(indices, values):
+            argvals[index] = value
+        result = self._do_call(f, argvals, node)
+        if fname in self._may_fail_functions:
+            self._guard_io_error(node)
+        return result
+
+    def _read_integer(self, node):
+        if len(node.args) != 1 or node.keywords:
+            raise self.err("only int(input()) is supported", node)
+        inp = node.args[0]
+        if not (isinstance(inp, ast.Call)
+                and isinstance(inp.func, ast.Name)
+                and inp.func.id == "input"):
+            raise self.err("only int(input()) is supported", node)
+        if inp.keywords or len(inp.args) > 1:
+            raise self.err("input() accepts at most one literal prompt", inp)
+        if inp.args:
+            prompt = inp.args[0]
+            if not (isinstance(prompt, ast.Constant)
+                    and isinstance(prompt.value, str)):
+                raise self.err("input() prompt must be a string literal", prompt)
+            self._emit_text(prompt.value, prompt)
+        helper = self._ensure_helper("ZZREADINT")
+        self._func.callees.append(helper)
+        result = self._do_call(helper, [], node)
+        self._guard_io_error(node)
+        return result
+
+    def _guard_io_error(self, node):
+        """Unwind failing calls immediately; only MAIN reports the error."""
+        self._ensure_error_global()
+        error = self.global_variables["u_" + ERROR_NAME]
+        cond = self._single_cmp(error, ast.NotEq(), 0)
+        saved = self.current_block
+        failed = Block(self)
+        self.current_block = failed
+        if self._is_main:
+            self._emit_text(INPUT_ERROR_MESSAGE, node)
+        else:
+            self.copy(failed, self.get_const_variable(INT, 0),
+                      Variable(INT, RETURN_VALUE))
+        failed.func_return(self._func)
+        self.current_block = saved
+        saved.switch_(cond, Block(self), failed, Block(self))
+        self._release_if_temp(cond)
 
     def _lower_args(self, arg_nodes):
-        """Lower argument expressions, keeping earlier temp results live."""
+        """Evaluate arguments left-to-right, capturing values across calls."""
         vals = []
         pushed = 0
-        for an in arg_nodes:
+        for index, an in enumerate(arg_nodes):
             v = self.lower(an)
+            if any(self._may_call(later) for later in arg_nodes[index + 1:]):
+                v = self._snapshot(v)
             vals.append(v)
             if self._is_temp(v):
                 self._live.append(v)
@@ -547,7 +666,10 @@ class _DirectCompiler(c2mg.Compiler):
         if isinstance(node, ast.BoolOp):
             return self._boolop_cond(node)
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
-            return self.not_(self.current_block, self._lower_cond(node.operand))
+            operand = self._lower_cond(node.operand)
+            result = self.not_(self.current_block, operand)
+            self._release_if_temp(operand)
+            return result
         if isinstance(node, ast.Constant):
             zero = self.get_const_variable(INT, 0)
             true_b = self.eq(self.current_block, zero, zero)  # always true
@@ -556,9 +678,10 @@ class _DirectCompiler(c2mg.Compiler):
             return self.not_(self.current_block, true_b)
         # truthiness of an integer expression: (x != 0)
         v = self._as_var(self.lower(node))
-        return self.not_(
-            self.current_block,
-            self.eq(self.current_block, v, self.get_const_variable(INT, 0)))
+        zero = self.eq(self.current_block, v, self.get_const_variable(INT, 0))
+        result = self.not_(self.current_block, zero)
+        self._release_if_temp(zero)
+        return result
 
     def _compare_cond(self, node):
         for op in node.ops:
@@ -566,33 +689,40 @@ class _DirectCompiler(c2mg.Compiler):
                 raise self.err(
                     "comparison operator {} is unsupported".format(
                         type(op).__name__), node)
-        # Lower every operand once (calls with side effects run once), keeping
-        # earlier temp operands live across later lowering.
-        vals = []
-        pushed = 0
-        first = self.lower(node.left)
-        vals.append(first)
-        if self._is_temp(first):
-            self._live.append(first)
-            pushed += 1
-        for c in node.comparators:
-            v = self.lower(c)
-            vals.append(v)
-            if self._is_temp(v):
-                self._live.append(v)
-                pushed += 1
-        for _ in range(pushed):
-            self._live.pop()
-        res = None
-        for i, op in enumerate(node.ops):
-            b = self._single_cmp(vals[i], op, vals[i + 1])
-            if res is None:
-                res = b
-            else:
-                res = self._reacquire(self._logical_and(res, b))
-        for v in vals:
-            self._release_if_temp(v)
-        return res
+        # Later operands live inside the successful branch of the previous
+        # comparison. The middle value is evaluated once and retained for the
+        # next comparison, rather than rereading its mutable source location.
+        saved = self.current_block
+        left = self.lower(node.left)
+        result = None
+        try:
+            for index, (op, operand) in enumerate(zip(node.ops, node.comparators)):
+                if self._may_call(operand):
+                    left = self._snapshot(left)
+                right = self._lower_protecting(operand, left)
+                condition = self._single_cmp(left, op, right)
+                self._release_if_temp(left)
+                if len(node.ops) == 1:
+                    self._release_if_temp(right)
+                    return condition
+                if result is None:
+                    result = self.get_temporary_variable(BOOL)
+                    self._live.append(result)
+                self.copy(self.current_block, condition, result)
+                if index + 1 < len(node.ops):
+                    reached = Block(self)
+                    self.current_block.switch_(condition, Block(self), reached,
+                                               Block(self))
+                    self.current_block = reached
+                    left = self._snapshot(right)
+                else:
+                    self._release_if_temp(right)
+                self._release_if_temp(condition)
+            return result
+        finally:
+            self.current_block = saved
+            if result is not None:
+                self._live.remove(result)
 
     def _single_cmp(self, lval, op, rval):
         cb = self.current_block
@@ -609,25 +739,83 @@ class _DirectCompiler(c2mg.Compiler):
         if isinstance(op, ast.Eq):
             return self.eq(cb, lv, rv)
         if isinstance(op, ast.NotEq):
-            return self.not_(cb, self.eq(cb, lv, rv))
+            equal = self.eq(cb, lv, rv)
+            result = self.not_(cb, equal)
+            self._release_if_temp(equal)
+            return result
         raise Py2MgError("unsupported comparison")
 
     def _boolop_cond(self, node):
-        res = None
-        for v in node.values:
-            protect = res is not None and self._is_temp(res)
-            if protect:
-                self._live.append(res)
-            b = self._lower_cond(v)
-            if protect:
-                self._live.pop()
-            if res is None:
-                res = b
-            elif isinstance(node.op, ast.And):
-                res = self._reacquire(self._logical_and(res, b))
-            else:
-                res = self._reacquire(self._logical_or(res, b))
-        return res
+        # Conditions need only truth, not the selected integer operand. Keep
+        # comparisons in their native BOOL representation instead of converting
+        # each one to INT and back; input-parser predicates otherwise balloon.
+        operands = list(node.values)
+        first = operands.pop(0)
+        known = self._static_bool(first)
+        while known is not None and operands:
+            stop = not known if isinstance(node.op, ast.And) else known
+            if stop:
+                return self._lower_cond(first)
+            first = operands.pop(0)
+            known = self._static_bool(first)
+        condition = self._lower_cond(first)
+        if not operands:
+            return condition
+        result = self.get_temporary_variable(BOOL)
+        self.copy(self.current_block, condition, result)
+        saved = self.current_block
+        self._live.append(result)
+        try:
+            for operand in operands:
+                reached = Block(self)
+                if isinstance(node.op, ast.And):
+                    self.current_block.switch_(condition, Block(self), reached,
+                                               Block(self))
+                else:
+                    self.current_block.switch_(condition, reached, Block(self),
+                                               Block(self))
+                self._release_if_temp(condition)
+                self.current_block = reached
+                condition = self._lower_cond(operand)
+                self.copy(self.current_block, condition, result)
+            self._release_if_temp(condition)
+            return result
+        finally:
+            self._live.remove(result)
+            self.current_block = saved
+
+    def _boolop_value(self, node):
+        values = list(node.values)
+        value = self.lower(values.pop(0))
+        # A decisive constant can omit an unreachable expression entirely.
+        while isinstance(value, int) and values:
+            stop = value == 0 if isinstance(node.op, ast.And) else value != 0
+            if stop:
+                return value
+            value = self.lower(values.pop(0))
+        if not values:
+            return value
+        result = self.get_temporary_variable(INT)
+        self._store_into(value, result)
+        saved = self.current_block
+        self._live.append(result)
+        try:
+            for operand in values:
+                condition = self._single_cmp(result, ast.NotEq(), 0)
+                reached = Block(self)
+                if isinstance(node.op, ast.And):
+                    self.current_block.switch_(condition, Block(self), reached,
+                                               Block(self))
+                else:
+                    self.current_block.switch_(condition, reached, Block(self),
+                                               Block(self))
+                self._release_if_temp(condition)
+                self.current_block = reached
+                self._store_into(self.lower(operand), result)
+            return result
+        finally:
+            self._live.remove(result)
+            self.current_block = saved
 
     def _bool_as_int(self, node):
         b = self._lower_cond(node)
@@ -646,6 +834,8 @@ class _DirectCompiler(c2mg.Compiler):
     def _compile_body(self, stmts):
         for s in stmts:
             self._stmt(s)
+            if self._da_terminates([s]):
+                break
 
     def _stmt(self, node):
         method = getattr(self, "_stmt_" + type(node).__name__, None)
@@ -670,11 +860,11 @@ class _DirectCompiler(c2mg.Compiler):
         if not all(c.isalnum() or c == "_" for c in name) or not name.isascii():
             raise self.err(
                 "identifier {!r} has unsupported characters".format(name), node)
-        if name.lower().startswith("zz"):
+        if name.lower().startswith("zz") and not self._compiling_helper:
             raise self.err(
                 "identifier {!r} is reserved ('zz' prefix is internal)".format(
                     name), node)
-        if name in C_KEYWORDS:
+        if name in C_KEYWORDS or name.lower() in {"int", "input"}:
             raise self.err(
                 "identifier {!r} collides with a reserved word".format(name),
                 node)
@@ -760,23 +950,27 @@ class _DirectCompiler(c2mg.Compiler):
         if isinstance(op, ast.Div):
             raise self.err(
                 "true division '/=' is unsupported; use '//='", node)
-        val = self.lower(node.value)
+        previous = self._snapshot(z) if self._may_call(node.value) else z
+        val = self._lower_protecting(node.value, previous)
         if isinstance(op, ast.Add):
-            self.add(self.current_block, z, self._as_var(val))
-            self._release_if_temp(val)
+            result = self._add_expr(self._as_var(previous), self._as_var(val))
         elif isinstance(op, ast.Sub):
-            self.sub(self.current_block, z, self._as_var(val))
-            self._release_if_temp(val)
+            result = self._sub_expr(self._as_var(previous), self._as_var(val))
+        elif isinstance(op, ast.Mult) and isinstance(val, int) and 0 <= val <= 16:
+            result = self._multiply_small(previous, val)
         elif type(op) in _OP_HELPER:
             f = self._ensure_helper(_OP_HELPER[type(op)])
             self._func.callees.append(f)
-            t = self._do_call(f, [z, self._as_var(val)], node)
-            self.copy(self.current_block, t, z)
-            self.release_temporary_variable(t)
+            result = self._do_call(f, [self._as_var(previous),
+                                       self._as_var(val)], node)
+            if isinstance(op, (ast.FloorDiv, ast.Mod)) and not (
+                    isinstance(val, int) and val != 0):
+                self._guard_io_error(node)
         else:
             raise self.err(
                 "unsupported augmented operator: {}".format(
                     type(op).__name__), node)
+        self._store(result, z)
 
     def _stmt_Expr(self, node):
         value = node.value
@@ -797,7 +991,7 @@ class _DirectCompiler(c2mg.Compiler):
         result = self.lower(value)
         self._release_if_temp(result)
 
-    # -- print() and f-strings (compile-time constant rendering) ------------
+    # -- print() and f-strings ----------------------------------------------
     def _putbyte(self, cp):
         """Emit a single output byte for codepoint ``cp`` (assumed 0..255)."""
         argv = self.get_const_variable(INT, cp)
@@ -807,7 +1001,13 @@ class _DirectCompiler(c2mg.Compiler):
     def _emit_print(self, call, node):
         sep = " "
         end = "\n"
+        seen_keywords = set()
         for kw in call.keywords:
+            if kw.arg in seen_keywords:
+                raise self.err(
+                    "print() received duplicate keyword argument {!r}"
+                    .format(kw.arg), kw.value)
+            seen_keywords.add(kw.arg)
             if kw.arg == "sep":
                 sep = self._const_str_kwarg(kw, "sep")
             elif kw.arg == "end":
@@ -819,8 +1019,48 @@ class _DirectCompiler(c2mg.Compiler):
                 raise self.err(
                     "print() only supports the 'sep' and 'end' keyword "
                     "arguments, not {!r}".format(kw.arg), node)
-        parts = [self._render_print_arg(a) for a in call.args]
-        text = sep.join(parts) + end
+        # Evaluate every argument before emitting any output, exactly once and
+        # left-to-right. Snapshot variables as well as temporaries: a later
+        # argument may call a function that changes an earlier global value.
+        parts = []
+        held = []
+        try:
+            for arg in call.args:
+                if isinstance(arg, ast.JoinedStr) or (
+                        isinstance(arg, ast.Constant)
+                        and isinstance(arg.value, str)):
+                    parts.append(self._render_print_arg(arg))
+                    continue
+                folded = self._fold_int_const(arg)
+                if folded is not None:
+                    parts.append(str(folded))
+                    continue
+                value = self.lower(arg)
+                if not self._is_temp(value):
+                    snapshot = self.get_temporary_variable(INT)
+                    self.copy(self.current_block, self._as_var(value), snapshot)
+                    value = snapshot
+                parts.append(value)
+                self._live.append(value)
+                held.append(value)
+            for i, part in enumerate(parts):
+                if i:
+                    self._emit_text(sep, node)
+                if isinstance(part, str):
+                    self._emit_text(part, node)
+                else:
+                    self._live.remove(part)
+                    held.remove(part)
+                    helper = self._ensure_helper("ZZPRINTINT")
+                    self._func.callees.append(helper)
+                    result = self._do_call(helper, [part], node)
+                    self._release_if_temp(result)
+            self._emit_text(end, node)
+        finally:
+            for value in held:
+                self._live.remove(value)
+
+    def _emit_text(self, text, node):
         for ch in text:
             cp = ord(ch)
             if cp > 255:
@@ -838,9 +1078,7 @@ class _DirectCompiler(c2mg.Compiler):
             kw.value)
 
     def _render_print_arg(self, node):
-        """Render a print() argument to the text it contributes.  Only
-        compile-time constants are accepted; a runtime value is rejected with
-        a line number (variable printing is a v2 feature)."""
+        """Render a constant print() argument, including constant f-strings."""
         if isinstance(node, ast.JoinedStr):
             return self._render_fstring(node)
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -848,10 +1086,8 @@ class _DirectCompiler(c2mg.Compiler):
         folded = self._fold_int_const(node)
         if folded is None:
             raise self.err(
-                "print() only accepts compile-time constants (string/int "
-                "literals, foldable int expressions, all-constant f-strings); "
-                "use putchar(codepoint) for runtime values -- variable "
-                "printing is a v2 feature", node)
+                "runtime f-strings are unsupported; pass integer values "
+                "as separate print() arguments or use putchar(codepoint)", node)
         return str(folded)
 
     def _render_fstring(self, node):
@@ -948,6 +1184,8 @@ class _DirectCompiler(c2mg.Compiler):
         n = len(stmts)
         for i, s in enumerate(stmts):
             self._stmt(s)
+            if self._da_terminates([s]):
+                break
             if i + 1 < n and self._contains_loop_control(s):
                 rest = stmts[i + 1:]
                 skip = self._active_loop["skip"]
@@ -1077,53 +1315,84 @@ class _DirectCompiler(c2mg.Compiler):
         if it.keywords:
             raise self.err("range() does not take keyword arguments", node)
         start, stop, step = self._range_args(it)
+        start_literal = self._signed_literal(start)
+        stop_literal = self._signed_literal(stop)
+        if start_literal is not None and start_literal < 0:
+            raise self.err("range() cannot yield negative integers", start)
+        include_zero = step < 0 and stop_literal == -1
+        if step < 0 and stop_literal is not None and stop_literal < -1:
+            raise self.err(
+                "descending range() supports non-negative bounds or stop=-1",
+                stop)
+        # Evaluate and freeze both arguments before binding the visible target.
+        # A target assignment in the body cannot alter the hidden iterator.
+        start_value = self._snapshot(self.lower(start))
+        stop_value = (0 if stop_literal is not None and stop_literal < 0
+                      else self._lower_protecting(stop, start_value))
+        number = self._func._iter_id
+        self._func._iter_id += 1
+        iterator = Variable(INT, "RANGE_ITER" + str(number))
+        bound = Variable(INT, "RANGE_STOP" + str(number))
+        self._func.variables[iterator.name] = iterator
+        self._func.variables[bound.name] = bound
+        self._store(start_value, iterator)
+        self._store(stop_value, bound)
         var = self._target_var(node.target.id, node)
-        self._store(self.lower(start), var)
-        bound = self._as_var(self.lower(stop))
-        stepc = self.get_const_variable(INT, step % MOD)
-        if not self._loop_has_control(node.body):
-            prev = self._active_loop
-            self._active_loop = None
-            try:
-                inner = Block(self)
-                saved = self.current_block
-                self.current_block = inner
-                cond = self.lt(inner, var, bound, False)     # var < bound
-                body = self._compile_into_block(node.body)
-                self.add(body, var, stepc)
-                inner.switch_(cond, Block(self).break_(), body, Block(self))
-                self._release_if_temp(cond)
-                self.current_block = saved
-                self.current_block.repeat_inf(inner)
-                self._release_if_temp(bound)
-            finally:
-                self._active_loop = prev
-            return
-        # break/continue present: lower via per-loop flags.  The range step is
-        # appended after the (guarded) body, outside the guard, so ``continue``
-        # still advances the loop variable.
-        brk, skip = self._new_loop_flags()
-        self._set_flag(self.current_block, brk, 0)
-        loop = {"brk": brk, "skip": skip}
+        stepc = self.get_const_variable(INT, abs(step) % MOD)
+        control = self._loop_has_control(node.body)
+        loop = None
+        if control:
+            brk, skip = self._new_loop_flags()
+            self._set_flag(self.current_block, brk, 0)
+            loop = {"brk": brk, "skip": skip}
+            self._loops.append(loop)
         prev = self._active_loop
-        self._loops.append(loop)
         self._active_loop = loop
+        saved = self.current_block
         try:
             inner = Block(self)
-            saved = self.current_block
             self.current_block = inner
-            self._set_flag(inner, skip, 0)       # top of each iteration
-            cond = self.lt(inner, var, bound, False)     # var < bound
-            body = self._compile_loop_body(node.body)
-            self.add(body, var, stepc)
+            comparison = (ast.Lt() if step > 0 else
+                          ast.GtE() if include_zero else ast.Gt())
+            cond = self._single_cmp(iterator, comparison, bound)
+            body = Block(self)
+            self.current_block = body
+            self.copy(body, iterator, var)
+            if control:
+                self._set_flag(body, skip, 0)
+                self._compile_loop_seq(node.body)
+                self._emit_break_check(body, brk)
+            else:
+                self._compile_body(node.body)
+            # The machine word must not wrap and restart an otherwise finite
+            # Python range. A unit step with an unsigned exclusive bound is
+            # inherently safe; literal small bounds also prove this cheaply.
+            folded_stop = (0 if stop_literal is not None and stop_literal < 0
+                           else self._fold_int_const(stop))
+            if abs(step) >= MOD:
+                body.break_()
+            elif step > 0:
+                if step > 1 and (folded_stop is None or folded_stop > MOD - step):
+                    overflow = self._single_cmp(iterator, ast.Gt(), MOD - 1 - step)
+                    body.switch_(overflow, Block(self), Block(self).break_(),
+                                 Block(self))
+                    self._release_if_temp(overflow)
+                self.add(body, iterator, stepc)
+            else:
+                if include_zero or folded_stop is None or folded_stop < -step - 1:
+                    underflow = self._single_cmp(iterator, ast.Lt(), -step)
+                    body.switch_(underflow, Block(self), Block(self).break_(),
+                                 Block(self))
+                    self._release_if_temp(underflow)
+                self.sub(body, iterator, stepc)
+            self.current_block = inner
             inner.switch_(cond, Block(self).break_(), body, Block(self))
             self._release_if_temp(cond)
-            self._emit_break_check(inner, brk)
-            self.current_block = saved
-            self.current_block.repeat_inf(inner)
-            self._release_if_temp(bound)
+            saved.repeat_inf(inner)
         finally:
-            self._loops.pop()
+            self.current_block = saved
+            if control:
+                self._loops.pop()
             self._active_loop = prev
 
     def _range_args(self, call):
@@ -1137,20 +1406,30 @@ class _DirectCompiler(c2mg.Compiler):
         step = 1
         if n == 3:
             s = call.args[2]
-            if not (isinstance(s, ast.Constant) and isinstance(s.value, int)
-                    and not isinstance(s.value, bool)):
+            step = self._signed_literal(s)
+            if step is None:
                 raise self.err(
-                    "range() step must be a positive integer literal", s)
-            if s.value <= 0:
+                    "range() step must be a nonzero integer literal", s)
+            if step == 0:
                 raise self.err(
-                    "range() step must be positive (no descending ranges)", s)
-            step = s.value
+                    "range() step must be nonzero", s)
         return start, stop, step
+
+    @staticmethod
+    def _signed_literal(node):
+        try:
+            value = ast.literal_eval(node)
+        except (TypeError, ValueError, SyntaxError):
+            return None
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        return None
 
     def _stmt_Return(self, node):
         if self._is_main:
             raise self.err("'return' outside function", node)
-        if node.value is None:
+        if node.value is None or (isinstance(node.value, ast.Constant)
+                                  and node.value.value is None):
             val = 0
         else:
             val = self.lower(node.value)
@@ -1197,7 +1476,21 @@ class _DirectCompiler(c2mg.Compiler):
             if isinstance(v, bool):
                 return v
             if isinstance(v, int):
-                return v != 0
+                return v % MOD != 0
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            value = self._static_bool(node.operand)
+            return None if value is None else not value
+        if isinstance(node, ast.BoolOp):
+            result = None
+            for operand in node.values:
+                result = self._static_bool(operand)
+                if result is None:
+                    return None
+                if isinstance(node.op, ast.And) and not result:
+                    return False
+                if isinstance(node.op, ast.Or) and result:
+                    return True
+            return result
         return None
 
     # =======================================================================
@@ -1251,16 +1544,24 @@ class _DirectCompiler(c2mg.Compiler):
     # of never-/conditionally-/annotation-only-bound names, uninitialised
     # augmented assignment) with an accurate original-source line number.
     def _check_definite_assignment(self, stmts, external, all_assigned):
+        self._da_exit_stack = []
         self._da_stmts(stmts, set(), external, all_assigned)
 
     def _da_stmts(self, stmts, bound, external, all_assigned):
         bound = set(bound)
         for s in stmts:
             bound = self._da_stmt(s, bound, external, all_assigned)
+            if self._da_terminates([s]):
+                break
         return bound
 
     def _da_stmt(self, s, bound, external, all_assigned):
         if isinstance(s, ast.Assign):
+            for target in s.targets:
+                if not isinstance(target, ast.Name):
+                    raise self.err(
+                        "unsupported assignment target: {} (only simple names)"
+                        .format(type(target).__name__), s)
             self._da_reads(s.value, bound, external, all_assigned)
             for t in s.targets:
                 if isinstance(t, ast.Name):
@@ -1284,6 +1585,10 @@ class _DirectCompiler(c2mg.Compiler):
             return bound
         if isinstance(s, ast.If):
             self._da_reads(s.test, bound, external, all_assigned)
+            folded = self._static_bool(s.test)
+            if folded is not None:
+                return self._da_stmts(s.body if folded else s.orelse,
+                                      bound, external, all_assigned)
             b1 = self._da_stmts(s.body, bound, external, all_assigned)
             b2 = self._da_stmts(s.orelse, bound, external, all_assigned)
             t1 = self._da_terminates(s.body)
@@ -1297,15 +1602,44 @@ class _DirectCompiler(c2mg.Compiler):
             return bound | (b1 & b2)
         if isinstance(s, ast.While):
             self._da_reads(s.test, bound, external, all_assigned)
+            if self._static_bool(s.test) is False:
+                return bound
+            exits = []
+            self._da_exit_stack.append(exits)
             self._da_stmts(s.body, bound, external, all_assigned)
+            self._da_exit_stack.pop()
+            breaks = [state for kind, state in exits if kind == "break"]
+            if self._static_bool(s.test) is True and breaks:
+                return set.intersection(*breaks)
             return bound  # the body may run zero times
         if isinstance(s, ast.For):
+            if (isinstance(s.iter, ast.Call) and isinstance(s.iter.func, ast.Name)
+                    and s.iter.func.id == "range"):
+                start, stop, step = self._range_args(s.iter)
+                first = self._signed_literal(start)
+                last = self._signed_literal(stop)
+                if first is not None and first < 0:
+                    raise self.err("range() cannot yield negative integers", start)
+                if step < 0 and last is not None and last < -1:
+                    raise self.err(
+                        "descending range() supports non-negative bounds or stop=-1",
+                        stop)
             self._da_reads(s.iter, bound, external, all_assigned)
             body_bound = set(bound)
             if isinstance(s.target, ast.Name):
                 body_bound.add(s.target.id)
-            self._da_stmts(s.body, body_bound, external, all_assigned)
+            exits = []
+            self._da_exit_stack.append(exits)
+            end_bound = self._da_stmts(s.body, body_bound, external, all_assigned)
+            self._da_exit_stack.pop()
+            if self._literal_range_nonempty(s.iter):
+                return set.intersection(end_bound, *(state for _, state in exits))
             return bound  # range may be empty; target not bound afterwards
+        if isinstance(s, (ast.Break, ast.Continue)):
+            if self._da_exit_stack:
+                kind = "break" if isinstance(s, ast.Break) else "continue"
+                self._da_exit_stack[-1].append((kind, set(bound)))
+            return bound
         if isinstance(s, ast.Return):
             if s.value is not None:
                 self._da_reads(s.value, bound, external, all_assigned)
@@ -1313,21 +1647,59 @@ class _DirectCompiler(c2mg.Compiler):
         return bound  # Pass / Global / (rejected elsewhere) -- no reads
 
     @staticmethod
-    def _da_terminates(stmts):
+    def _literal_range_nonempty(call):
+        if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+                and call.func.id == "range" and not call.keywords):
+            return False
+        try:
+            args = [ast.literal_eval(arg) for arg in call.args]
+            if not all(isinstance(arg, int) for arg in args):
+                return False
+            args = [value % MOD if index < 2 and value >= 0 else value
+                    for index, value in enumerate(args)]
+            iterator = range(*args)
+            return (iterator.start < iterator.stop if iterator.step > 0
+                    else iterator.start > iterator.stop)
+        except (TypeError, ValueError, SyntaxError):
+            return False
+
+    def _da_terminates(self, stmts):
         if not stmts:
             return False
         last = stmts[-1]
         if isinstance(last, (ast.Return, ast.Break, ast.Continue)):
             return True
-        if isinstance(last, ast.If) and last.orelse:
-            return (_DirectCompiler._da_terminates(last.body)
-                    and _DirectCompiler._da_terminates(last.orelse))
+        if isinstance(last, ast.If):
+            known = self._static_bool(last.test)
+            if known is not None:
+                return self._da_terminates(last.body if known else last.orelse)
+            if last.orelse:
+                return (self._da_terminates(last.body)
+                        and self._da_terminates(last.orelse))
         return False
 
     def _da_reads(self, expr, bound, external, all_assigned):
-        for n in ast.walk(expr):
-            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load):
-                self._da_name(n, bound, external, all_assigned)
+        if isinstance(expr, ast.Name) and isinstance(expr.ctx, ast.Load):
+            self._da_name(expr, bound, external, all_assigned)
+            return
+        if isinstance(expr, ast.BoolOp):
+            for operand in expr.values:
+                self._da_reads(operand, bound, external, all_assigned)
+                known = self._static_bool(operand)
+                if known is not None and (
+                        (isinstance(expr.op, ast.And) and not known)
+                        or (isinstance(expr.op, ast.Or) and known)):
+                    break
+            return
+        if isinstance(expr, ast.IfExp):
+            self._da_reads(expr.test, bound, external, all_assigned)
+            known = self._static_bool(expr.test)
+            if known is not None:
+                self._da_reads(expr.body if known else expr.orelse,
+                               bound, external, all_assigned)
+                return
+        for child in ast.iter_child_nodes(expr):
+            self._da_reads(child, bound, external, all_assigned)
 
     def _da_name(self, name_node, bound, external, all_assigned):
         name = name_node.id
@@ -1356,12 +1728,14 @@ class _DirectCompiler(c2mg.Compiler):
         f = Func(self, INT, upper)
         f._temp_id = 0
         f._flag_id = 0
+        f._iter_id = 0
         f._free_temps = []
         f._cross_call_temps = set()
         self.functions[upper] = f
         return f
 
     def _compile_user_function(self, upper):
+        self._compiling_helper = upper in HELPER_SRC or upper in PYTHON_HELPERS
         fdef = self._fdefs[upper]
         f = self.functions[upper]
         args = fdef.args.args
@@ -1428,6 +1802,7 @@ class _DirectCompiler(c2mg.Compiler):
             self.current_block.func_return(f)
 
     def _compile_main(self, module_body):
+        self._compiling_helper = False
         f = self._new_func(MAIN_FUNCTION)
         self._func = f
         self._is_main = True
@@ -1451,6 +1826,15 @@ class _DirectCompiler(c2mg.Compiler):
         self._func = f
         init_block = Block(self)
         f.finalize_block = Block(self)
+        if f.is_recursive or any(callee.is_recursive for callee in f.callees):
+            # CALL expansion saves a recursive callee's return address even
+            # when the caller itself is not recursive. Its late-generated
+            # push/pop instructions must never borrow body temporaries: those
+            # cells can still hold later print arguments or other live values.
+            # Allocate the separate scratch cell before emitting VAR headers.
+            f._free_temps = []
+            scratch = self.get_temporary_variable(INT)
+            self.release_temporary_variable(scratch)
         if f.is_recursive:
             protected = []
             for key in sorted(f.variables):
@@ -1459,9 +1843,6 @@ class _DirectCompiler(c2mg.Compiler):
                     protected.append(v)
             for v in sorted(f._cross_call_temps, key=lambda x: x.name):
                 protected.append(v)
-            # Fresh scratch names for the push/pop machinery, so they can never
-            # alias a protected cell.
-            f._free_temps = []
             for v in protected:
                 self.push_stack(init_block, v)
             for v in reversed(protected):
@@ -1500,6 +1881,9 @@ class _DirectCompiler(c2mg.Compiler):
     # =======================================================================
     def compile(self):
         try:
+            # ast.parse alone skips CPython's symbol-table validation (e.g.
+            # using a name before its global declaration).
+            compile(self.source, "<python-subset>", "exec")
             tree = ast.parse(self.source)
         except SyntaxError as e:
             node = ast.Constant(value=None)
@@ -1507,6 +1891,9 @@ class _DirectCompiler(c2mg.Compiler):
             node.col_offset = (e.offset or 1) - 1
             raise Py2MgError(
                 "Python syntax error: {}".format(e.msg), node, self.source)
+
+        tree = normalize_tree(tree, error=self.err)
+        self._may_fail_functions = io_reachable_functions(tree)
 
         module_body = []
         for stmt in tree.body:
@@ -1577,19 +1964,27 @@ class _DirectCompiler(c2mg.Compiler):
         self._new_func(upper)
 
     def _ensure_helper(self, upper):
-        """Register an arithmetic helper (ZZMUL/ZZDIV/ZZMOD) on first real use.
+        """Register an arithmetic or decimal I/O helper on first real use.
 
         Injecting lazily -- only when a runtime multiply/divide/modulo is
         actually emitted -- means a constant-folded ``9 * 7`` pulls in nothing,
         matching the C backend (whose folded operators never reference a
         helper)."""
         if upper not in self._fdefs:
-            hdef = ast.parse(HELPER_SRC[upper]).body[0]
+            if upper in {"ZZREADINT", "ZZDIV", "ZZMOD"}:
+                self._ensure_error_global()
+            source = (PYTHON_HELPERS[upper] if upper in PYTHON_HELPERS
+                      else HELPER_SRC[upper])
+            hdef = ast.parse(source).body[0]
             self._fdefs[upper] = hdef
             self._pynames[upper] = hdef.name
             self._new_func(upper)
             self._pending_helpers.append(upper)
         return self.functions[upper]
+
+    def _ensure_error_global(self):
+        name = "u_" + ERROR_NAME
+        self.global_variables.setdefault(name, Variable(INT, name))
 
 
 def compile_python_to_mg(source):

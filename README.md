@@ -10,20 +10,39 @@ with interpreters for both Malbolge variants and a full-featured debugger.
 No C++, flex, bison or Perl build dependencies — `pip install malbolge` and the
 whole toolchain is there.
 
+The [Fibonacci example](examples/fib.py) uses ordinary Python input and
+output alongside inline double recursion. The compiler supplies the decimal
+conversion routines:
+
 ```python
 def fib(n):
     if n < 2:
         return n
     return fib(n - 1) + fib(n - 2)
 
-putchar(48 + fib(6))
+
+n = int(input())
+if 0 <= n <= 47:
+    print(fib(n))
+else:
+    print("error")
 ```
 
+Compile it once, then supply an index (newline or EOF ends the input):
+
 ```console
-$ python3 -m malbolge compile fib.py --backend=direct -o fib.mb
-$ python3 -m malbolge --variant=malbolge20 fib.mb
-8
+$ uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb
+$ printf '10\n' | uv run python -m malbolge --variant=malbolge20 fib.mb
+55
 ```
+
+The fresh artifact completes input `0` with the bounded project Python CLI;
+the optimized C reference also verifies input `20` → `6765`. The retained
+v2 image additionally completes below 1 GiB sampled RSS; see the [runtime measurements](#runtime-qos-2026-10-08).
+
+The arithmetic range is `0..47`, but double recursion takes exponential time.
+Use small demonstration inputs such as `6`, `7`, or `10`; large indices are
+impractical on the Malbolge20 interpreter.
 
 Malbolge was designed in 1998 by Ben Olmstead to be as close to unprogrammable
 as a language can get: every instruction is self-modifying, the opcode depends
@@ -35,7 +54,7 @@ about the other end of that history — compiling ordinary code into it.
 - **Compiler** — Python subset → Malbolge20, two independent backends, fully deterministic output
 - **Interpreters** — original Malbolge (10 trits) and Malbolge20 (20 trits, sparse memory)
 - **Debugger** — breakpoints, watchpoints, step-back, memory inspection, disassembly; CLI and TUI
-- **Verified** — the toolchain ports are byte-exact against the reference C++/Perl tools; 441 tests
+- **Verified** — the toolchain ports are byte-exact against the reference C++/Perl tools; conformance and end-to-end tests
 - **Zero runtime dependencies** — `textual` only if you want the TUI debugger
 
 ## Installation
@@ -53,16 +72,27 @@ Requires Python 3.8+.
 
 ```bash
 # Compile and run
-python3 -m malbolge compile examples/hello.py -o hello.mb
-python3 -m malbolge --variant=malbolge20 hello.mb
+uv run python -m malbolge compile examples/hello.py -o hello.mb
+uv run python -m malbolge --variant=malbolge20 hello.mb
 
 # Direct backend: skips the C layer, roughly half the output size on
 # programs with control flow or functions, native double recursion
-python3 -m malbolge compile examples/fib.py --backend=direct -o fib.mb
+uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb
+
+# Opt-in stage cache and JSON metrics on stderr
+uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb \
+  --cache-dir .cache/malbolge --stats
 
 # Dump the intermediate stages
-python3 -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
+uv run python -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
 ```
+
+The cache is opt-in and keyed by content, toolchain, code-generation style
+and Python version; corrupt entries are rebuilt. Output paths are checked
+before compilation, including source/symlink/hardlink and multi-output
+collisions. Writes use atomic replacement, and the CLI streams the final `.mb`
+rather than retaining it as a full intermediate string. File/encoding failures
+produce concise diagnostics.
 
 ### Python API
 
@@ -85,23 +115,31 @@ from malbolge.compiler import (
 
 ### Supported Python subset (v1)
 
-Accepted: `int` variables and arithmetic (`+ - * // %`, constant-folded mod
-3^20), `while` / `if` / `elif` / `else`, `for i in range(...)`, `break` /
-`continue`, chained comparisons, short-circuit `and` / `or` / `not`,
-conditional expressions (`a if c else b`, lazily evaluated), function
-definitions and calls including mutual recursion, `global`, `putchar()` /
-`getchar()` I/O, `ord()`, and `print()` with compile-time-constant arguments
-(string literals, constant ints, all-constant f-strings, `sep=` / `end=`).
-Docstrings are tolerated.
+Accepted: unsigned `int` variables and arithmetic (`+ - * // %`, modulo
+`3**20`); conditions and loops, `break`/`continue`; lazy `and`/`or` returning
+operand values and lazy chained comparisons; conditional expressions;
+functions and mutual recursion with captured argument values; simple keyword
+calls; flat fixed-arity tuple assignment/swaps; descending literal-step
+`range()`; byte I/O and `ord()`; decimal `int(input([literal_prompt]))` in
+module or function scope; `print()` mixing unsigned integer values, literal
+strings and basic runtime integer f-strings, with literal `sep=`/`end=`.
 
-Rejected, with line-numbered `CompileError`s: negative literals and unary minus
-(the value ring is unsigned mod 3^20), true division, runtime-valued `print()`
-arguments, `chr`, runtime strings and f-strings, floats, `bool`, lists / dicts
-/ sets, classes, `import`, `lambda`, comprehensions, nested functions, tuple
-unpacking and keyword arguments.
+Earlier operands and RHS values are captured before later side effects.
+Range bounds are frozen and iteration uses a hidden iterator. Input failure
+and dynamic division/remainder by zero unwind through callers; main prints
+`error` once and halts. A function that may return None may be called for its
+side effects, but its result is rejected in scalar contexts.
+
+Rejected with source-located `CompileError`s: general signed integers (the
+explicit range-bound/step literals are exceptions), true division, runtime
+string/object values, raw string-valued `input()`, general `int(...)`,
+f-string conversions/format specifications or f-strings outside `print()`,
+nested/arbitrary tuple unpacking, starred/default arguments, classes,
+imports, comprehensions and nested functions. See the specification for
+unsigned range boundaries and conservative assignment/return checks.
 
 The [normative specification](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md)
-covers the accepted-AST whitelist, all seventeen documented divergences from
+covers the accepted-AST whitelist, the documented divergences from
 CPython semantics, and the diagnostic contract.
 
 ## How the pipeline works
@@ -139,7 +177,8 @@ compiled through both backends must produce identical *program output*.
 | `break` / `continue` | Not available | Flag lowering, correct in nested loops |
 | Chained comparisons, short-circuit `and`/`or` | — | Supported |
 | Conditional expressions | — | `a if c else b`, lazily evaluated |
-| Text output | `putchar` per character | `print()` with constant arguments, lowered to a putchar chain |
+| Text output | `putchar` per character | `print()` with runtime unsigned integers and static strings; decimal helpers injected on demand |
+| Decimal input | Manual character parsing | Module/function `int(input([literal_prompt]))`, with explicit unsigned range/error semantics |
 | Diagnostics | Parser errors | Line-numbered `CompileError` with a source excerpt |
 | Inline double recursion (`f(n-1) + f(n-2)`) | Miscompiled from fib(4) up | Correct on both backends |
 | Output determinism | `srand(time(NULL))` padding — deliberately different on every compile | Byte-for-byte reproducible |
@@ -161,13 +200,89 @@ executed, and control flow is carried in a register. Compiled programs are
 therefore *enormous* relative to their source and run slowly — this is inherent
 to the target, not an artifact of this implementation.
 
-Measured on an M-series Mac, CPython 3.9:
+### Runtime QoS (2026-10-08)
+
+The [final validation report](docs/notes/python-qos-validation.json) records
+the fresh **285,466,345-byte** Fibonacci artifact and its exact hash. Cold
+cached compilation took **38.173 s** wall time (**37.974 s** CLI metrics);
+a warm repeat took **1.415 s** wall (**1.212 s** CLI metrics) and produced
+identical bytes. These are whole fresh compilations, not final-stage timings.
+
+| Fresh artifact execution | Whole-process time | Verified result |
+|---|---|---|
+| Bounded project Python CLI, `n=0` | 82.494 s | `0\n`, 73,378,255 steps, terminated |
+| Optimized C reference, `n=12` | 20.193 s | `144\n` |
+| Optimized C reference, `n=20` | 279.169 s | `6765\n` |
+
+The Python CLI reported 82.410 s internally; its whole-process wall time
+above also includes interpreter startup.
+
+For a controlled runtime-storage comparison, the retained v2 image
+(**277,965,145 bytes**, SHA-256 `8fb3450ddb660aaad5f15731f7ef96366b3d4189a96fdd7a65f00c56d7ac2969`)
+also completed input `0` in both interpreters on M1 Pro/32 GiB:
+
+| Retained v2 interpreter | Whole-process time | Sampled peak RSS | Result |
+|---|---|---|---|
+| Project Python CLI | 111.076 s | 0.846 GiB | `0\n`, exit 0, empty stderr |
+| Optimized C reference | 11.591 s | 1.086 GiB | `0\n`, exit 0, empty stderr |
+
+The two retained-image runs were monitored at 4 GiB; neither reached that threshold.
+Compact immutable source, typed mutable pages and COW snapshots replace the
+old per-cell dictionary. Frozen initialization fill makes execution, copies,
+reset and memory inspection agree; debugger history uses deque/output-length
+deltas. These are single whole-process samples, including loading and setup.
+
+On the same **retained `.mc`**, final compact-mapping assembly/write took
+**35.853 s**, with an isolated peak of **144.0 MiB**, reproducing v2 byte for
+byte. This is about 12.5% slower than the earlier 31.875 s streamed stage,
+with substantially less memory. Historical full v2 compilation was
+103.432 s (its old `mc2mb` stage was 103.073 s). These stage-only results
+must not be presented as fresh frontend-to-program compilation times.
+For a separate helper-size case, literal `x * 3` lowered to 32,223 MC bytes
+instead of 204,296, an **84.2% reduction**; this is not a general speedup.
+
+### Pre-QoS runtime-input Fibonacci baseline (2026-10-08)
+
+On an Apple M1 Pro with 32 GiB RAM, macOS 27.0 and CPython 3.12.9, the final
+ordinary-Python example compiled through the pure-Python `direct` backend in
+**103.43 s**, producing **277,965,145 bytes** (about 278 MB, decimal).
+The optimized C reference interpreter (`-O3`) completed these single
+whole-process trials, including program loading and initialization:
+
+| Input `n` | 0 | 6 | 7 | 10 | 12 | 16 | 20 |
+|---|---|---|---|---|---|---|---|
+| C reference time (s) | 11.430 | 11.562 | 12.073 | 13.921 | 18.044 | 51.507 | 276.136 |
+
+Its cumulative child-process max RSS was about **1.085 GiB**, not a separate
+peak for each input. Running the same Python source directly under CPython
+at `n=10` took **0.019145 s**, the median of five whole-process trials
+including interpreter startup.
+
+In this **pre-QoS baseline**, the project Python CLI did not complete: at `n=0`, the benchmark stopped
+it at its 4 GiB RSS threshold after **44.498 s**, with a sampled peak of
+**4.212 GiB** (sampling overshot the threshold) and no output. This was a
+resource-limit stop, not a timeout or a completed runtime; it does not
+establish how much memory a completed run would require. The old
+per-source-cell dictionary representation caused a storage bottleneck; the
+compact-memory result above supersedes this limitation. These original
+measurement figures remain unchanged as historical evidence.
+
+The [pre-QoS shared measurement data](docs/notes/fib-input-performance.json) contains
+samples, environment details and validation outputs. These results use the
+`direct` backend. The `c` backend also passed native runs for `0`, `10`, and
+invalid input; its artifact is 572,759,579 bytes and compiled in 283.06 s.
+
+### Historical baselines
+
+Historical measurements on an M-series Mac, CPython 3.9. The `fib(6)` row
+uses the original fixed-input recursive source, without the runtime decimal
+parser or formatter in the current `examples/fib.py`:
 
 | Source | `.mb` size (`c`) | `.mb` size (`direct`) | Compile | Run | Steps |
 |---|---|---|---|---|---|
 | `print("Hello, world!")` | 3.47 MB | 3.47 MB | 1.8 s | 3.0 s | 735 K |
 | `for i in range(3): putchar(65+i)` | 27.3 MB | 11.9 MB | 5.7 s | 9.5 s | 3.0 M |
-| recursive `fib(6)` | 110.5 MB | 56.8 MB | 28.2 s | 53.8 s | — |
+| fixed-input recursive `fib(6)` (historical) | 110.5 MB | 56.8 MB | 28.2 s | 53.8 s | — |
 
 **Output size.** The direct backend is no help on straight-line code — the two
 `hello` builds differ by under a kilobyte — but roughly halves anything with
@@ -233,9 +348,9 @@ one.
 ## Running Malbolge programs
 
 ```bash
-python3 -m malbolge hello.mal                        # original Malbolge
-python3 -m malbolge --variant=malbolge20 program.mb  # Malbolge20
-python3 -m malbolge cat.mal -i "Hello World"         # feed stdin
+uv run python -m malbolge hello.mal                        # original Malbolge
+uv run python -m malbolge --variant=malbolge20 program.mb  # Malbolge20
+uv run python -m malbolge cat.mal -i "Hello World"         # feed stdin
 ```
 
 ```python
@@ -250,6 +365,44 @@ eval('''(=BA#9"=<;:3y7x54-21q/p-,+*)"!h%B0/.~P<<:(8&66#"!~}|{zyxwvugJ%''', "abc1
 eval20(malbolge20_source, input_data)
 ```
 
+### Batch execution limits and metrics
+
+```bash
+uv run python -m malbolge --variant=malbolge20 program.mb --input '7' \
+  --eof sentinel --max-steps 10000000 --max-output 1024 --stats
+# Raw bytes instead of text input:
+uv run python -m malbolge --variant=malbolge20 program.mb --input-file input.bin --stats
+```
+
+`--input` encodes UTF-8; `--input-file` supplies raw bytes. With limits or
+`--stats`, execution is batch-oriented: input comes from these options or a
+pipe; an unattended TTY without an input option supplies empty EOF. Use
+`--input` for an interactive shell's batch command. `--eof sentinel|stop`
+sets the EOF policy. Metrics are one JSON object on stderr, while program
+bytes stay on stdout. Exit status is 3 for a resource budget, 2 for an invalid
+instruction, and 0 for termination or input exhaustion. Ordinary unlimited
+CLI invocation retains its streaming behavior.
+
+### Bounded byte-oriented execution
+
+```python
+from malbolge import run20
+
+result = run20(malbolge20_source, b"7\n", max_steps=10_000_000,
+             max_output=1024, eof="sentinel")
+print(result.output)       # bytes
+print(result.to_dict())    # counts, registers and stop reason
+```
+
+Limits accept nonnegative integers or `None`; zero is a real zero budget.
+Stop reasons distinguish termination, invalid instruction, exhausted input,
+step limit and output limit. An output limit stops before a byte would exceed
+the cap. Text passed to this new API is encoded as UTF-8 and consumption is
+counted in bytes. Legacy `eval()` retains its text/codepoint input behavior
+and default EOF-stop policy; the new API defaults to the variant's EOF
+sentinel. The original interpreter exposes the same API in
+`malbolge.run` (also exported with `run20` and `RunResult`).
+
 > **Malbolge20 is not backward compatible.** Its `crazy()` operates on 20 trits
 > and produces different results than the 10-trit original, so programs written
 > for one variant will not run correctly on the other.
@@ -258,14 +411,14 @@ eval20(malbolge20_source, input_data)
 |---|---|---|
 | Word size | 10 trits | 20 trits |
 | Memory | 59,049 cells | ~3.48 billion cells |
-| Memory model | Dense array | Sparse, lazily materialized |
+| Memory model | Dense array | Immutable source + typed copy-on-write pages |
 
 ## Debugger
 
 ```bash
-python3 -m malbolge debug hello.mal                     # CLI, GDB-like
-python3 -m malbolge debug --tui hello.mal               # TUI (needs textual)
-python3 -m malbolge debug --variant=malbolge20 prog.mb
+uv run python -m malbolge debug hello.mal                     # CLI, GDB-like
+uv run python -m malbolge debug --tui hello.mal               # TUI (needs textual)
+uv run python -m malbolge debug --variant=malbolge20 prog.mb
 ```
 
 ```
@@ -348,20 +501,30 @@ Every document exists in English (`<name>.md`) and Chinese (`<name>.zh.md`).
 - [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/highlevel-to-malbolge.md) — why the pipeline looks like this
 - [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered from `ternary`
 - [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/lmao-internals.md) — HeLL and the LMAO assembler's algorithms
-- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) — profiling and the two hotspots that were fixed
+- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) — historical profiling baseline; current measurements are in the QoS report
 - [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/toolchain-guide.md) — building the reference tools, for conformance work
 
 ## Development
 
 ```bash
-pip install -e .[dev]
-python3 -m pytest test/           # 441 tests
-python3 -m pytest test/ -n auto   # ~2.6x faster with pytest-xdist
+uv sync --extra dev
+uv run --no-sync pytest test/
+uv run --no-sync pytest test/ -n 2
 ```
 
 The reference tools under `ref/` are optional. When present, the end-to-end
 tests build through them for speed and cross-check the results; when absent,
 everything falls back to the pure-Python pipeline.
+
+Local QoS acceptance also includes a final focused 207-test run (128
+subtests) and portable execution of both compiler backends on the project VM
+(2 tests/2 subtests). The [audit snapshot](docs/notes/python-qos-audit.json)
+is resolved by the [validation report](docs/notes/python-qos-validation.json),
+without rewriting its original counterexamples.
+
+[CI configuration](.github/workflows/qos.yml) covers Python 3.8/3.12/3.13
+and a separate portable semantic job. Python 3.8/3.13 smoke checks passed
+locally; as of 2026-10-08 the workflow has not been pushed or run on GitHub.
 
 ## Roadmap
 
@@ -369,7 +532,8 @@ everything falls back to the pure-Python pipeline.
 - [x] Debugger (CLI + TUI, with step-back)
 - [x] Pure-Python port of the full Nagoya toolchain, byte-exact
 - [x] Python front end, plus a direct `py → .mg` backend
-- [ ] Compiler v2: signed integers, decimal `print()` / `input()`, arrays and strings via `IND_OPR`
+- [x] Unsigned decimal input/output, basic print f-strings, flat tuple swaps and simple keyword calls
+- [ ] Compiler v2: signed integers, general runtime objects/strings and arrays via `IND_OPR`
 - [ ] Malbolge Unshackled support (3-adic integers, variable rotation width, Unicode I/O)
 
 ## References

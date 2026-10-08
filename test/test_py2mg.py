@@ -180,6 +180,49 @@ class TestFramePolicy(unittest.TestCase):
         # The function's own DEF does declare temporaries.
         self.assertIn("VAR TMP", self._def_body(mg, "G"))
 
+    def test_late_call_expansion_does_not_reuse_body_temporaries(self):
+        class TrackingCompiler(_DirectCompiler):
+            generating = None
+
+            def _generate_function(self, function, generator):
+                self.generating = function
+                self.body_temps = {
+                    name for name, value in function.variables.items()
+                    if value.is_temporary
+                }
+                try:
+                    return super()._generate_function(function, generator)
+                finally:
+                    self.generating = None
+
+            def get_temporary_variable(self, type=None):
+                if type is None:
+                    value = super().get_temporary_variable()
+                else:
+                    value = super().get_temporary_variable(type)
+                if self.generating is not None:
+                    assert value.name not in self.body_temps, (
+                        self.generating.name, value.name)
+                return value
+
+        # MAIN is non-recursive, but the decimal formatter is recursive.
+        # Its return-address wrapper previously overwrote the second and third
+        # captured arguments while formatting the first argument.
+        source = (
+            "x = 7\ndef update():\n    global x\n    x = 12\n"
+            '    print("side", end="|")\n    return 3\n'
+            'print(x, update(), x, sep="/", end="!\\n")\n'
+        )
+        self.assertTrue(translate_mg_to_mc(TrackingCompiler(source).compile()))
+
+    def test_zero_local_recursive_function_declares_call_scratch(self):
+        source = (
+            "x = 1\ndef recurse():\n    global x\n"
+            "    if x == 0:\n        return 0\n"
+            "    x -= 1\n    return recurse()\nputchar(recurse() + 65)\n"
+        )
+        self.assertTrue(translate_mg_to_mc(compile_python_to_mg(source)))
+
 
 # ---------------------------------------------------------------------------
 # Downstream acceptance: mg2mc must accept every generated .mg unchanged
@@ -217,6 +260,9 @@ class TestMg2McAcceptance(unittest.TestCase):
         "print_multi": "print(\"a\", 65, sep=\"-\", end=\"!\")\n",
         "print_empty": "print()\n",
         "print_fstring": "print(f\"n={1 + 2}\")\n",
+        "print_runtime": 'x = 123\nprint("value", x, x + 1, sep=":")\n',
+        "decimal_input": "n = int(input())\nprint(n)\n",
+        "decimal_prompt": 'n = int(input("n: "))\nprint(n)\n',
         "cond_expr": "x = 5\ny = 1 if x < 3 else 2\nputchar(y + 64)\n",
         "aug_mul": "x = 6\nx *= 7\nputchar(x - 42)\n",
         "aug_div": "x = 20\nx //= 3\nputchar(x + 59)\n",
@@ -260,7 +306,7 @@ class TestRejections(unittest.TestCase):
         self.assert_rejects("break\n", "outside loop")
 
     def test_continue_outside_loop(self):
-        self.assert_rejects("continue\n", "outside loop")
+        self.assert_rejects("continue\n", "loop")
 
     def test_break_in_function_outside_loop(self):
         self.assert_rejects(
@@ -314,7 +360,7 @@ class TestRejections(unittest.TestCase):
 
     def test_for_variable_after_loop(self):
         self.assert_rejects(
-            "for i in range(3):\n    putchar(65)\nputchar(i + 65)\n",
+            "for i in range(0):\n    putchar(65)\nputchar(i + 65)\n",
             "used before assignment")
 
     def test_annotation_with_value_binds(self):
@@ -407,17 +453,39 @@ class TestPrint(unittest.TestCase):
         self.assertIn("VAR CONST_61=61", mg)    # '='
         self.assertIn("VAR CONST_51=51", mg)    # '3'
 
-    def test_print_variable_rejected(self):
-        with self.assertRaises(Py2MgError) as cm:
-            compile_python_to_mg("x = 5\nprint(x)\n")
-        msg = str(cm.exception)
-        self.assertIn("putchar", msg)
-        self.assertIn("v2", msg)
+    def test_print_variable_injects_decimal_helpers(self):
+        mg, flags = compile_and_flags("x = 5\nprint(x)\n")
+        self.assertIn("CALL ZZPRINTINT", mg)
+        self.assertIn("DEF ZZDIV", mg)
+        self.assertTrue(flags["ZZPRINTINT"])
+        self.assertFalse(flags["ZZDIV"])
+        self.assertNotIn("DEF ZZREADINT", mg)
 
-    def test_print_fstring_variable_rejected(self):
-        with self.assertRaises(Py2MgError) as cm:
-            compile_python_to_mg('x = 5\nprint(f"{x}")\n')
-        self.assertIn("putchar", str(cm.exception))
+    def test_print_evaluates_all_arguments_before_output(self):
+        mg = compile_python_to_mg(
+            'def f():\n    putchar(65)\n    return 12\n'
+            'def g():\n    putchar(66)\n    return 34\n'
+            'print("values", f(), g())\n')
+        body = TestFramePolicy()._def_body(mg, "MAIN")
+        self.assertLess(body.index("CALL F"), body.index("CALL G"))
+        self.assertLess(body.index("CALL G"), body.index("OUTPUT"))
+        self.assertEqual(body.count("CALL ZZPRINTINT"), 2)
+
+    def test_print_snapshots_global_before_later_call(self):
+        compiler = _DirectCompiler(
+            'x = 7\n'
+            'def mutate():\n    global x\n    x = 9\n    return 1\n'
+            'print(x, mutate(), x)\n')
+        mg = compiler.compile()
+        body = TestFramePolicy()._def_body(mg, "MAIN")
+        # Earlier values have their own cells and are kept across later calls.
+        main = compiler.functions["MAIN"]
+        self.assertTrue(main._cross_call_temps)
+        self.assertLess(body.index("OPR u_x"), body.index("CALL MUTATE"))
+
+    def test_print_fstring_variable_supported(self):
+        mg = compile_python_to_mg('x = 5\nprint(f"{x}")\n')
+        self.assertIn("CALL ZZPRINTINT", mg)
 
     def test_print_fstring_conversion_rejected(self):
         self.assertRaises(
@@ -437,6 +505,15 @@ class TestPrint(unittest.TestCase):
             compile_python_to_mg('print("a", file=1)\n')
         self.assertIn("sep", str(cm.exception))
 
+    def test_duplicate_print_keywords_rejected(self):
+        for keyword in ("sep", "end"):
+            source = f'print(1, {keyword}=":", {keyword}="-")\n'
+            with self.subTest(keyword=keyword):
+                with self.assertRaises(Py2MgError) as cm:
+                    compile_python_to_mg(source)
+                self.assertRegex(str(cm.exception),
+                                 "duplicate keyword|keyword argument repeated")
+
     def test_print_as_value_rejected(self):
         with self.assertRaises(Py2MgError) as cm:
             compile_python_to_mg("x = print(1)\n")
@@ -452,6 +529,64 @@ class TestPrint(unittest.TestCase):
             compile_python_to_mg('x = 5\nq = f"{x}"\n')
         self.assertIn("f-string", str(cm.exception))
         self.assertEqual(cm.exception.lineno, 2)
+
+
+class TestDecimalInput(unittest.TestCase):
+    def test_reader_injected_once_and_error_halts(self):
+        mg = compile_python_to_mg("a = int(input())\nb = int(input())\n")
+        self.assertEqual(mg.count("DEF ZZREADINT\n"), 1)
+        self.assertEqual(mg.count("CALL ZZREADINT"), 2)
+        self.assertIn("VAR u_zzioerror=0", mg)
+        body = TestFramePolicy()._def_body(mg, "MAIN")
+        self.assertEqual(sum(line.strip() == "RETURN"
+                             for line in body.splitlines()), 2)
+        self.assertNotIn("DEF ZZPRINTINT", mg)
+
+    def test_literal_prompt_emits_before_read(self):
+        mg = compile_python_to_mg('n = int(input("n: "))\n')
+        body = TestFramePolicy()._def_body(mg, "MAIN")
+        self.assertLess(body.index("OUTPUT"), body.index("CALL ZZREADINT"))
+
+    def test_input_in_top_level_condition_and_loop(self):
+        src = ('if int(input()) > 0:\n    print("yes")\n'
+               'while int(input()) > 0:\n    print("again")\n')
+        self.assertEqual(compile_python_to_mg(src).count("CALL ZZREADINT"), 2)
+
+    def test_reader_forms_outside_subset_rejected(self):
+        cases = [
+            'n = input()\n', 'n = int(12)\n', 'n = int()\n',
+            'n = int(input(), 10)\n', 'n = int(input(prompt="n"))\n',
+            'n = int(input(1))\n',
+        ]
+        for source in cases:
+            with self.subTest(source=source):
+                self.assertRaises(Py2MgError, compile_python_to_mg, source)
+
+    def test_builtin_and_internal_names_reserved(self):
+        for name in ("int", "INT", "Input", "input", "zzreadint",
+                     "ZZPRINTINT", "zzioerror", "ZZIOERROR"):
+            for source in (f'{name} = 1\n',
+                           f'def {name}():\n    return 1\n'):
+                with self.subTest(source=source):
+                    self.assertRaises(Py2MgError, compile_python_to_mg, source)
+
+    def test_injected_helpers_cannot_be_called_from_user_code(self):
+        # User function compilation injects the printer before main's name
+        # analysis. A private name must stay inaccessible after registration.
+        prefix = 'def emit(n):\n    q = n // 10\n    print(n)\n'
+        for name in ("zzprintint", "ZZPRINTINT", "zzdiv", "ZZDIV"):
+            args = "42, 10" if name.lower() == "zzdiv" else "42"
+            with self.subTest(name=name):
+                with self.assertRaises(Py2MgError) as cm:
+                    compile_python_to_mg(prefix + f'{name}({args})\n')
+                self.assertIn("reserved", str(cm.exception))
+
+    def test_registered_reader_remains_private(self):
+        compiler = _DirectCompiler('zzreadint()\n')
+        compiler._ensure_helper("ZZREADINT")
+        with self.assertRaises(Py2MgError) as cm:
+            compiler.compile()
+        self.assertIn("reserved", str(cm.exception))
 
 
 class TestOrd(unittest.TestCase):
@@ -495,7 +630,7 @@ class TestConditionalExpr(unittest.TestCase):
 class TestAugAssign(unittest.TestCase):
     def test_aug_mul(self):
         mg = compile_python_to_mg("x = 6\nx *= 7\nputchar(x - 42)\n")
-        self.assertIn("CALL ZZMUL", mg)
+        self.assertNotIn("CALL ZZMUL", mg)
 
     def test_aug_floordiv(self):
         mg = compile_python_to_mg("x = 20\nx //= 3\nputchar(x + 59)\n")
@@ -573,13 +708,13 @@ class TestBreakContinue(unittest.TestCase):
     def test_break_outside_loop_rejected(self):
         with self.assertRaises(Py2MgError) as cm:
             compile_python_to_mg("break\n")
-        self.assertIn("outside loop", str(cm.exception))
+        self.assertIn("loop", str(cm.exception))
         self.assertEqual(cm.exception.lineno, 1)
 
     def test_continue_outside_loop_rejected(self):
         with self.assertRaises(Py2MgError) as cm:
             compile_python_to_mg("x = 1\ncontinue\n")
-        self.assertIn("outside loop", str(cm.exception))
+        self.assertIn("loop", str(cm.exception))
         self.assertEqual(cm.exception.lineno, 2)
 
 

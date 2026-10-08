@@ -92,6 +92,7 @@ def _rev_xlat1_c(c, C):
 # ---------------------------------------------------------------------------
 
 import re
+from collections.abc import MutableMapping
 
 # Instruction -> single-char opcode used by PutInst (parse_mc2.pl output stage).
 _INST_CHAR = {
@@ -863,11 +864,136 @@ class _JmpAddrs(list):
         super().__setitem__(index, value)
 
 
+_CODE_PAGE_BITS = 12
+_CODE_PAGE_SIZE = 1 << _CODE_PAGE_BITS
+_CODE_PAGE_MASK = _CODE_PAGE_SIZE - 1
+_NONZERO_SOURCE_RUN = re.compile(rb'[^\x00]+')
+
+
+class _CodePage:
+    __slots__ = ('data', 'zeros')
+
+    def __init__(self):
+        self.data = bytearray(_CODE_PAGE_SIZE)
+        # Ordinary instruction bytes are nonzero and encode their own
+        # presence. Allocate a bitmap only for explicitly stored zero cells.
+        self.zeros = None
+
+
+class _PagedCode(MutableMapping):
+    """Sparse byte-valued source cells without one Python key per character.
+
+    Zero is a present mapping value, although the assembler's finish step
+    treats it as padding. Iteration is in address order. Integer addresses may
+    be sparse; pages between distant addresses are never allocated.
+    """
+
+    def __init__(self):
+        self._pages = {}
+        self._size = 0
+        self._last_index = None
+        self._last_page = None
+
+    @staticmethod
+    def _check_address(address):
+        if not isinstance(address, int):
+            raise TypeError('source cell addresses must be integers')
+
+    def __getitem__(self, address):
+        self._check_address(address)
+        page = self._pages.get(address >> _CODE_PAGE_BITS)
+        if page is None:
+            raise KeyError(address)
+        offset = address & _CODE_PAGE_MASK
+        value = page.data[offset]
+        if value or (page.zeros is not None and
+                     page.zeros[offset >> 3] & (1 << (offset & 7))):
+            return value
+        raise KeyError(address)
+
+    def __setitem__(self, address, value):
+        self._check_address(address)
+        if not isinstance(value, int):
+            raise TypeError('source cell values must be bytes')
+        if not 0 <= value <= 255:
+            raise ValueError('source cell values must be in range(256)')
+        index = address >> _CODE_PAGE_BITS
+        if index == self._last_index:
+            page = self._last_page
+        else:
+            page = self._pages.get(index)
+            if page is None:
+                page = _CodePage()
+                self._pages[index] = page
+            self._last_index, self._last_page = index, page
+        offset = address & _CODE_PAGE_MASK
+        previous = page.data[offset]
+        zero_present = (page.zeros is not None and
+                        page.zeros[offset >> 3] & (1 << (offset & 7)))
+        if not previous and not zero_present:
+            self._size += 1
+        page.data[offset] = value
+        if value == 0:
+            if page.zeros is None:
+                page.zeros = bytearray(_CODE_PAGE_SIZE >> 3)
+            page.zeros[offset >> 3] |= 1 << (offset & 7)
+        elif zero_present:
+            page.zeros[offset >> 3] &= ~(1 << (offset & 7))
+
+    def __delitem__(self, address):
+        self[address]  # check both the address and presence, including zero
+        index = address >> _CODE_PAGE_BITS
+        page = self._pages[index]
+        offset = address & _CODE_PAGE_MASK
+        page.data[offset] = 0
+        if page.zeros is not None:
+            page.zeros[offset >> 3] &= ~(1 << (offset & 7))
+            if not any(page.zeros):
+                page.zeros = None
+        self._size -= 1
+        if not any(page.data) and page.zeros is None:
+            del self._pages[index]
+            if self._last_index == index:
+                self._last_index, self._last_page = None, None
+
+    def __iter__(self):
+        for index in sorted(self._pages):
+            page = self._pages[index]
+            base = index << _CODE_PAGE_BITS
+            if page.zeros is None:
+                for match in _NONZERO_SOURCE_RUN.finditer(page.data):
+                    yield from range(base + match.start(), base + match.end())
+            else:
+                for offset, value in enumerate(page.data):
+                    if value or page.zeros[offset >> 3] & (1 << (offset & 7)):
+                        yield base + offset
+
+    def __len__(self):
+        return self._size
+
+    def clear(self):
+        self._pages.clear()
+        self._size = 0
+        self._last_index, self._last_page = None, None
+
+    def copy(self):
+        return dict(self)
+
+    def iter_nonzero_runs(self):
+        """Yield (address, byte view) runs using C-level scans of each page."""
+        for index in sorted(self._pages):
+            page = self._pages[index]
+            view = memoryview(page.data)
+            base = index << _CODE_PAGE_BITS
+            for match in _NONZERO_SOURCE_RUN.finditer(page.data):
+                yield base + match.start(), view[match.start():match.end()]
+
+
 class _Assembler:
     """Port of the C++ ``init`` code generator (init/dmod/comm.cpp)."""
 
     def __init__(self):
-        self.code = {}          # pos -> source byte (char array)
+        self.code = _PagedCode()  # pos -> source byte, compact sparse pages
         self.code_size = 0
         self.C = 0
         self.D = 0
@@ -1533,7 +1659,9 @@ class _Assembler:
                 "indirect instruction. Due to offset??")
 
     # --- init.cpp: main tail ----------------------------------------------
-    def finish(self):
+    def _prepare_finish(self):
+        if getattr(self, "_finished", False):
+            return
         # advance to an odd position whose Xlat1(82,pos) is a legal opcode
         while (chr(_xlat1(82, self.code_size)) not in _LEGAL) or not (self.code_size & 1):
             self.code_size += 1
@@ -1541,14 +1669,48 @@ class _Assembler:
         self.code_size += 1
         self.code[self.code_size] = 81
         self.code_size += 1
+        self._finished = True
 
-        # fill unset cells deterministically (upstream uses srand(time)+rand()%8)
-        for i in range(self.code_size):
-            if not self.code.get(i):
-                nch = _LEGAL[i % 8]
-                self.code[i] = _rev_xlat1_c(ord(nch), i)
+    def iter_finish(self, chunk_size=65536):
+        """Yield byte-exact source chunks without expanding padding into a dict."""
+        if type(chunk_size) is not int or chunk_size <= 0:
+            raise ValueError("chunk_size must be a positive integer")
+        self._prepare_finish()
+        # Padding depends only on position mod 8 and mod 94: period 376.
+        padding = bytes(_rev_xlat1_c(ord(_LEGAL[i % 8]), i)
+                        for i in range(376))
+        if isinstance(self.code, _PagedCode):
+            runs = iter(self.code.iter_nonzero_runs())
+        else:
+            # Keep the private mapping replaceable for small diagnostics.
+            runs = ((key, bytes((value,))) for key, value in
+                    sorted(self.code.items()) if value)
+        run = next(runs, None)
+        for start in range(0, self.code_size, chunk_size):
+            length = min(chunk_size, self.code_size - start)
+            offset = start % len(padding)
+            data = bytearray((padding * ((offset + length) // len(padding) + 1))[
+                offset:offset + length])
+            end = start + length
+            while run is not None and run[0] < end:
+                position, values = run
+                if position < 0:
+                    # Invalid negative source positions historically used
+                    # Python's negative indexing in the first output chunk.
+                    for offset, value in enumerate(values):
+                        data[position + offset] = value
+                    run = next(runs, None)
+                    continue
+                stop = position + len(values)
+                left, right = max(start, position), min(end, stop)
+                data[left - start:right - start] = values[left - position:right - position]
+                if stop > end:
+                    break
+                run = next(runs, None)
+            yield bytes(data)
 
-        return "".join(chr(self.code.get(i, 0)) for i in range(self.code_size))
+    def finish(self):
+        return b"".join(self.iter_finish()).decode("ascii")
 
 
 def data_to_mb(data_text: str) -> str:
@@ -1567,3 +1729,11 @@ def assemble_mc_to_mb(mc_source: str) -> str:
     """Assemble LAL (.mc) source into a Malbolge20 (.mb) program string."""
     data_text = parse_mc_to_data(mc_source)
     return data_to_mb(data_text)
+
+
+def iter_mc_to_mb(mc_source: str, chunk_size=65536):
+    """Assemble to byte chunks; callers can write atomically without a full string."""
+    asm = _Assembler()
+    asm.setup_data_module()
+    asm.memory_init_code1(parse_mc_to_data(mc_source))
+    yield from asm.iter_finish(chunk_size)

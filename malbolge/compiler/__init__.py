@@ -21,7 +21,7 @@ from .py2c import compile_python_to_c, CompileError
 from .py2mg import compile_python_to_mg, Py2MgError
 from .c2mg import compile_c_to_mg, C2MgError
 from .mg2mc import translate_mg_to_mc, Mg2McError
-from .mc2mb import assemble_mc_to_mb, Mc2MbError
+from .mc2mb import assemble_mc_to_mb, iter_mc_to_mb, Mc2MbError
 
 
 def compile_python_to_mb(py_source: str, backend: str = "c", *,
@@ -59,6 +59,6 @@ __all__ = [
     "compile_python_to_mg", "Py2MgError",
     "compile_c_to_mg", "C2MgError",
     "translate_mg_to_mc", "Mg2McError",
-    "assemble_mc_to_mb", "Mc2MbError",
+    "assemble_mc_to_mb", "iter_mc_to_mb", "Mc2MbError",
     "compile_python_to_mb",
 ]

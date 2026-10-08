@@ -11,6 +11,7 @@ Supports multiple Malbolge variants:
 - Malbolge20 (20 trits)
 """
 
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
@@ -228,7 +229,7 @@ class HistoryEntry:
     c: int
     d: int
     input_pos: int
-    output: str
+    output_length: int
     step_count: int
     # Store only modified memory locations to save space
     mem_changes: Dict[int, int] = field(default_factory=dict)
@@ -254,7 +255,7 @@ class MalbolgeDebugger:
     """
 
     def __init__(self, source: str, input_data: str = "",
-                 config: Optional[MalbolgeConfig] = None):
+                 config: Optional[MalbolgeConfig] = None, *, eof: str = "stop"):
         """
         Initialize debugger with Malbolge source code.
 
@@ -276,9 +277,14 @@ class MalbolgeDebugger:
         self._d: int = 0
 
         # Input/Output
-        self._input: str = input_data
+        if eof not in ("stop", "sentinel"):
+            raise ValueError("eof must be 'stop' or 'sentinel'")
+        self._eof = eof
+        self._input = (bytes(input_data).decode("latin1")
+                       if isinstance(input_data, (bytes, bytearray, memoryview))
+                       else input_data)
         self._input_pos: int = 0
-        self._output: str = ""
+        self._output = bytearray()
 
         # Breakpoints and watchpoints
         self._breakpoints: Dict[int, Breakpoint] = {}
@@ -290,7 +296,7 @@ class MalbolgeDebugger:
         self._source_length: int = 0
 
         # History for step-back functionality
-        self._history: List[HistoryEntry] = []
+        self._history = deque()
         self._max_history: int = 10000
 
         # Cumulative write count per memory cell (see write_heat)
@@ -409,7 +415,7 @@ class MalbolgeDebugger:
             effective_opcode=opcode,
             opcode_name=OPCODE_NAMES.get(opcode, "invalid"),
             step_count=self._step_count,
-            output=self._output,
+            output=self.output,
             input_consumed=self._input_pos,
             stop_reason=StopReason.TERMINATED if self._terminated else StopReason.RUNNING
         )
@@ -452,7 +458,7 @@ class MalbolgeDebugger:
     @property
     def output(self) -> str:
         """Get accumulated program output."""
-        return self._output
+        return self._output.decode("latin1")
 
     @property
     def is_terminated(self) -> bool:
@@ -532,15 +538,18 @@ class MalbolgeDebugger:
 
     def _save_history(self, mem_changes: Dict[int, int]) -> None:
         """Save current state to history for step-back."""
-        if len(self._history) >= self._max_history:
-            self._history.pop(0)
+        if self._max_history <= 0:
+            self._history.clear()
+            return
+        while len(self._history) >= self._max_history:
+            self._history.popleft()
 
         entry = HistoryEntry(
             a=self._a,
             c=self._c,
             d=self._d,
             input_pos=self._input_pos,
-            output=self._output,
+            output_length=len(self._output),
             step_count=self._step_count,
             mem_changes=mem_changes
         )
@@ -602,13 +611,16 @@ class MalbolgeDebugger:
             self._c = self._mem[self._d]
         elif v == 5:    # out a
             char = chr(int(self._a % 256))
-            self._output += char
+            self._output.append(self._a % 256)
             if self._on_output:
                 self._on_output(char)
         elif v == 23:   # in a
             if self._input_pos < len(self._input):
                 self._a = ord(self._input[self._input_pos])
                 self._input_pos += 1
+            elif self._eof == "sentinel":
+                self._a = (59049 if self._config.variant == MalbolgeVariant.MALBOLGE20
+                           else self._config.memory_size - 1)
             else:
                 self._terminated = True
                 state = self.get_state()
@@ -701,7 +713,7 @@ class MalbolgeDebugger:
         self._c = entry.c
         self._d = entry.d
         self._input_pos = entry.input_pos
-        self._output = entry.output
+        del self._output[entry.output_length:]
         self._step_count = entry.step_count
 
         # Restore memory changes
@@ -875,7 +887,7 @@ class MalbolgeDebugger:
         self._c = 0
         self._d = 0
         self._input_pos = 0
-        self._output = ""
+        self._output.clear()
         self._step_count = 0
         self._terminated = False
         self._history.clear()
@@ -886,7 +898,9 @@ class MalbolgeDebugger:
 
     def set_input(self, input_data: str) -> None:
         """Set new input data (resets input position)."""
-        self._input = input_data
+        self._input = (bytes(input_data).decode("latin1")
+                       if isinstance(input_data, (bytes, bytearray, memoryview))
+                       else input_data)
         self._input_pos = 0
 
     # ==================== Callbacks ====================
@@ -1155,6 +1169,11 @@ class MalbolgeDebugger:
                     'char': self._input[self._input_pos],
                     'ascii': new_a
                 }
+            elif self._eof == "sentinel":
+                new_a = (59049 if self._config.variant == MalbolgeVariant.MALBOLGE20
+                         else self._config.memory_size - 1)
+                reg_changes['a'] = (self._a, new_a)
+                calc_details = {'type': 'input_eof', 'ascii': new_a}
             else:
                 will_terminate = True
                 calc_details = {

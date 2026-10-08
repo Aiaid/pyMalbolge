@@ -36,6 +36,12 @@ The public entry point is :func:`compile_python_to_c`.
 """
 
 import ast
+import warnings
+
+from .decimal_io import C_HELPERS, ERROR_NAME, INPUT_ERROR_MESSAGE
+from .python_normalize import (
+    bind_call_arguments, io_reachable_functions, normalize_tree,
+)
 
 __all__ = ["compile_python_to_c", "CompileError"]
 
@@ -44,13 +50,17 @@ MOD = 3 ** 20  # 3486784401
 
 # Names the reference parser reserves (compared after upper-casing) plus the
 # helpers we inject.  A user function may not upper-case to any of these.
-RESERVED_FUNCS = {"MAIN", "PUTCHAR", "GETCHAR", "ZZMUL", "ZZDIV", "ZZMOD"}
+RESERVED_FUNCS = {
+    "MAIN", "PUTCHAR", "GETCHAR", "ZZMUL", "ZZDIV", "ZZMOD", "INT", "INPUT",
+}
 
 # Names `_call()` special-cases at every call site, before it ever consults
 # `self.functions`.  A user-defined function with one of these names could be
 # registered but never successfully called, so they're reserved at
 # definition time instead (see defects.md B3-B6).
-BUILTIN_CALL_NAMES = {"putchar", "getchar", "ord", "chr", "print", "range"}
+BUILTIN_CALL_NAMES = {
+    "putchar", "getchar", "ord", "chr", "print", "range", "int", "input",
+}
 
 # C keywords / builtins in the subset; a Python variable may not be named one
 # of these (they are legal Python identifiers but illegal here).
@@ -85,6 +95,7 @@ HELPER_DIV = """\
 int zzdiv(int a, int b){
   int q; int rem; int bsh; int p;
   q = 0; rem = a;
+  if(b == 0){ zzioerror = 1; return 0; }
   if(b != 0){
     while(b <= rem){
       bsh = b; p = 1;
@@ -101,6 +112,7 @@ HELPER_MOD = """\
 int zzmod(int a, int b){
   int rem; int bsh;
   rem = a;
+  if(b == 0){ zzioerror = 1; return 0; }
   if(b != 0){
     while(b <= rem){
       bsh = b;
@@ -161,7 +173,7 @@ class _Compiler:
         self.source = source
         self.functions = {}          # python name -> ast.FunctionDef
         self.func_c_names = {}        # python name -> emitted C name
-        self.used_helpers = set()     # subset of {"zzmul","zzdiv","zzmod"}
+        self.used_helpers = set()     # arithmetic and decimal I/O helpers
         self.global_names = []        # module-level variable names, in order
         self._global_seen = set()
         self.module_globals = set()   # names assigned anywhere at module
@@ -196,6 +208,8 @@ class _Compiler:
                                        # of the current iteration without a
                                        # real break/continue/goto in the
                                        # target C subset.
+        self.failing_functions = set()  # propagate checked runtime failures
+        self.binding_loop_exits = []  # reachable break/continue binding states
 
     # -- diagnostics --------------------------------------------------------
     def err(self, msg, node):
@@ -214,6 +228,24 @@ class _Compiler:
     def use_helper(self, name):
         self.used_helpers.add(name)
 
+    def _snapshot(self, value):
+        """Capture a value before a later expression can change its binding."""
+        if isinstance(value, int) or value.startswith("zzt"):
+            return value
+        result = self.newtmp()
+        self.emit("{} = {};".format(result, value))
+        return result
+
+    @staticmethod
+    def _has_effects(node):
+        return any(isinstance(n, ast.Call) for n in ast.walk(node))
+
+    def _lower_before(self, node, later):
+        value = self.lower(node)
+        if any(self._has_effects(n) for n in later):
+            value = self._snapshot(value)
+        return value
+
     # -- name validation ----------------------------------------------------
     def check_var_name(self, name, node):
         if not name or not (name[0].isalpha() and name.isascii()):
@@ -231,6 +263,10 @@ class _Compiler:
             raise self.err(
                 "identifier {!r} collides with a C keyword in the target "
                 "backend".format(name), node)
+        if name.lower() in ("int", "input"):
+            raise self.err(
+                "identifier {!r} is reserved for decimal input".format(name),
+                node)
         return name
 
     def check_func_name(self, name, node):
@@ -286,7 +322,8 @@ class _Compiler:
         """
         if name in self.bound:
             return True
-        if not self.in_main and name in self.module_globals:
+        if not self.in_main and name not in self.locals \
+                and name in self.module_globals:
             return True
         return False
 
@@ -312,7 +349,7 @@ class _Compiler:
         if isinstance(node, ast.UnaryOp):
             return self._unaryop(node)
         if isinstance(node, ast.BoolOp):
-            return self._materialize_cond(node)
+            return self._bool_value(node)
         if isinstance(node, ast.Compare):
             return self._materialize_cond(node)
         if isinstance(node, ast.Call):
@@ -364,7 +401,7 @@ class _Compiler:
             raise self.err(
                 "true division '/' is unsupported; use floor division '//' "
                 "(all values are non-negative integers mod 3**20)", node)
-        left = self.lower(node.left)
+        left = self._lower_before(node.left, [node.right])
         right = self.lower(node.right)
         # constant folding
         if isinstance(left, int) and isinstance(right, int):
@@ -399,19 +436,51 @@ class _Compiler:
         elif isinstance(op, ast.Sub):
             self.emit("{} = {} - {};".format(d, lo, ro))
         elif isinstance(op, ast.Mult):
+            if isinstance(right, int) and right <= 16:
+                self._small_multiply(left, right, d)
+                return d
+            if isinstance(left, int) and left <= 16:
+                self._small_multiply(right, left, d)
+                return d
             self.use_helper("zzmul")
             self.emit("{} = zzmul({}, {});".format(d, lo, ro))
         elif isinstance(op, ast.FloorDiv):
             self.use_helper("zzdiv")
             self.emit("{} = zzdiv({}, {});".format(d, lo, ro))
+            if not isinstance(right, int) or right == 0:
+                self._check_io_error()
         elif isinstance(op, ast.Mod):
             self.use_helper("zzmod")
             self.emit("{} = zzmod({}, {});".format(d, lo, ro))
+            if not isinstance(right, int) or right == 0:
+                self._check_io_error()
         else:
             raise self.err(
                 "unsupported binary operator: {}".format(type(op).__name__),
                 node)
         return d
+
+    def _small_multiply(self, value, multiplier, destination):
+        """Use at most four doublings for small literal multipliers."""
+        if multiplier == 0:
+            self.emit("{} = 0;".format(destination))
+            return
+        power = _operand(value)
+        result = None
+        while multiplier:
+            if multiplier & 1:
+                if result is None:
+                    result = power
+                else:
+                    summed = self.newtmp()
+                    self.emit("{} = {} + {};".format(summed, result, power))
+                    result = summed
+            multiplier >>= 1
+            if multiplier:
+                doubled = self.newtmp()
+                self.emit("{} = {} + {};".format(doubled, power, power))
+                power = doubled
+        self.emit("{} = {};".format(destination, result))
 
     def _unaryop(self, node):
         op = node.op
@@ -448,29 +517,74 @@ class _Compiler:
                 node)
         if fname == "print":
             raise self.err(
-                "print() is only supported as a top-level statement with "
-                "compile-time constant arguments; it cannot be used as a "
+                "print() is only supported as a statement; it cannot be "
+                "used as a "
                 "value (use putchar(codepoint) to emit output)", node)
+        if fname == "int":
+            return self._read_decimal(node)
+        if fname == "input":
+            raise self.err(
+                "input() strings are unsupported; use int(input()) for "
+                "non-negative decimal input", node)
         if fname == "range":
             raise self.err("range() is only valid in a 'for' loop header", node)
         # user function
         if fname not in self.functions:
             raise self.err("call to undefined function {!r}".format(fname), node)
-        if node.keywords:
-            raise self.err(
-                "keyword arguments are unsupported; pass arguments positionally",
-                node)
         fn = self.functions[fname]
         nparams = len(fn.args.args)
-        if len(node.args) != nparams:
+        if not node.keywords and len(node.args) != nparams:
             raise self.err(
                 "{}() takes {} argument(s) but {} given".format(
                     fname, nparams, len(node.args)), node)
-        args = [_operand(self.lower(a)) for a in node.args]
+        ordered, indices = bind_call_arguments(
+            node, [parameter.arg for parameter in fn.args.args], error=self.err)
+        args = [None] * nparams
+        for i, (argument, parameter_index) in enumerate(zip(ordered, indices)):
+            args[parameter_index] = _operand(
+                self._lower_before(argument, ordered[i + 1:]))
         d = self.newtmp()
         self.emit("{} = {}({});".format(
             d, self.func_c_names[fname], ", ".join(args)))
+        if fname in self.failing_functions:
+            self._check_io_error()
         return d
+
+    def _read_decimal(self, node):
+        """Read a checked decimal integer; a failed read exits main()."""
+        if len(node.args) != 1 or node.keywords or not (
+                isinstance(node.args[0], ast.Call)
+                and isinstance(node.args[0].func, ast.Name)
+                and node.args[0].func.id == "input"):
+            raise self.err(
+                "int() is supported only as int(input())", node)
+        input_call = node.args[0]
+        if input_call.keywords or len(input_call.args) > 1:
+            raise self.err(
+                "input() takes no arguments or one string literal prompt",
+                input_call)
+        if input_call.args:
+            prompt = input_call.args[0]
+            if not (isinstance(prompt, ast.Constant)
+                    and isinstance(prompt.value, str)):
+                raise self.err(
+                    "input() prompt must be a string literal", prompt)
+            self._check_bytes_range(prompt.value, prompt)
+            self._emit_text(prompt.value)
+        self.use_helper("zzreadint")
+        result = self.newtmp()
+        self.emit("{} = zzreadint();".format(result))
+        self._check_io_error()
+        return result
+
+    def _check_io_error(self):
+        self.emit("if({} != 0){{".format(ERROR_NAME))
+        self.indent += 1
+        if self.in_main:
+            self._emit_text(INPUT_ERROR_MESSAGE)
+        self.emit("return 0;")
+        self.indent -= 1
+        self.emit("}")
 
     def _callee_name(self, node):
         if not isinstance(node.func, ast.Name):
@@ -541,27 +655,23 @@ class _Compiler:
                 raise self.err(
                     "comparison operator {} is unsupported".format(
                         type(op).__name__), node)
-        # Lower every operand once (so calls with side effects run once), then
-        # AND the pairwise comparisons together for chained comparisons.
-        operands = [_operand(self.lower(node.left))]
-        for c in node.comparators:
-            operands.append(_operand(self.lower(c)))
-        if len(node.ops) == 1:
-            self._single_cmp_into(operands[0], node.ops[0], operands[1], flag)
-            return
-        # chained: a < b < c  ==>  (a<b) && (b<c)
+        left = self._lower_before(node.left, [node.comparators[0]])
         self.emit("{} = 0;".format(flag))
-        self._chain_cmp(operands, node.ops, 0, flag)
+        self._chain_cmp(node.comparators, node.ops, 0, left, flag)
 
-    def _chain_cmp(self, operands, ops, i, flag):
-        # emits: if(operands[i] op operands[i+1]){ <rest or flag=1> }
+    def _chain_cmp(self, comparators, ops, i, left, flag):
+        # The next comparator is evaluated only after the preceding test
+        # succeeds. Its value is reused once as the following left operand.
+        right = self.lower(comparators[i])
+        if i + 1 < len(ops) and self._has_effects(comparators[i + 1]):
+            right = self._snapshot(right)
         self.emit("if({} {} {}){{".format(
-            operands[i], self._CMP_OP[type(ops[i])], operands[i + 1]))
+            _operand(left), self._CMP_OP[type(ops[i])], _operand(right)))
         self.indent += 1
         if i + 1 == len(ops):
             self.emit("{} = 1;".format(flag))
         else:
-            self._chain_cmp(operands, ops, i + 1, flag)
+            self._chain_cmp(comparators, ops, i + 1, right, flag)
         self.indent -= 1
         self.emit("}")
 
@@ -580,6 +690,25 @@ class _Compiler:
         else:  # Or -- short-circuit
             self.emit("{} = 0;".format(flag))
             self._or_chain(node.values, 0, flag)
+
+    def _bool_value(self, node):
+        """and/or return the selected operand, with lazy evaluation."""
+        result = self.newtmp()
+        self.emit("{} = {};".format(result, _operand(self.lower(node.values[0]))))
+        self._bool_value_tail(node.values[1:], node.op, result)
+        return result
+
+    def _bool_value_tail(self, values, op, result):
+        if not values:
+            return
+        comparison = "!=" if isinstance(op, ast.And) else "=="
+        self.emit("if({} {} 0){{".format(result, comparison))
+        self.indent += 1
+        value = self.lower(values[0])
+        self.emit("{} = {};".format(result, _operand(value)))
+        self._bool_value_tail(values[1:], op, result)
+        self.indent -= 1
+        self.emit("}")
 
     def _and_chain(self, values, i, flag):
         sub = self._materialize_cond(values[i])
@@ -634,7 +763,7 @@ class _Compiler:
         """Compute value_node directly into an existing variable target_name."""
         if isinstance(value_node, ast.BinOp) and not isinstance(
                 value_node.op, ast.Div):
-            left = self.lower(value_node.left)
+            left = self._lower_before(value_node.left, [value_node.right])
             right = self.lower(value_node.right)
             if isinstance(left, int) and isinstance(right, int):
                 folded = self._fold(value_node.op, left, right, value_node)
@@ -643,11 +772,6 @@ class _Compiler:
                     return
             self._binop_emit(value_node.op, left, right, value_node,
                              dest=target_name)
-            return
-        if isinstance(value_node, (ast.Compare, ast.BoolOp)) or (
-                isinstance(value_node, ast.UnaryOp)
-                and isinstance(value_node.op, ast.Not)):
-            self._cond_into(value_node, target_name)
             return
         val = _operand(self.lower(value_node))
         self.emit("{} = {};".format(target_name, val))
@@ -665,10 +789,10 @@ class _Compiler:
                     "subscript assignment is not supported)".format(
                         type(t).__name__), node)
             names.append(t.id)
-        for name in names:
-            self._bind_target(name, node)
         # a = b = expr : compute once into the first, copy to the rest.
         self._assign_into(names[0], node.value)
+        for name in names:
+            self._bind_target(name, node)
         for name in names[1:]:
             self.emit("{} = {};".format(name, names[0]))
 
@@ -684,8 +808,8 @@ class _Compiler:
             return
         if not isinstance(node.target, ast.Name):
             raise self.err("unsupported annotated assignment target", node)
-        self._bind_target(node.target.id, node)
         self._assign_into(node.target.id, node.value)
+        self._bind_target(node.target.id, node)
 
     def _stmt_AugAssign(self, node):
         if not isinstance(node.target, ast.Name):
@@ -707,13 +831,14 @@ class _Compiler:
             raise self.err(
                 "true division '/=' is unsupported; use floor division '//='",
                 node)
+        previous = self._snapshot(name) if self._has_effects(node.value) else name
         val = self.lower(node.value)
         if isinstance(op, ast.Add):
-            self.emit("{} += {};".format(name, _operand(val)))
+            self.emit("{} = {} + {};".format(name, previous, _operand(val)))
         elif isinstance(op, ast.Sub):
-            self.emit("{} -= {};".format(name, _operand(val)))
+            self.emit("{} = {} - {};".format(name, previous, _operand(val)))
         elif isinstance(op, (ast.Mult, ast.FloorDiv, ast.Mod)):
-            self._binop_emit(op, name, val, node, dest=name)
+            self._binop_emit(op, previous, val, node, dest=name)
         else:
             raise self.err(
                 "unsupported augmented operator: {}".format(
@@ -752,12 +877,9 @@ class _Compiler:
         self.lower(value)
 
     # -- print() ------------------------------------------------------------
-    # print() only accepts compile-time constant arguments: string literals,
-    # f-strings whose every part is itself constant, and int expressions the
-    # existing constant folder (_fold/_binop) can reduce to a literal. Every
-    # accepted call is rendered once, at compile time, into a fixed sequence
-    # of putchar() calls -- there is no runtime formatting support (that is
-    # deferred to a v2 decimal print()).
+    # Constants retain their fixed putchar sequence. Runtime integers are
+    # formatted by zzprintint; every argument is evaluated and captured before
+    # any output belonging to the print call, matching Python's call order.
     def _check_bytes_range(self, text, node):
         for ch in text:
             cp = ord(ch)
@@ -777,12 +899,24 @@ class _Compiler:
         value = self.lower(arg)
         if not isinstance(value, int):
             raise self.err(
-                "print() only accepts compile-time constant arguments "
-                "(string literals, f-strings with constant parts, or "
-                "int expressions the compiler can fold); use "
-                "putchar(codepoint) for runtime values (decimal print() "
-                "of runtime values is planned for a future version)", arg)
+                "f-string parts must be compile-time constant; runtime "
+                "f-strings are unsupported (use separate print arguments)", arg)
         return str(value % MOD)
+
+    def _emit_text(self, text):
+        for ch in text:
+            self.emit("putchar({});".format(ord(ch)))
+
+    def _print_arg(self, arg):
+        if isinstance(arg, ast.JoinedStr) or (
+                isinstance(arg, ast.Constant) and isinstance(arg.value, str)):
+            return True, self._print_render_arg(arg)
+        value = self.lower(arg)
+        if isinstance(value, int):
+            return True, str(value % MOD)
+        captured = self.newtmp()
+        self.emit("{} = {};".format(captured, value))
+        return False, captured
 
     def _render_fstring(self, node):
         out = []
@@ -826,25 +960,73 @@ class _Compiler:
                 sep = kw.value.value
             else:
                 end = kw.value.value
-        parts = [self._print_render_arg(a) for a in call.args]
-        text = sep.join(parts) + end
-        for ch in text:
-            self.emit("putchar({});".format(ord(ch)))
+        parts = [self._print_arg(a) for a in call.args]
+        for i, (is_text, value) in enumerate(parts):
+            if i:
+                self._emit_text(sep)
+            if is_text:
+                self._emit_text(value)
+            else:
+                self.use_helper("zzdiv")
+                self.use_helper("zzprintint")
+                self.emit("zzprintint({});".format(value))
+        self._emit_text(end)
 
     def _stmt_If(self, node):
+        incoming = set(self.bound)
+        truth = self._constant_truth(node.test)
+        if truth is not None:
+            self._compile_body(node.body if truth else node.orelse)
+            return
         flag = self._materialize_cond(node.test)
         self.emit("if({} != 0){{".format(flag))
         self.indent += 1
         self._compile_body(node.body)
+        after_true = set(self.bound)
         self.indent -= 1
+        self.bound = set(incoming)
         if node.orelse:
             self.emit("} else {")
             self.indent += 1
             self._compile_body(node.orelse)
             self.indent -= 1
         self.emit("}")
+        after_false = set(self.bound)
+        true_terminates = self._terminates(node.body)
+        false_terminates = self._terminates(node.orelse)
+        self.bound = (incoming if true_terminates and false_terminates else
+                      after_false if true_terminates else
+                      after_true if false_terminates else
+                      after_true & after_false)
+
+    @staticmethod
+    def _constant_truth(node):
+        """Recognize literal branch proofs without evaluating user code."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, bool)):
+            return bool(node.value % MOD)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            truth = _Compiler._constant_truth(node.operand)
+            return None if truth is None else not truth
+        return None
+
+    @staticmethod
+    def _terminates(statements):
+        for statement in statements:
+            if isinstance(statement, (ast.Return, ast.Break, ast.Continue)):
+                return True
+            if isinstance(statement, ast.If):
+                truth = _Compiler._constant_truth(statement.test)
+                if truth is not None:
+                    if _Compiler._terminates(statement.body if truth
+                                              else statement.orelse):
+                        return True
+                elif (statement.orelse and _Compiler._terminates(statement.body)
+                      and _Compiler._terminates(statement.orelse)):
+                    return True
+        return False
 
     def _stmt_While(self, node):
+        incoming = set(self.bound)
         if node.orelse:
             raise self.err("while/else is unsupported", node)
         # Recompute the condition into the same flag before the loop and at the
@@ -861,18 +1043,28 @@ class _Compiler:
         self.indent += 1
         if has_bc:
             self.emit("{} = 0;".format(skip))
+        exits = []
+        self.binding_loop_exits.append(exits)
         self._compile_loop_body(node.body, skip, brk)
-        self._cond_into(node.test, flag)
+        self.binding_loop_exits.pop()
         if has_bc:
-            # break forces the loop to end regardless of what the (still
-            # correctly recomputed) condition says.
-            self.emit("if({} != 0){{".format(brk))
+            # A break must not evaluate the condition's side effects again.
+            self.emit("if({} == 0){{".format(brk))
+            self.indent += 1
+            self._cond_into(node.test, flag)
+            self.indent -= 1
+            self.emit("} else {")
             self.indent += 1
             self.emit("{} = 0;".format(flag))
             self.indent -= 1
             self.emit("}")
+        else:
+            self._cond_into(node.test, flag)
         self.indent -= 1
         self.emit("}")
+        breaks = [state for kind, state in exits if kind == "break"]
+        self.bound = set.intersection(*breaks) if (
+            self._constant_truth(node.test) is True and breaks) else incoming
 
     def _stmt_For(self, node):
         if node.orelse:
@@ -890,12 +1082,30 @@ class _Compiler:
         if it.keywords:
             raise self.err("range() does not take keyword arguments", node)
         start, stop, step = self._range_args(it)
+        incoming = set(self.bound)
+        # Freeze both range operands before binding the visible loop target.
+        initial = self._snapshot(self._lower_before(start, [stop]))
+        signed_stop = None
+        if (isinstance(stop, ast.UnaryOp) and isinstance(stop.op, ast.USub)
+                and isinstance(stop.operand, ast.Constant)
+                and isinstance(stop.operand.value, int)):
+            signed_stop = -stop.operand.value
+        negative_stop = step < 0 and signed_stop == -1
+        if signed_stop is not None and signed_stop < 0:
+            if step > 0:
+                boundary = 0  # empty in the supported non-negative domain
+            elif negative_stop:
+                boundary = -1
+            else:
+                raise self.err("descending range() stop below -1 is unsupported",
+                               stop)
+        else:
+            boundary = self._snapshot(self.lower(stop))
+        iterator = self.newtmp()
+        self.emit("{} = {};".format(iterator, _operand(initial)))
+        bound = None if negative_stop else _operand(boundary)
         var = node.target.id
-        self._bind_target(var, node)
-        # i = start
-        self._assign_into(var, start)
-        # bound = stop (evaluate once)
-        bound = _operand(self.lower(stop))
+        self.check_var_name(var, node)
         has_bc = self._body_has_break_continue(node.body)
         skip = brk = None
         if has_bc:
@@ -903,30 +1113,63 @@ class _Compiler:
             brk = self.newtmp()
             self.emit("{} = 0;".format(brk))
         flag = self.newtmp()
-        self._single_cmp_into(var, ast.Lt(), bound, flag)
+        comparison = ast.Lt() if step > 0 else ast.Gt()
+        if negative_stop:
+            self.emit("{} = 1;".format(flag))
+        else:
+            self._single_cmp_into(iterator, comparison, bound, flag)
         self.emit("while({} != 0){{".format(flag))
         self.indent += 1
+        self.emit("{} = {};".format(var, iterator))
+        self._bind_target(var, node)
         if has_bc:
             self.emit("{} = 0;".format(skip))
+        exits = []
+        self.binding_loop_exits.append(exits)
         self._compile_loop_body(node.body, skip, brk)
+        self.binding_loop_exits.pop()
+        after_body = set(self.bound)
         # `continue` still advances the loop variable (it only skips the
         # rest of the body); `break` must not, so the increment is guarded
         # by the break flag alone, not the skip flag.
         if has_bc:
             self.emit("if({} == 0){{".format(brk))
             self.indent += 1
-            self.emit("{} += {};".format(var, step))
+            self._advance_range(iterator, bound, step, flag)
             self.indent -= 1
             self.emit("}")
         else:
-            self.emit("{} += {};".format(var, step))
-        self._single_cmp_into(var, ast.Lt(), bound, flag)
+            self._advance_range(iterator, bound, step, flag)
         if has_bc:
             self.emit("if({} != 0){{".format(brk))
             self.indent += 1
             self.emit("{} = 0;".format(flag))
             self.indent -= 1
             self.emit("}")
+        self.indent -= 1
+        self.emit("}")
+        self.bound = incoming
+        if isinstance(initial, int) and isinstance(boundary, int) and (
+                initial < boundary if step > 0 else initial > boundary):
+            self.bound = set.intersection(after_body,
+                                          *(state for _, state in exits))
+
+    def _advance_range(self, iterator, bound, step, flag):
+        """End before an unsigned iterator could wrap around the value ring."""
+        self.emit("{} = 0;".format(flag))
+        if abs(step) >= MOD:
+            return
+        op = "<=" if step > 0 else ">="
+        threshold = MOD - 1 - step if step > 0 else -step
+        self.emit("if({} {} {}){{".format(iterator, op, threshold))
+        self.indent += 1
+        symbol = "+" if step > 0 else "-"
+        self.emit("{} = {} {} {};".format(iterator, iterator, symbol, abs(step)))
+        if bound is None:
+            self.emit("{} = 1;".format(flag))
+        else:
+            self._single_cmp_into(iterator, ast.Lt() if step > 0 else ast.Gt(),
+                                  bound, flag)
         self.indent -= 1
         self.emit("}")
 
@@ -941,21 +1184,24 @@ class _Compiler:
         step = 1
         if n == 3:
             s = call.args[2]
-            if not (isinstance(s, ast.Constant) and isinstance(s.value, int)
-                    and not isinstance(s.value, bool)):
+            negative = isinstance(s, ast.UnaryOp) and isinstance(s.op, ast.USub)
+            literal = s.operand if negative else s
+            if not (isinstance(literal, ast.Constant)
+                    and isinstance(literal.value, int)
+                    and not isinstance(literal.value, bool)):
                 raise self.err(
-                    "range() step must be a positive integer literal", s)
-            if s.value <= 0:
+                    "range() step must be a nonzero integer literal", s)
+            step = -literal.value if negative else literal.value
+            if step == 0:
                 raise self.err(
-                    "range() step must be positive (the value ring has no "
-                    "negatives, so descending ranges are unsupported)", s)
-            step = s.value
+                    "range() step must be nonzero", s)
         return start, stop, step
 
     def _stmt_Return(self, node):
         if self.in_main:
             raise self.err("'return' outside function", node)
-        if node.value is None:
+        if node.value is None or (isinstance(node.value, ast.Constant)
+                                  and node.value.value is None):
             self.emit("return 0;")
             return
         val = _operand(self.lower(node.value))
@@ -973,12 +1219,12 @@ class _Compiler:
                 raise self.err(
                     "name {!r} is parameter and global".format(name), node)
             self.globals_in_scope.add(name)
-            self.bound.add(name)
 
     def _stmt_Break(self, node):
         if not self.loop_stack:
             raise self.err("'break' outside loop", node)
         skip, brk = self.loop_stack[-1]
+        self.binding_loop_exits[-1].append(("break", set(self.bound)))
         # break both abandons the rest of this iteration (skip) and marks
         # the loop itself for termination (brk); see _stmt_While/_stmt_For.
         self.emit("{} = 1;".format(skip))
@@ -988,6 +1234,7 @@ class _Compiler:
         if not self.loop_stack:
             raise self.err("'continue' outside loop", node)
         skip, _brk = self.loop_stack[-1]
+        self.binding_loop_exits[-1].append(("continue", set(self.bound)))
         self.emit("{} = 1;".format(skip))
 
     def _stmt_FunctionDef(self, node):
@@ -1052,6 +1299,8 @@ class _Compiler:
                 self.emit("}")
             else:
                 self.compile_stmt(s)
+            if self._terminates([s]):
+                break
 
     # =======================================================================
     # Top-level driver.
@@ -1128,6 +1377,7 @@ class _Compiler:
         self.locals = set()
         self.loop_stack = []
         self.current_skip = None
+        self.binding_loop_exits = []
         # Pre-seed declared locals so ordering of first-use doesn't matter.
         # In main() every assigned name is a module global, not a local.
         if not is_main:
@@ -1174,13 +1424,21 @@ class _Compiler:
 
     def compile(self):
         try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                compile(self.source, "<malbolge-input>", "exec")
             tree = ast.parse(self.source)
         except SyntaxError as e:
             node = ast.Constant(value=None)
             node.lineno = e.lineno or 1
             node.col_offset = (e.offset or 1) - 1
+            message = e.msg.replace("'continue' not properly in loop",
+                                    "'continue' outside loop")
             raise CompileError(
-                "Python syntax error: {}".format(e.msg), node, self.source)
+                "Python syntax error: {}".format(message), node, self.source)
+
+        tree = normalize_tree(tree, error=self.err)
+        self.failing_functions = io_reachable_functions(tree)
 
         module_body = []
         for i, stmt in enumerate(tree.body):
@@ -1229,10 +1487,15 @@ class _Compiler:
 
         # Assemble the final translation unit.
         out = []
+        if self.used_helpers & {"zzreadint", "zzdiv", "zzmod"}:
+            out.append("int {};".format(ERROR_NAME))
         # Injected helpers first (only those used).
         for hname in ("zzmul", "zzdiv", "zzmod"):
             if hname in self.used_helpers:
                 out.append(HELPERS[hname].rstrip())
+        for hname in ("zzreadint", "zzprintint"):
+            if hname in self.used_helpers:
+                out.append(C_HELPERS[hname].rstrip())
         # Forward prototypes for every user function, so calls resolve
         # regardless of definition order (the backend rejects calls to a
         # not-yet-seen function) and mutual recursion works.

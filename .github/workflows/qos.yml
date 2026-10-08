@@ -1,0 +1,50 @@
+name: Python semantics and runtime quality
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qos-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.8', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Official setup-uv v10.1.0, pinned to its documented commit.
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: ${{ matrix.python }}
+      - run: uv sync --extra dev
+      - run: uv run --no-sync pytest test/ -q -n 2
+
+  semantic-differential:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+      - run: uv sync --extra dev
+      - name: Execute both compiler backends on the project VM
+        env:
+          MALBOLGE_QOS_E2E: '1'
+        run: uv run --no-sync pytest test/test_qos_ci.py -q

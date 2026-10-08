@@ -76,6 +76,11 @@ BIG_CASES = {
     "print_const": (
         'print("foo")\nprint("a", 65, sep="-", end="!\\n")\n', b"", b"foo\na-65!\n"),
     "print_folded": ('print(9 * 7)\nprint(f"n={1 + 2}")\n', b"", b"63\nn=3\n"),
+    "runtime_print_argument_snapshot": (
+        'x = 7\ndef update():\n    global x\n    x = 12\n'
+        '    print("side", end="|")\n    return 3\n'
+        'print(x, update(), x, sep="/", end="!\\n")\n',
+        b"", b"side|7/3/12!\n"),
     # Nested loops with break in both: inner breaks at j==1, outer at i==2.
     "nested_break_continue": (
         "for i in range(5):\n    if i == 2:\n        break\n"

@@ -1,0 +1,558 @@
+{
+  "date": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "source": "examples/fib.py",
+  "environment": {
+    "cpu": "Apple M1 Pro",
+    "ram_bytes": 34359738368,
+    "os": "macOS 27.0",
+    "python": "CPython 3.12.9",
+    "native_reference_build": "Same upstream source, Apple clang 21.0.0 -O3; built outside repository"
+  },
+  "compile": {
+    "source_sha256": "0f28426f71737122715663aa795d7645c966a3d06dbd28b8111774cf029333dc",
+    "python": "3.12.9 (main, Mar 17 2025, 21:36:21) [Clang 20.1.0 ]",
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "cpu": "Apple M1 Pro",
+    "ram_bytes": 34359738368,
+    "backend": "direct",
+    "op_style": "cluster",
+    "jmp_style": "main",
+    "stages": [
+      {
+        "stage": "py2mg",
+        "seconds": 0.004899915773421526,
+        "bytes": 105025
+      },
+      {
+        "stage": "mg2mc",
+        "seconds": 0.12140933307819068,
+        "bytes": 1125864
+      },
+      {
+        "stage": "mc2mb",
+        "seconds": 103.07290737517178,
+        "bytes": 277965145
+      }
+    ],
+    "toolchain_sha256": {
+      "malbolge/compiler/py2mg.py": "6a3d6728a432e57db913a0a5988b24abe55cfccfe2ac6842130959ae323c9b74",
+      "malbolge/compiler/mg2mc.py": "596fdebaba0d4ffa93b8e7a6cf899c51de42c61de8b76492883b1f300964a67d",
+      "malbolge/compiler/mc2mb.py": "1eac7430b5b277b110568e19020f576e3ddfe869200bf4b46662f56651ec8365",
+      "malbolge/compiler/decimal_io.py": "89e30084a2175568d9cb46be0d826e801402d4e6deb9ea01fa1caa0f2cde3f69"
+    },
+    "compile_and_write_seconds": 103.43163741705939,
+    "mb_sha256": "8fb3450ddb660aaad5f15731f7ef96366b3d4189a96fdd7a65f00c56d7ac2969"
+  },
+  "native_reference": {
+    "program": "/private/tmp/pymalbolge-fib-benchmark-v2/fib.mb",
+    "program_bytes": 277965145,
+    "results": [
+      {
+        "input": "0\n",
+        "expected": "0\n",
+        "stdout": "0\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 11.43,
+        "user_cpu_seconds": 11.089,
+        "sys_cpu_seconds": 0.245,
+        "passed": true
+      },
+      {
+        "input": "6\n",
+        "expected": "8\n",
+        "stdout": "8\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 11.562,
+        "user_cpu_seconds": 11.31,
+        "sys_cpu_seconds": 0.209,
+        "passed": true
+      },
+      {
+        "input": "10\n",
+        "expected": "55\n",
+        "stdout": "55\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 13.921,
+        "user_cpu_seconds": 13.641,
+        "sys_cpu_seconds": 0.228,
+        "passed": true
+      },
+      {
+        "input": "7\n",
+        "expected": "13\n",
+        "stdout": "13\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 12.073,
+        "user_cpu_seconds": 11.792,
+        "sys_cpu_seconds": 0.215,
+        "passed": true
+      },
+      {
+        "input": "12\n",
+        "expected": "144\n",
+        "stdout": "144\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 18.044,
+        "user_cpu_seconds": 17.632,
+        "sys_cpu_seconds": 0.228,
+        "passed": true
+      }
+    ],
+    "sample_order": [
+      "0",
+      "6",
+      "10",
+      "7",
+      "12"
+    ],
+    "timing_context": "Sequential native child processes after root compile and Python memory benchmark jobs ended; original loaded timing dataset retained separately.",
+    "isolated_v2_native_peak_rss_bytes": 1165524992
+  },
+  "ordinary_cpython": [
+    {
+      "n": 0,
+      "median_seconds": 0.01822349987924099,
+      "samples_seconds": [
+        0.020120166009292006,
+        0.018698708154261112,
+        0.01822349987924099,
+        0.017526415875181556,
+        0.017795291962102056
+      ],
+      "output": "0\n"
+    },
+    {
+      "n": 6,
+      "median_seconds": 0.01798737491481006,
+      "samples_seconds": [
+        0.017781500006094575,
+        0.01798737491481006,
+        0.01833287486806512,
+        0.018283375073224306,
+        0.017563374945893884
+      ],
+      "output": "8\n"
+    },
+    {
+      "n": 7,
+      "median_seconds": 0.01726945792324841,
+      "samples_seconds": [
+        0.017603875137865543,
+        0.017122041899710894,
+        0.01719954190775752,
+        0.01726945792324841,
+        0.018828415777534246
+      ],
+      "output": "13\n"
+    },
+    {
+      "n": 10,
+      "median_seconds": 0.01914537511765957,
+      "samples_seconds": [
+        0.01917054201476276,
+        0.018374792067334056,
+        0.018682958092540503,
+        0.01948645804077387,
+        0.01914537511765957
+      ],
+      "output": "55\n"
+    },
+    {
+      "n": 12,
+      "median_seconds": 0.019353166921064258,
+      "samples_seconds": [
+        0.019353166921064258,
+        0.01826741686090827,
+        0.020071708830073476,
+        0.019383790902793407,
+        0.01903620781376958
+      ],
+      "output": "144\n"
+    }
+  ],
+  "project_python_cli_bounded": {
+    "interpreter": "project Python CLI",
+    "input": "0\n",
+    "seconds": 44.49842191697098,
+    "first_line_seconds": null,
+    "peak_sampled_rss_bytes": 4522967040,
+    "reason": "stopped_at_4GiB_RSS",
+    "returncode": -9,
+    "stdout": "",
+    "stderr": ""
+  },
+  "measurement_notes": [
+    "Clean direct native times are single sequential whole-process samples after heavy validation jobs finished, including program loading and initialization; the loaded validation samples are retained separately.",
+    "CPython values are medians of five whole-process samples, including interpreter startup.",
+    "Any max_child_rss_bytes_cumulative field is cumulative across child processes, not a per-case peak; the clean direct report separately records an isolated native observation.",
+    "The project Python CLI test was stopped at a sampled RSS threshold of 4 GiB (sampling can overshoot). It produced no output and has no completed runtime measurement.",
+    "The C compiler backend artifact was generated through the pure-Python compiler and validated with the optimized native reference interpreter for zero, double-recursive fib(10), and invalid input.",
+    "Source and toolchain hashes identify the measured artifacts; generation scratch isolation was fixed before these final direct measurements."
+  ],
+  "compile_c_backend": {
+    "source_sha256": "0f28426f71737122715663aa795d7645c966a3d06dbd28b8111774cf029333dc",
+    "python": "3.12.9 (main, Mar 17 2025, 21:36:21) [Clang 20.1.0 ]",
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "cpu": "Apple M1 Pro",
+    "ram_bytes": 34359738368,
+    "backend": "c",
+    "op_style": "cluster",
+    "jmp_style": "main",
+    "stages": [
+      {
+        "stage": "py2c",
+        "seconds": 0.0005950420163571835,
+        "bytes": 2742
+      },
+      {
+        "stage": "c2mg",
+        "seconds": 0.007480083033442497,
+        "bytes": 262633
+      },
+      {
+        "stage": "mg2mc",
+        "seconds": 0.2603155409451574,
+        "bytes": 2480344
+      },
+      {
+        "stage": "mc2mb",
+        "seconds": 282.31868912489153,
+        "bytes": 572759579
+      }
+    ],
+    "toolchain_sha256": {
+      "malbolge/compiler/py2c.py": "40b81576cd808efca7bcd0350d19a9d665e269d2ee58b0ee9b197ccb1cc32c63",
+      "malbolge/compiler/c2mg.py": "5599e24291d52ab1e6ae8effc3a3052faf1b78566ddc8d9a58ba7c4ae3406549",
+      "malbolge/compiler/mg2mc.py": "596fdebaba0d4ffa93b8e7a6cf899c51de42c61de8b76492883b1f300964a67d",
+      "malbolge/compiler/mc2mb.py": "1eac7430b5b277b110568e19020f576e3ddfe869200bf4b46662f56651ec8365",
+      "malbolge/compiler/decimal_io.py": "89e30084a2175568d9cb46be0d826e801402d4e6deb9ea01fa1caa0f2cde3f69"
+    },
+    "compile_and_write_seconds": 283.05815612501465,
+    "mb_sha256": "80f8331e6c98d8b4887ea4d68d4356a2dfcc93d816eb631dd12c0614bcfdb8db"
+  },
+  "native_validation_direct": {
+    "program": "/private/tmp/pymalbolge-fib-benchmark-v2/fib.mb",
+    "program_bytes": 277965145,
+    "results": [
+      {
+        "input": "0\n",
+        "expected": "0\n",
+        "stdout": "0\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 14.222,
+        "user_cpu_seconds": 11.715,
+        "sys_cpu_seconds": 0.578,
+        "max_child_rss_bytes_cumulative": 852197376,
+        "passed": true
+      },
+      {
+        "input": "6\n",
+        "expected": "8\n",
+        "stdout": "8\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 16.211,
+        "user_cpu_seconds": 11.9,
+        "sys_cpu_seconds": 0.589,
+        "max_child_rss_bytes_cumulative": 1123467264,
+        "passed": true
+      },
+      {
+        "input": "7\n",
+        "expected": "13\n",
+        "stdout": "13\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 13.407,
+        "user_cpu_seconds": 12.108,
+        "sys_cpu_seconds": 0.311,
+        "max_child_rss_bytes_cumulative": 1123467264,
+        "passed": true
+      },
+      {
+        "input": "10\n",
+        "expected": "55\n",
+        "stdout": "55\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 20.875,
+        "user_cpu_seconds": 14.339,
+        "sys_cpu_seconds": 0.661,
+        "max_child_rss_bytes_cumulative": 1123467264,
+        "passed": true
+      },
+      {
+        "input": "12\n",
+        "expected": "144\n",
+        "stdout": "144\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 18.984,
+        "user_cpu_seconds": 18.017,
+        "sys_cpu_seconds": 0.281,
+        "max_child_rss_bytes_cumulative": 1165508608,
+        "passed": true
+      },
+      {
+        "input": "7",
+        "expected": "13\n",
+        "stdout": "13\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 13.688,
+        "user_cpu_seconds": 12.132,
+        "sys_cpu_seconds": 0.349,
+        "max_child_rss_bytes_cumulative": 1165508608,
+        "passed": true
+      },
+      {
+        "input": "7\r\n",
+        "expected": "13\n",
+        "stdout": "13\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 15.648,
+        "user_cpu_seconds": 12.392,
+        "sys_cpu_seconds": 0.623,
+        "max_child_rss_bytes_cumulative": 1165508608,
+        "passed": true
+      },
+      {
+        "input": "48\n",
+        "expected": "error\n",
+        "stdout": "error\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 14.245,
+        "user_cpu_seconds": 11.664,
+        "sys_cpu_seconds": 0.472,
+        "max_child_rss_bytes_cumulative": 1165508608,
+        "passed": true
+      },
+      {
+        "input": "",
+        "expected": "error\n",
+        "stdout": "error\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 12.976,
+        "user_cpu_seconds": 11.123,
+        "sys_cpu_seconds": 0.412,
+        "max_child_rss_bytes_cumulative": 1165508608,
+        "passed": true
+      },
+      {
+        "input": "badtext\n",
+        "expected": "error\n",
+        "stdout": "error\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 12.201,
+        "user_cpu_seconds": 11.105,
+        "sys_cpu_seconds": 0.36,
+        "max_child_rss_bytes_cumulative": 1165508608,
+        "passed": true
+      }
+    ]
+  },
+  "native_validation_c_backend": {
+    "program": "/private/tmp/pymalbolge-fib-benchmark-c/fib.mb",
+    "program_bytes": 572759579,
+    "results": [
+      {
+        "input": "0\n",
+        "expected": "0\n",
+        "stdout": "0\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 23.895,
+        "user_cpu_seconds": 23.275,
+        "sys_cpu_seconds": 0.425,
+        "max_child_rss_bytes_cumulative": 2398896128,
+        "passed": true
+      },
+      {
+        "input": "10\n",
+        "expected": "55\n",
+        "stdout": "55\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 31.217,
+        "user_cpu_seconds": 29.63,
+        "sys_cpu_seconds": 0.577,
+        "max_child_rss_bytes_cumulative": 2398912512,
+        "passed": true
+      },
+      {
+        "input": "badtext\n",
+        "expected": "error\n",
+        "stdout": "error\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 22.819,
+        "user_cpu_seconds": 22.286,
+        "sys_cpu_seconds": 0.455,
+        "max_child_rss_bytes_cumulative": 2398912512,
+        "passed": true
+      }
+    ]
+  },
+  "runtime_regressions": [
+    {
+      "kind": "build",
+      "case": "print_order",
+      "program": "/private/tmp/pymalbolge-runtime-io-review/print_order-direct-fixed.mb",
+      "program_bytes": 130382137,
+      "elapsed_seconds": 45.646
+    },
+    {
+      "kind": "run",
+      "case": "print_order",
+      "input": "",
+      "expected": "side|7/3/12!\n",
+      "stdout": "side|7/3/12!\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 7.642,
+      "passed": true
+    },
+    {
+      "kind": "build",
+      "case": "invalid_loop",
+      "program": "/private/tmp/pymalbolge-runtime-io-review/invalid_loop-direct-fixed.mb",
+      "program_bytes": 225658657,
+      "elapsed_seconds": 78.933
+    },
+    {
+      "kind": "run",
+      "case": "invalid_loop",
+      "input": "badtext\n",
+      "expected": "error\n",
+      "stdout": "error\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 9.102,
+      "passed": true
+    },
+    {
+      "kind": "run",
+      "case": "invalid_loop",
+      "input": "7\nbad\n",
+      "expected": "7\nerror\n",
+      "stdout": "7\nerror\n",
+      "stderr": "",
+      "returncode": 0,
+      "timed_out": false,
+      "elapsed_seconds": 9.43,
+      "passed": true
+    }
+  ],
+  "verification": {
+    "focused_tests_passed": 269,
+    "focused_subtests_passed": 231,
+    "gated_slow_test_skipped": 1,
+    "direct_fib_native_cases_passed": 10,
+    "c_backend_fib_native_cases_passed": 3,
+    "mixed_print_and_invalid_loop_native_cases_passed": 3
+  },
+  "larger_n_native_reference": {
+    "date": "2026-10-08",
+    "timezone": "Asia/Shanghai",
+    "program_bytes": 277965145,
+    "mb_sha256": "8fb3450ddb660aaad5f15731f7ef96366b3d4189a96fdd7a65f00c56d7ac2969",
+    "interpreter": "same optimized native C reference interpreter (-O3)",
+    "interpreter_sha256": "693315ac08c6235184c0e35d5c9aebfefed4c92c03cd4c578c7c7d3d263f3b64",
+    "timing_context": "Sequential single whole-process runs, including program loading and initialization; existing compiled double-recursive program reused.",
+    "timeout_seconds_per_case": 600,
+    "results": [
+      {
+        "n": 16,
+        "input": "16\n",
+        "expected": "987\n",
+        "stdout": "987\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 51.507,
+        "user_cpu_seconds": 50.574,
+        "sys_cpu_seconds": 0.579,
+        "max_child_rss_bytes_cumulative": 1165524992,
+        "passed": true,
+        "expected_recursive_calls": 3193
+      },
+      {
+        "n": 20,
+        "input": "20\n",
+        "expected": "6765\n",
+        "stdout": "6765\n",
+        "stderr": "",
+        "returncode": 0,
+        "timed_out": false,
+        "elapsed_seconds": 276.136,
+        "user_cpu_seconds": 272.835,
+        "sys_cpu_seconds": 1.631,
+        "max_child_rss_bytes_cumulative": 1165524992,
+        "passed": true,
+        "expected_recursive_calls": 21891
+      }
+    ],
+    "status": "complete",
+    "recursive_call_count_note": "Theoretical call counts for the source double-recursive Fibonacci algorithm (2*F(n+1)-1), not counts instrumented in the virtual machine."
+  },
+  "larger_n_ordinary_cpython": {
+    "timing_context": "Median of five whole-process runs, including interpreter startup; same ordinary Python source.",
+    "results": [
+      {
+        "n": 16,
+        "output": "987\n",
+        "samples_seconds": [
+          0.01829079119488597,
+          0.017735417000949383,
+          0.017787290969863534,
+          0.01699308305978775,
+          0.01739220810122788
+        ],
+        "median_seconds": 0.017735417000949383
+      },
+      {
+        "n": 20,
+        "output": "6765\n",
+        "samples_seconds": [
+          0.018004874931648374,
+          0.018363582901656628,
+          0.017858208157122135,
+          0.017718249931931496,
+          0.01730487495660782
+        ],
+        "median_seconds": 0.017858208157122135
+      }
+    ]
+  }
+}

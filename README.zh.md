@@ -9,20 +9,36 @@ pyMalbolge 是一个纯 Python 实现的编译器,把 Python 的一个子集编�
 两个 Malbolge 变体的解释器和一个功能完整的调试器。不需要 C++、flex、bison 或
 Perl 这些构建依赖 —— `pip install malbolge`,整条工具链就都在了。
 
+[Fibonacci 示例](examples/fib.py)使用普通 Python 输入输出与内联双重递归。
+十进制转换由编译器生成：
+
 ```python
 def fib(n):
     if n < 2:
         return n
     return fib(n - 1) + fib(n - 2)
 
-putchar(48 + fib(6))
+
+n = int(input())
+if 0 <= n <= 47:
+    print(fib(n))
+else:
+    print("error")
 ```
 
+编译一次后即可输入下标（换行或 EOF 结束输入）：
+
 ```console
-$ python3 -m malbolge compile fib.py --backend=direct -o fib.mb
-$ python3 -m malbolge --variant=malbolge20 fib.mb
-8
+$ uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb
+$ printf '10\n' | uv run python -m malbolge --variant=malbolge20 fib.mb
+55
 ```
+
+新产物已通过有限资源的项目 Python CLI 完成输入 `0`；优化 C 参考解释器也验证了
+输入 `20` → `6765`。保留 v2 产物另在采样 RSS 低于 1 GiB 时完成，见[运行时实测](#运行时-qos2026-10-08)。
+
+算术范围是 `0..47`，但双重递归的耗时呈指数增长。演示宜用 `6`、`7` 或 `10`
+这样的小输入；在 Malbolge20 解释器上计算较大的下标并不实用。
 
 Malbolge 由 Ben Olmstead 在 1998 年设计,目标是让一门语言尽可能地无法编程:每条
 指令都是自修改的,操作码取决于指令自身的地址,算术是一个作用在三进制位上的查表
@@ -32,7 +48,7 @@ Malbolge 由 Ben Olmstead 在 1998 年设计,目标是让一门语言尽可能�
 - **编译器** —— Python 子集 → Malbolge20,两个相互独立的后端,输出完全确定
 - **解释器** —— 原版 Malbolge(10 个三进制位(trit))和 Malbolge20(20 个 trit,稀疏内存)
 - **调试器** —— 断点、观察点、回退单步、内存查看、反汇编;CLI 与 TUI 两种界面
-- **已验证** —— 工具链移植与参考 C++/Perl 工具逐字节一致;441 个测试
+- **已验证** —— 工具链移植与参考 C++/Perl 工具逐字节一致;一致性与端到端测试
 - **零运行时依赖** —— 只有想用 TUI 调试器时才需要 `textual`
 
 ## 安装
@@ -50,16 +66,25 @@ pip install malbolge[tui]     # 追加 TUI 调试器(textual)
 
 ```bash
 # 编译并运行
-python3 -m malbolge compile examples/hello.py -o hello.mb
-python3 -m malbolge --variant=malbolge20 hello.mb
+uv run python -m malbolge compile examples/hello.py -o hello.mb
+uv run python -m malbolge --variant=malbolge20 hello.mb
 
 # 直连后端:跳过 C 这一层,在含控制流或函数的程序上输出体积大约减半,
 # 并原生支持双重递归
-python3 -m malbolge compile examples/fib.py --backend=direct -o fib.mb
+uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb
+
+# 按需启用阶段缓存与 stderr JSON 指标
+uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb \
+  --cache-dir .cache/malbolge --stats
 
 # 导出各个中间阶段
-python3 -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
+uv run python -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
 ```
+
+缓存须主动启用，按内容、工具链、代码生成风格与 Python 版本生成键；损坏项
+重新构建。编译前检查输出路径，包括源码、symlink/hardlink 与多输出碰撞。
+写入使用原子替换，CLI 将最终 `.mb` 流式写出，避免保留完整中间字符串；文件/编码
+失败给出简明诊断。
 
 ### Python API
 
@@ -82,20 +107,25 @@ from malbolge.compiler import (
 
 ### 支持的 Python 子集(v1)
 
-接受:`int` 变量与算术(`+ - * // %`,按 3^20 取模做常量折叠)、`while` / `if` /
-`elif` / `else`、`for i in range(...)`、`break` / `continue`、链式比较、短路的
-`and` / `or` / `not`、条件表达式(`a if c else b`,惰性求值)、函数定义与调用
-(含相互递归)、`global`、`putchar()` / `getchar()` I/O、`ord()`,以及参数为编译期
-常量的 `print()`(字符串字面量、常量整数、全常量 f-string、`sep=` / `end=`)。
-文档字符串会被容忍。
+接受：无符号 `int` 变量与算术（`+ - * // %`，按 `3**20` 取模）；条件、
+循环及 `break`/`continue`；返回操作数的惰性 `and`/`or`、惰性链式比较、
+条件表达式；保存实参值的函数/相互递归、简单关键字调用、固定长度平坦 tuple
+赋值/交换、负字面量步长的 `range()`；字节 I/O 与 `ord()`；模块与函数内
+`int(input([字面量提示语]))`；可混合无符号整数、字符串字面量及基本运行时
+整数 f-string 的 `print()`，支持字面量 `sep=`/`end=`。
 
-拒绝,并给出带行号的 `CompileError`:负字面量与一元负号(值环是无符号的 mod
-3^20)、真除法、运行期取值的 `print()` 参数、`chr`、运行期字符串与 f-string、
-浮点数、`bool`、列表 / 字典 / 集合、类、`import`、`lambda`、推导式、嵌套函数、
-元组解包与关键字参数。
+先保存较早的操作数与 RHS 值，再执行后续副作用；range 边界固定，遍历使用
+隐藏迭代器。输入失败与动态除法/取余零除数逐层退栈，main 仅输出一次 `error`
+并终止。可能返回 None 的函数可用于副作用调用，但结果作为标量使用会被拒绝。
+
+拒绝并指向原源码位置：一般有符号整数（明确的 range 边界/步长字面量为例外）、
+真除法、运行时字符串/对象、返回字符串的原始 `input()`、通用 `int(...)`、
+f-string conversion/格式规格或 print 之外的 f-string、嵌套/任意 tuple
+拆包、starred/默认参数、类、import、推导式与嵌套函数。无符号边界以及保守的
+赋值/返回路径检查细节见规格。
 
 [规范性说明文档](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md)
-覆盖了受理的 AST 白名单、与 CPython 语义之间全部十七处有记录的分歧,以及诊断契约。
+覆盖了受理的 AST 白名单、与 CPython 语义之间有记录的分歧,以及诊断契约。
 
 ## 流水线如何工作
 
@@ -131,7 +161,8 @@ subset      │        subset             pseudo-        LAL low-      Malbolge2
 | `break` / `continue` | 没有 | 标志降级,在嵌套循环中也正确 |
 | 链式比较、短路 `and`/`or` | — | 支持 |
 | 条件表达式 | — | `a if c else b`,惰性求值 |
-| 文本输出 | 每个字符一次 `putchar` | 参数为常量的 `print()`,降级为一串 putchar |
+| 文本输出 | 每个字符一次 `putchar` | `print()` 支持运行时无符号整数与静态字符串，按需注入十进制辅助函数 |
+| 十进制输入 | 手写字符解析 | 模块与函数内 `int(input([字面量提示语]))`，有明确的无符号范围与错误语义 |
 | 诊断 | 解析器报错 | 带行号的 `CompileError`,附源码摘录 |
 | 内联双重递归(`f(n-1) + f(n-2)`) | 从 fib(4) 起就编译错误 | 两个后端上都正确 |
 | 输出确定性 | `srand(time(NULL))` 填充 —— 每次编译刻意都不一样 | 逐字节可复现 |
@@ -149,13 +180,76 @@ Malbolge20 没有通常意义上的指令。光是加法就是一个在三进制
 单元在被执行后都会重写自己,而控制流则承载在一个寄存器里。因此编译出来的程序相对
 源码而言*大得惊人*,而且跑得慢 —— 这是目标语言本身固有的,不是这个实现造成的。
 
-在 M 系列 Mac、CPython 3.9 上实测:
+### 运行时 QoS（2026-10-08）
+
+[最终验收报告](docs/notes/python-qos-validation.json)记录了新编译的
+**285,466,345 字节** Fibonacci 产物及完整哈希。缓存冷编译墙钟耗时
+**38.173 s**（CLI 指标 **37.974 s**）；热缓存重复编译为 **1.415 s**
+墙钟（CLI **1.212 s**），产物逐字节一致。这是完整新编译，非最终阶段耗时。
+
+| 新产物执行 | 整进程耗时 | 已验证结果 |
+|---|---|---|
+| 有限资源项目 Python CLI，`n=0` | 82.494 s | `0\n`，73,378,255 步，正常终止 |
+| 优化 C 参考解释器，`n=12` | 20.193 s | `144\n` |
+| 优化 C 参考解释器，`n=20` | 279.169 s | `6765\n` |
+
+Python CLI 内部指标为 82.410 s；上表整进程墙钟还包含解释器启动。
+
+为隔离运行时存储改动，同一份保留 v2 产物（**277,965,145 字节**，SHA-256
+`8fb3450ddb660aaad5f15731f7ef96366b3d4189a96fdd7a65f00c56d7ac2969`）也在
+M1 Pro / 32 GiB 上完成了输入 `0` 的对照：
+
+| 保留 v2 产物的解释器 | 整进程耗时 | 采样峰值 RSS | 结果 |
+|---|---|---|---|
+| 项目 Python CLI | 111.076 s | 0.846 GiB | `0\n`，退出码 0，stderr 为空 |
+| 优化 C 参考解释器 | 11.591 s | 1.086 GiB | `0\n`，退出码 0，stderr 为空 |
+
+这两个保留产物进程受 4 GiB 阈值监控，均未达到阈值。紧凑不可变源码、类型化可变页与
+COW 快照取代逐单元字典；初始化填充值冻结，执行、复制、reset 与观察一致；
+调试历史使用 deque/输出长度增量。这些均为含加载/初始化的单次整进程样本。
+
+同一份**保留 `.mc`** 的紧凑映射最终汇编/写出为 **35.853 s**，隔离测量峰值
+**144.0 MiB**，逐字节复现 v2。比先前 31.875 s 流式阶段慢约 12.5%，但显著
+降低内存。历史完整 v2 编译为 103.432 s（旧 `mc2mb` 为 103.073 s）；这些
+阶段测量不能冒充更新前端后的完整编译耗时。另一个辅助函数体积样本中，
+字面量 `x * 3` 的 MC 从 204,296 字节降为 32,223，**减少 84.2%**；不是
+一般性加速比。
+
+### QoS 修复前的运行时输入基线（2026-10-08）
+
+在 Apple M1 Pro、32 GiB 内存、macOS 27.0、CPython 3.12.9 上，最终的普通
+Python 示例经纯 Python `direct` 后端编译耗时 **103.43 s**，产物为
+**277,965,145 字节**（约 278 MB，十进制）。优化的 C 参考解释器（`-O3`）
+完成了以下单次整进程测量，包含程序加载与初始化：
+
+| 输入 `n` | 0 | 6 | 7 | 10 | 12 | 16 | 20 |
+|---|---|---|---|---|---|---|---|
+| C 参考解释器耗时（s） | 11.430 | 11.562 | 12.073 | 13.921 | 18.044 | 51.507 | 276.136 |
+
+其跨子进程累计 max RSS 约为 **1.085 GiB**，并非各输入独立的内存峰值。
+同一 Python 源码直接由 CPython 执行，`n=10` 的五次整进程耗时中位数为
+**0.019145 s**，包含解释器启动。
+
+在这份 **QoS 修复前基线**中，项目 Python CLI 未完成执行：`n=0` 时，基准在 **44.498 s** 后因达到
+4 GiB RSS 阈值而停止进程，采样峰值为 **4.212 GiB**（采样间隔导致超出
+阈值），没有输出。这是资源阈值停止，不是超时或完成耗时，也不能据此断言
+完成执行需要多少内存。当时逐源码单元的 Python 字典构成表示层瓶颈；上方
+紧凑内存结果已取代该限制。原始测量数值保持不变，作为历史证据。
+
+[QoS 修复前共享测量数据](docs/notes/fib-input-performance.json)保留样本、环境与验证输出。
+上述结果使用 `direct` 后端。`c` 后端也通过了 `0`、`10` 和非法输入的原生执行验证；
+其产物为 572,759,579 字节，编译耗时 283.06 s。
+
+### 历史基线
+
+以下为 M 系列 Mac、CPython 3.9 上的历史实测。`fib(6)` 一行使用原先的固定输入
+递归源码，不包含当前 `examples/fib.py` 的运行时十进制读取与输出逻辑：
 
 | 源码 | `.mb` 体积(`c`) | `.mb` 体积(`direct`) | 编译 | 运行 | 步数 |
 |---|---|---|---|---|---|
 | `print("Hello, world!")` | 3.47 MB | 3.47 MB | 1.8 s | 3.0 s | 735 K |
 | `for i in range(3): putchar(65+i)` | 27.3 MB | 11.9 MB | 5.7 s | 9.5 s | 3.0 M |
-| 递归 `fib(6)` | 110.5 MB | 56.8 MB | 28.2 s | 53.8 s | — |
+| 固定输入递归 `fib(6)`（历史） | 110.5 MB | 56.8 MB | 28.2 s | 53.8 s | — |
 
 **输出体积。** 直连后端对直线代码没有帮助 —— 两个 `hello` 构建相差不到 1 KB ——
 但对任何带控制流或函数调用的代码,体积大致减半。体积由调用点和循环决定,而不是由
@@ -207,9 +301,9 @@ Python 移植端到端**快了约 2 倍**,但这不是关于 Python 快慢的结
 ## 运行 Malbolge 程序
 
 ```bash
-python3 -m malbolge hello.mal                        # 原版 Malbolge
-python3 -m malbolge --variant=malbolge20 program.mb  # Malbolge20
-python3 -m malbolge cat.mal -i "Hello World"         # 喂入 stdin
+uv run python -m malbolge hello.mal                        # 原版 Malbolge
+uv run python -m malbolge --variant=malbolge20 program.mb  # Malbolge20
+uv run python -m malbolge cat.mal -i "Hello World"         # 喂入 stdin
 ```
 
 ```python
@@ -224,6 +318,39 @@ eval('''(=BA#9"=<;:3y7x54-21q/p-,+*)"!h%B0/.~P<<:(8&66#"!~}|{zyxwvugJ%''', "abc1
 eval20(malbolge20_source, input_data)
 ```
 
+### 批处理执行限制与指标
+
+```bash
+uv run python -m malbolge --variant=malbolge20 program.mb --input '7' \
+  --eof sentinel --max-steps 10000000 --max-output 1024 --stats
+# 输入原始字节：
+uv run python -m malbolge --variant=malbolge20 program.mb --input-file input.bin --stats
+```
+
+`--input` 使用 UTF-8，`--input-file` 提供原始字节。带限制或 `--stats` 时按
+批处理执行：从上述选项或管道读取输入；TTY 无显式输入选项时提供空 EOF，
+在交互 shell 中执行批处理请用 `--input`。`--eof sentinel|stop` 设置 EOF
+策略。指标为 stderr 上的一个 JSON 对象，程序字节保留在 stdout。达到资源
+预算退出码为 3，非法指令为 2，正常终止或输入耗尽为 0。普通无限制 CLI
+调用保留流式行为。
+
+### 有限资源的字节执行 API
+
+```python
+from malbolge import run20
+
+result = run20(malbolge20_source, b"7\n", max_steps=10_000_000,
+             max_output=1024, eof="sentinel")
+print(result.output)       # bytes
+print(result.to_dict())    # 计数、寄存器与停止原因
+```
+
+限制接受非负整数或 `None`；零表示真正的零预算。停止原因区分正常终止、非法
+指令、输入耗尽、步数限制和输出限制；输出将超过上限前停止。新 API 将文本
+显式编码为 UTF-8，输入消耗按字节计数。旧 `eval()` 保留文本/codepoint
+输入与默认 EOF-stop 行为；新 API 默认使用对应变体的 EOF 哨兵。原版解释器
+通过 `malbolge.run` 提供相同接口（与 `run20`、`RunResult` 一同导出）。
+
 > **Malbolge20 不向后兼容。** 它的 `crazy()` 作用在 20 个 trit 上,产生的结果与
 > 10-trit 的原版不同,所以为其中一个变体写的程序,在另一个上不会正确运行。
 
@@ -231,14 +358,14 @@ eval20(malbolge20_source, input_data)
 |---|---|---|
 | 字长 | 10 trits | 20 trits |
 | 内存 | 59,049 个单元 | 约 34.8 亿个单元 |
-| 内存模型 | 稠密数组 | 稀疏、惰性物化 |
+| 内存模型 | 稠密数组 | 不可变源码 + 类型化写时复制页 |
 
 ## 调试器
 
 ```bash
-python3 -m malbolge debug hello.mal                     # CLI,类 GDB
-python3 -m malbolge debug --tui hello.mal               # TUI(需要 textual)
-python3 -m malbolge debug --variant=malbolge20 prog.mb
+uv run python -m malbolge debug hello.mal                     # CLI,类 GDB
+uv run python -m malbolge debug --tui hello.mal               # TUI(需要 textual)
+uv run python -m malbolge debug --variant=malbolge20 prog.mb
 ```
 
 ```
@@ -310,19 +437,27 @@ Szewczyk 的 **MalbolgeLISP** —— 一个约 350 MB 的 LISP 解释器 —— 
 - [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/highlevel-to-malbolge.md) —— 流水线为什么长这样
 - [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/mg-spec.md) —— `.mg` 伪指令语言,从 `ternary` 逆向而来
 - [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/lmao-internals.md) —— HeLL 与 LMAO 汇编器的算法
-- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) —— 性能剖析,以及被修掉的两个热点
+- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) —— 历史性能剖析基线；当前测量见 QoS 报告
 - [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/toolchain-guide.md) —— 构建参考工具,用于一致性工作
 
 ## 开发
 
 ```bash
-pip install -e .[dev]
-python3 -m pytest test/           # 441 tests
-python3 -m pytest test/ -n auto   # ~2.6x faster with pytest-xdist
+uv sync --extra dev
+uv run --no-sync pytest test/
+uv run --no-sync pytest test/ -n 2
 ```
 
 `ref/` 下的参考工具是可选的。存在时,端到端测试会走它们来提速并交叉检查结果;不存在
 时,一切回退到纯 Python 流水线。
+
+本地 QoS 验收还包含最终定向的 207 项测试（128 个 subtest），以及两个
+编译后端在项目 VM 上的便携执行（2 项测试/2 个 subtest）。[历史审计快照](docs/notes/python-qos-audit.json)由[验收报告](docs/notes/python-qos-validation.json)
+结案，不改写原反例证据。
+
+[CI 配置](.github/workflows/qos.yml)覆盖 Python 3.8/3.12/3.13，并设单独的
+便携语义作业。Python 3.8/3.13 已通过本地冒烟检查；截至 2026-10-08，工作流
+尚未推送或在 GitHub 运行。
 
 ## 路线图
 
@@ -330,7 +465,8 @@ python3 -m pytest test/ -n auto   # ~2.6x faster with pytest-xdist
 - [x] 调试器(CLI + TUI,带回退单步)
 - [x] 完整 Nagoya 工具链的纯 Python 移植,逐字节一致
 - [x] Python 前端,以及一个 `py → .mg` 直连后端
-- [ ] 编译器 v2:有符号整数、十进制 `print()` / `input()`、通过 `IND_OPR` 支持数组和字符串
+- [x] 无符号十进制输入输出、基本 print f-string、平坦 tuple 交换与简单关键字调用
+- [ ] 编译器 v2：有符号整数、一般运行时对象/字符串，以及通过 `IND_OPR` 支持数组
 - [ ] Malbolge Unshackled 支持(3-adic 整数、可变旋转宽度、Unicode I/O)
 
 ## 参考资料

@@ -14,6 +14,7 @@ The self-modifying code mechanism and instruction set remain the same.
 """
 
 import sys
+from .core import MalbolgeConfig, RunResult, create_memory, parse_source, run_memory
 from typing import Union
 
 from .core import (
@@ -178,6 +179,16 @@ def eval(code: str, input_data: str = "", eof: str = 'stop') -> str:
         d = 0 if d == mem_size - 1 else d + 1
 
 
+def run(code, input_data=b"", *, max_steps=None, max_output=None,
+        eof="sentinel") -> RunResult:
+    """Run with byte I/O, explicit EOF policy, and optional resource limits."""
+    config = CONFIG
+    memory = create_memory(config)
+    memory.initialize_source(parse_source(code, config))
+    return run_memory(memory, config, input_data, max_steps=max_steps,
+                      max_output=max_output, eof=eof)
+
+
 def main():
     """Command-line entry point for Malbolge20 interpreter."""
     if len(sys.argv) < 2:
@@ -189,8 +200,8 @@ def main():
     try:
         with open(filename, 'r') as f:
             source = f.read()
-    except IOError:
-        print(f'Unable to open file: {filename}')
+    except (OSError, UnicodeError) as error:
+        sys.stderr.write(f'error: cannot read {filename}: {error}\n')
         sys.exit(1)
 
     mem = create_memory(CONFIG)
@@ -198,7 +209,7 @@ def main():
         cells = parse_source(source, CONFIG)
         mem.initialize_source(cells)
     except ValueError as e:
-        print(f'Error: {e}')
+        sys.stderr.write(f'error: {e}\n')
         sys.exit(1)
 
     try:

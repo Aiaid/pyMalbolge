@@ -137,14 +137,14 @@ class TestControlFlow(unittest.TestCase):
 
     def test_for_range_desugar(self):
         c = compile_python_to_c("for i in range(3):\n    putchar(65 + i)\n")
-        self.assertIn("i = 0;", c)
+        self.assertRegex(c, r"zzt\d+ = 0;")
         self.assertIn("while(", c)
-        self.assertIn("i += 1;", c)
+        self.assertRegex(c, r"(zzt\d+) = \1 \+ 1;")
 
     def test_for_range_start_stop_step(self):
         c = compile_python_to_c("for i in range(2, 10, 2):\n    putchar(i)\n")
-        self.assertIn("i = 2;", c)
-        self.assertIn("i += 2;", c)
+        self.assertRegex(c, r"zzt\d+ = 2;")
+        self.assertRegex(c, r"(zzt\d+) = \1 \+ 2;")
 
     def test_if_elif_else(self):
         c = compile_python_to_c(
@@ -207,10 +207,9 @@ class TestStaticErrors(unittest.TestCase):
     def test_chr_unsupported(self):
         self.assert_error("putchar(chr(65))\n", "chr()")
 
-    def test_print_runtime_arg_unsupported(self):
-        # print() now accepts compile-time constant arguments (see
-        # TestPrintSugar below); a runtime variable is still rejected.
-        self.assert_error("x = 65\nprint(x)\n", "compile-time constant")
+    def test_runtime_fstring_supported(self):
+        c = compile_python_to_c("x = 65\nprint(f'{x}')\n")
+        self.assertIn("int zzprintint(", c)
 
     def test_print_as_value_unsupported(self):
         self.assert_error("x = print(65)\n", "cannot be used as a value")
@@ -260,9 +259,9 @@ class TestStaticErrors(unittest.TestCase):
             "    return inner()\n", "nested function")
 
     def test_range_negative_step(self):
-        self.assert_error(
-            "for i in range(10, 0, -1):\n    putchar(65)\n",
-            "range() step must be a positive integer literal")
+        c = compile_python_to_c(
+            "for i in range(10, 0, -1):\n    putchar(65)\n")
+        self.assertRegex(c, r"(zzt\d+) = \1 - 1;")
 
     def test_division_by_zero_constant(self):
         self.assert_error("putchar(5 // 0)\n", "division or modulo by zero")
@@ -341,7 +340,7 @@ class TestHelperAlgorithms(unittest.TestCase):
 
 
 class TestPrintSugar(unittest.TestCase):
-    """print() with compile-time constant arguments (batch-one sugar #1)."""
+    """Constant text and decimal runtime integer print arguments."""
 
     def test_multi_arg_default_sep_end(self):
         c = compile_python_to_c("print('A', 'B')\n")
@@ -372,12 +371,39 @@ class TestPrintSugar(unittest.TestCase):
         c = compile_python_to_c("print(f\"{'AB'}\")\n")
         self.assertEqual(putchar_codes(c), [ord(ch) for ch in "AB\n"])
 
-    def test_rejects_runtime_variable_argument(self):
-        with self.assertRaises(CompileError) as ctx:
-            compile_python_to_c("x = 65\nprint(x)\n")
-        msg = str(ctx.exception)
-        self.assertIn("compile-time constant", msg)
-        self.assertIn("putchar", msg)
+    def test_runtime_variable_injects_decimal_helper_after_division(self):
+        c = compile_python_to_c("x = 65\nprint(x)\n")
+        self.assertIn("int zzprintint(", c)
+        self.assertLess(c.index("int zzdiv("), c.index("int zzprintint("))
+        main = c[c.index("int main(){"):]
+        self.assertRegex(main, r"zzt\d+ = x;")
+        self.assertRegex(main, r"zzprintint\(zzt\d+\);")
+        self.assertNotIn("zzmul", c)
+        self.assertNotIn("zzreadint", c)
+
+    def test_constant_print_does_not_inject_decimal_helpers(self):
+        c = compile_python_to_c("print('x', 65, sep=':', end='!')\n")
+        self.assertEqual(putchar_codes(c), [ord(ch) for ch in "x:65!"])
+        self.assertNotIn("zzprintint", c)
+        self.assertNotIn("zzdiv", c)
+
+    def test_arguments_captured_before_mutating_call_and_output(self):
+        c = compile_python_to_c(
+            "x = 12\ndef change():\n    global x\n"
+            "    x = 34\n    return x\n"
+            "print('value', x, change(), x, sep=':', end='!')\n")
+        main = c[c.index("int main(){"):]
+        capture = re.search(r"(zzt\d+) = x;", main)
+        self.assertIsNotNone(capture)
+        self.assertLess(capture.start(), main.index("= change();"))
+        self.assertLess(main.index("= change();"), main.index("putchar(118);"))
+        self.assertEqual(main.count("= change();"), 1)
+        self.assertIn("zzprintint({});".format(capture.group(1)), main)
+
+    def test_runtime_print_allowed_inside_function(self):
+        c = compile_python_to_c("def f(n):\n    print(n)\nf(12)\n")
+        self.assertIn("int zzprintint(", c)
+        self.assertRegex(c, r"zzt\d+ = n;")
 
     def test_rejects_fstring_conversion(self):
         with self.assertRaises(CompileError) as ctx:
@@ -414,6 +440,65 @@ class TestPrintSugar(unittest.TestCase):
         self.assertIn("unsupported expression", str(ctx.exception))
 
 
+class TestDecimalInput(unittest.TestCase):
+    def assert_error(self, source, message):
+        with self.assertRaises(CompileError) as ctx:
+            compile_python_to_c(source)
+        self.assertIn(message, str(ctx.exception))
+
+    def test_read_injects_global_before_helper_and_halts_on_error(self):
+        c = compile_python_to_c("n = int(input())\nputchar(n)\n")
+        self.assertLess(c.index("int zzioerror;"), c.index("int zzreadint("))
+        self.assertNotIn("zzdiv", c)
+        self.assertNotIn("zzprintint", c)
+        main = c[c.index("int main(){"):]
+        self.assertIn("= zzreadint();", main)
+        self.assertIn("if(zzioerror != 0){", main)
+        self.assertIn("return 0;", main)
+        self.assertEqual(putchar_codes(main), [ord(ch) for ch in "error\n"])
+        self.assertLess(main.index("return 0;"), main.index("putchar(n);"))
+
+    def test_literal_input_prompt_emitted_before_read(self):
+        c = compile_python_to_c("n = int(input('Number: '))\n")
+        main = c[c.index("int main(){"):]
+        self.assertEqual(putchar_codes(main)[:8], [ord(ch) for ch in "Number: "])
+        self.assertLess(main.index("putchar(32);"), main.index("zzreadint();"))
+
+    def test_read_in_loop_and_condition_is_main_context(self):
+        c = compile_python_to_c(
+            "while int(input()) != 0:\n    if int(input()):\n        print(1)\n")
+        main = c[c.index("int main(){"):]
+        self.assertEqual(main.count("= zzreadint();"), 3)
+        self.assertEqual(main.count("return 0;"), 3)
+
+    def test_read_inside_function_propagates_failure_to_main(self):
+        c = compile_python_to_c("def f():\n    return int(input())\nprint(f())\n")
+        self.assertEqual(c.count("if(zzioerror != 0){"), 2)
+        main = c[c.index("int main(){"):]
+        self.assertEqual(putchar_codes(main)[:-1], [ord(ch) for ch in "error\n"])
+
+    def test_raw_input_and_other_int_forms_rejected(self):
+        for source, message in (
+            ("n = input()\n", "input() strings"),
+            ("n = int(12)\n", "only as int(input())"),
+            ("n = int(input(), 10)\n", "only as int(input())"),
+            ("n = int(input(prompt='n'))\n", "string literal prompt"),
+            ("n = int(input(12))\n", "prompt must be a string literal"),
+        ):
+            with self.subTest(source=source):
+                self.assert_error(source, message)
+
+    def test_decimal_builtin_and_helper_names_are_reserved(self):
+        for name in ("int", "INT", "input", "Input", "zzreadint",
+                     "ZZPRINTINT", "zzioerror"):
+            message = "reserved" if name != "int" else "keyword"
+            with self.subTest(name=name, kind="variable"):
+                self.assert_error(name + " = 1\n", message)
+            with self.subTest(name=name, kind="function"):
+                self.assert_error("def " + name + "():\n    return 1\n",
+                                  message)
+
+
 class TestConditionalExpressionSugar(unittest.TestCase):
     """`a if c else b` (batch-one sugar #4): materialised via real if/else."""
 
@@ -423,12 +508,10 @@ class TestConditionalExpressionSugar(unittest.TestCase):
         self.assertIn("if(", c)
         self.assertIn("} else {", c)
 
-    def test_nested_ifexp_in_print_int_position_still_runtime(self):
-        # An IfExp never folds to a compile-time constant (it always goes
-        # through real control flow), so it's rejected as a print() arg --
-        # documents the boundary rather than a print()-specific bug.
-        with self.assertRaises(CompileError):
-            compile_python_to_c("x = 5\nprint(1 if x > 0 else 0)\n")
+    def test_nested_ifexp_in_print_int_position_uses_decimal_helper(self):
+        c = compile_python_to_c("x = 5\nprint(1 if x > 0 else 0)\n")
+        self.assertIn("} else {", c)
+        self.assertIn("int zzprintint(", c)
 
     def test_usable_as_function_argument(self):
         c = compile_python_to_c(
@@ -441,10 +524,11 @@ class TestAugmentedAssignmentSugar(unittest.TestCase):
     """`*= //= %=` (batch-one sugar #5) -- already wired through the
     existing zzmul/zzdiv/zzmod helpers; locked here as a regression test."""
 
-    def test_mult_augassign_injects_zzmul(self):
+    def test_small_mult_augassign_uses_additions(self):
         c = compile_python_to_c("x = 5\nx *= 3\nputchar(x)\n")
-        self.assertIn("int zzmul(int a, int b){", c)
-        self.assertIn("x = zzmul(x, 3);", c)
+        self.assertNotIn("zzmul", c)
+        self.assertIn("x + x;", c)
+        self.assertRegex(c, r"x = zzt\d+;")
 
     def test_floordiv_augassign_injects_zzdiv(self):
         c = compile_python_to_c("x = 17\nx //= 5\nputchar(x + 64)\n")
@@ -478,7 +562,7 @@ class TestBreakContinueSugar(unittest.TestCase):
         # increment must not be conditioned on the break flag alone being
         # false in a way that also guards on skip (continue must not stop
         # the index from advancing).
-        self.assertIn("i += 1;", c)
+        self.assertRegex(c, r"(zzt\d+) = \1 \+ 1;")
 
     def test_break_continue_outside_loop_rejected(self):
         with self.assertRaises(CompileError) as ctx:
