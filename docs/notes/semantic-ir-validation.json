@@ -1,0 +1,141 @@
+{
+  "date": "2026-10-09",
+  "status": "opt-in semantic frontend locally validated",
+  "reference_commit": "af08ff65b4c4456d7484bd7db0bbf3e337ccaba7",
+  "python": "3.12.9",
+  "xdsl": "0.69.0",
+  "pipeline": [
+    "Python AST",
+    "shared normalization and AST-only diagnostics",
+    "typed pysem IR",
+    "verified semantic passes",
+    "authoritative IR-to-AST target adapter",
+    "direct MG backend",
+    "MC",
+    "LAL IR",
+    "verified LAL passes",
+    "MC",
+    "existing MB assembler"
+  ],
+  "default_frontend": "compat",
+  "semantic_selection": "--backend=ir --ir-frontend=semantic",
+  "frontend_only_export": "--backend=ir --emit-semantic-ir PATH",
+  "default_semantic_passes": [
+    "verify-semantic"
+  ],
+  "default_lal_passes": [
+    "verify-lal"
+  ],
+  "new_optimization_passes": [],
+  "regression": {
+    "command": "uv run --offline --no-sync pytest test/ -q -n 2 --ignore=test/test_py2c_e2e.py --ignore=test/test_py2mg_e2e.py --ignore=test/test_hell_examples.py",
+    "passed": 1387,
+    "skipped": 27,
+    "subtests_passed": 3573,
+    "seconds": 36.43,
+    "scope": "Broad focused regression, excluding three expensive end-to-end modules",
+    "expected_diagnostic_warning": "One CPython SyntaxWarning in the rejected-is diagnostic fixture",
+    "post_canary_check": {
+      "command": "uv run --offline --no-sync pytest test/test_semantic_pipeline.py -q",
+      "passed": 8,
+      "note": "Final location/structure hashseed test added after broad collection; verified separately. Subsequent production-file change was documentation-only."
+    }
+  },
+  "semantic_coverage": {
+    "frontend_tests": 203,
+    "oracle_tests": 58,
+    "target_adapter_tests": 39,
+    "fixed_benchmark_workloads": 32,
+    "replayed_source_diagnostic_oracles": 68,
+    "qos_and_benchmark_sources_through_mg_mc": 21,
+    "legacy_codegen_not_used_by_frontend": "Old compiler constructor/lowering/generator calls forbidden by tests",
+    "independent_oracle": "Dispatches semantic operations without AST/exec, legacy compiler or target VM",
+    "actual_mb_checks": [
+      "IR65-to66 edit changes final output",
+      "one getchar SSA value reused outputs twice while consuming one byte",
+      "CLI semantic+LAL+MC+MB output",
+      "next-byte example A-to-B consumes one byte"
+    ],
+    "checks": [
+      "source-located syntax and diagnostic contracts",
+      "word ring and checked errors",
+      "ordered argument/global snapshots",
+      "lazy bool/chained comparison/conditional regions",
+      "range captures/iterator/break/continue",
+      "recursion and returns",
+      "explicit dead-name traps",
+      "SSA/type/scope validation",
+      "pass cloning and invalid post-pass isolation",
+      "source locations retained in printed/reloaded IR",
+      "cache provenance and frontend/pass keys",
+      "UTF8 text input matching bounded VM"
+    ]
+  },
+  "determinism": {
+    "seeds": [
+      "0",
+      "1",
+      "73",
+      "random"
+    ],
+    "semantic_example_operation_count": 15,
+    "semantic_example_ir_sha256": "b57dc7988ae7e244c03596f6a8903b7a0964ad2d00afe94694defd52fbf1b811",
+    "canary_test": "test/test_semantic_pipeline.py"
+  },
+  "example": {
+    "source": "def next_byte(value):\n    return value + 1\nbyte = getchar()\nputchar(next_byte(byte))\n",
+    "ir": "docs/notes/semantic-ir-example.mlir",
+    "input_hex": "41",
+    "output_hex": "42",
+    "input_consumed": 1,
+    "oracle_status": "completed",
+    "target_stop_reason": "terminated",
+    "target_budget": 10000000
+  },
+  "packaging": {
+    "wheel_and_sdist": "built",
+    "base_without_xdsl": "Installed wheel in independent Python3.12 environment; C/direct real VM output passed; both semantic and LAL requests return optional-dependency errors.",
+    "base_python38": "Syntax-checked base exports/CLI/lazy package; no live Python3.8 interpreter run.",
+    "mandatory_dependencies": [],
+    "optional_ir_extra": "xdsl==0.69.0 on Python>=3.10"
+  },
+  "hosted_ci": "Configured Python3.10/3.12/3.13 IR checks; not run on GitHub",
+  "limits": [
+    "Expression SSA with mutable source slots, not full variable SSA or whole-program liveness.",
+    "Target adapter reconstructs AST from verified IR; no direct semantic-to-LAL or LLVM backend yet.",
+    "AST-only analysis methods currently aliased from direct frontend; shared analysis extraction remains.",
+    "Unsupported AST forms are rejected even in dead regions; local-before-binding shadow diagnostics are stricter than legacy.",
+    "Implicit function-global reads require a module-bound name; function writes do not broaden admission.",
+    "Target adapter may increase artifact size and compile/runtime work; no performance improvement claim.",
+    "Structural verification and oracle checks do not certify future optimizing passes or new layouts."
+  ],
+  "source_sha256": {
+    "malbolge/compiler/__init__.py": "607190f8f92a477c007eceb3b5db1582b1f7175740ae2762c8be86c84f0c8eeb",
+    "malbolge/compiler/c2mg.py": "5599e24291d52ab1e6ae8effc3a3052faf1b78566ddc8d9a58ba7c4ae3406549",
+    "malbolge/compiler/cli.py": "93a7f711bb03c6434c6d7423511b72ccf03bb6b68ac65c07d6b7c7e39bb2ab35",
+    "malbolge/compiler/decimal_io.py": "89e30084a2175568d9cb46be0d826e801402d4e6deb9ea01fa1caa0f2cde3f69",
+    "malbolge/compiler/ir/__init__.py": "10ed6e4d79372cc03c233ab4b15a3df776cd2f619282420c69df9cbd7b3e0000",
+    "malbolge/compiler/ir/bridge.py": "4c39424c7d6a6953bbfde47753c056d33b78bb9f25a88b8fa86704d8fdc71087",
+    "malbolge/compiler/ir/frontend.py": "6f5834161d9cf1f475abe980d28a1725fa705bff777cfd4d45cacfb506976c7c",
+    "malbolge/compiler/ir/interpreter.py": "f90f261cfa8363722e194db6e593ab09894715fa2bc76e3cf53c0c942e693e8b",
+    "malbolge/compiler/ir/lal.py": "528158f135aae18a851dd5de52b1ec36239077b9bf1b7e6eccafc4789f5e639d",
+    "malbolge/compiler/ir/lowering.py": "d3676a4d1bf3256a885c347bbe7ce2578134e0a70807cbcda19cf3f119335d39",
+    "malbolge/compiler/ir/passes.py": "3e875d7341f719cf99ea25cd52c9ebab0c226dac5a4f60fb795b939ab0c0a6af",
+    "malbolge/compiler/ir/semantic.py": "59bd132b19c4c9ee8d92c1c9a56bcf0ad82dcfe26baab4187cc7139467ac65ff",
+    "malbolge/compiler/ir/semantic_passes.py": "209c9bbb596ea51e3e494a445e01b0bdc2daba9c87ed479aa49ee9d68923dd55",
+    "malbolge/compiler/mc2mb.py": "bac1ca8196c108cf91b8925c17f1f143bd1fe29fc5fcbeaa87e1f666b63fa58d",
+    "malbolge/compiler/mg2mc.py": "596fdebaba0d4ffa93b8e7a6cf899c51de42c61de8b76492883b1f300964a67d",
+    "malbolge/compiler/py2c.py": "2d4a102dd20a96aaebee2bdf03e35ca10360e1df2ca8a251cca8a306b207f959",
+    "malbolge/compiler/py2mg.py": "69537e71dbff7a5f9d694734d5114d351df4123ccd314730bfe535c96fe178d8",
+    "malbolge/compiler/python_normalize.py": "6a6716f79c54bff2bb3863f22523143662eabafb33fa2f36b27429e66040ae41",
+    "malbolge/core.py": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+    "malbolge/malbolge20.py": "72c98316bea757628a4dda39f030960e9486898430bb2db8fc6d3ec88a3984a1",
+    "pyproject.toml": "99e5335669fdad7574548693e79813566e58d7f52b893303cb1252c757ce9baa",
+    ".github/workflows/qos.yml": "aa5c863a93df81973de25a8f8ee47816b576d7f857bdc79291b54b13f571be32",
+    "test/test_semantic_cli.py": "3da3fc92d135cd2fc4fa1f2dfef6edc01e288de737feb6d7268dc7f5617d811f",
+    "test/test_semantic_frontend.py": "dfdb7f9eb328ef3c84ad7074c4455fd4f15435ae43a7c212e8dc8e2b580e154f",
+    "test/test_semantic_ir.py": "11a687108e36f73f51a3a7ed98f4a20296edb87a006e6235cd30ceef686706f7",
+    "test/test_semantic_lowering.py": "16d0f70e65c6667bd3ba65e17d8b063cb3e360be11e7b4b9a09c089b661b1c5f",
+    "test/test_semantic_pipeline.py": "e8e772a4b2606d589aa618b17ea9aa4a8439e7914b68d8bc729c5c584ea55fbf"
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-09",
+  "status": "low-level IR foundation locally validated",
+  "reference_commit": "af08ff65b4c4456d7484bd7db0bbf3e337ccaba7",
+  "python": "3.12.9",
+  "xdsl": "0.69.0",
+  "new_optimization_passes": [],
+  "default_passes": [
+    "verify-lal"
+  ],
+  "pipeline": [
+    "Python direct frontend",
+    "MG",
+    "legacy MC",
+    "structured LAL IR",
+    "verified project passes",
+    "canonical MC",
+    "existing mc2mb"
+  ],
+  "regression": {
+    "command": "uv run --offline --no-sync pytest test/ -q -n 2 --ignore=test/test_py2c_e2e.py --ignore=test/test_py2mg_e2e.py --ignore=test/test_hell_examples.py",
+    "passed": 1074,
+    "skipped": 27,
+    "subtests_passed": 3573,
+    "seconds": 36.31,
+    "scope": "Broad focused regression, not a complete slow/end-to-end suite",
+    "excluded_modules": [
+      "test_py2c_e2e",
+      "test_py2mg_e2e",
+      "test_hell_examples"
+    ]
+  },
+  "ir_coverage": {
+    "existing_mc_sources": 8,
+    "generated_mc_style_cases": 136,
+    "style_pairs": [
+      [
+        "cluster",
+        "main"
+      ],
+      [
+        "cluster",
+        "direct"
+      ],
+      [
+        "inline",
+        "main"
+      ],
+      [
+        "inline",
+        "direct"
+      ]
+    ],
+    "checks": [
+      "MC/xDSL parse-print round trips",
+      "byte-identical assembler data",
+      "representative identical MB and bounded VM output/input/stop/steps",
+      "strict syntax and scoped symbols",
+      "periods 2/4/5/6/9",
+      "sequential duplicate UNIT offsets",
+      "opcode/address ambiguity rejection",
+      "real test-only transforming ModulePass",
+      "input/post-pass verification and clone isolation",
+      "CLI atomic outputs, option preflight and cache identity/report provenance"
+    ]
+  },
+  "determinism": {
+    "hash_seeds": [
+      "0",
+      "1",
+      "73",
+      "random"
+    ],
+    "canary_operation_counts": [
+      7,
+      14
+    ],
+    "version_pinned_ir_mc_sha256": "test/test_ir_pipeline.py"
+  },
+  "packaging": {
+    "wheel": "built and inspected",
+    "sdist": "built and inspected",
+    "optional_ir_extra": true,
+    "base_requires_python": ">=3.8",
+    "ir_requires_python": ">=3.10",
+    "mandatory_dependencies": [],
+    "private_research_excluded": true,
+    "without_xdsl": "Installed wheel in a separate Python 3.12 environment; C/direct VM output passed; IR returned actionable dependency error; xDSL never imported.",
+    "python_38_syntax": "Base CLI, compiler exports and lazy IR package parsed with ast feature_version=(3,8); no live Python 3.8 interpreter was run."
+  },
+  "hosted_ci": {
+    "status": "configured, not executed in this task",
+    "ir_python_versions": [
+      "3.10",
+      "3.12",
+      "3.13"
+    ]
+  },
+  "limits": [
+    "Python still enters through the direct MG/MC compatibility bridge; semantic frontend/SSA migration pending.",
+    "Existing assembler cannot resolve some structurally representable ALIGN and address forms; these remain documented limitations.",
+    "Structural validity and digest parity do not certify future optimizing passes or new layouts.",
+    "No new optimization or performance benchmark was executed."
+  ],
+  "source_sha256": {
+    "malbolge/compiler/__init__.py": "40a7db4e41c30d42f38b22563d1edce62ec0ce9d7c245950715fa18d118d8f70",
+    "malbolge/compiler/cli.py": "9ea7ba70f2d200225c0266cd1b5b73eb4e5b5a3c56a457a667a12e10f65ccbaf",
+    "pyproject.toml": "99e5335669fdad7574548693e79813566e58d7f52b893303cb1252c757ce9baa",
+    ".github/workflows/qos.yml": "85b939ccf2a3f09fc2cfc2b820e750023021634b0af0e9836d55aed15295ab38",
+    "malbolge/compiler/ir/__init__.py": "8619c66f13a71a29a7dbc704daf4dfda8c2fa340f1f952b6f93bf98e9dc445c9",
+    "malbolge/compiler/ir/bridge.py": "12f4960f66755d199c4b2f3fb3d65a4c192c705ae75cfbdec51b1f1304c49efa",
+    "malbolge/compiler/ir/lal.py": "528158f135aae18a851dd5de52b1ec36239077b9bf1b7e6eccafc4789f5e639d",
+    "malbolge/compiler/ir/passes.py": "1f8873ddf3496ae27260aa9c8760552d1515623ad5dae24bd53ea2364ae00d3d",
+    "test/test_lal_ir.py": "b9dc40a8a5151c9f3700c98b5a8aa29edd86aac03426a5900e440c4278849559",
+    "test/test_ir_pipeline.py": "c4ab9131893838e62de1b3272084ba2ac67c4c8aca74fec5db12befc8053a6b9",
+    "test/test_ir_cli.py": "f923234e30c44d7e9cdb4f9c2ded705758aab2c055a6a7ce7539461fc9b5ad04"
+  }
+}

@@ -48,3 +48,26 @@ jobs:
         env:
           MALBOLGE_QOS_E2E: '1'
         run: uv run --no-sync pytest test/test_qos_ci.py -q
+
+  ir-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: ${{ matrix.python }}
+      - run: uv sync --extra dev --extra ir
+      - name: Verify IR round trips, pass contracts and determinism canaries
+        run: >-
+          uv run --no-sync pytest test/test_lal_ir.py test/test_ir_pipeline.py
+          test/test_ir_cli.py test/test_semantic_ir.py test/test_semantic_frontend.py
+          test/test_semantic_lowering.py test/test_semantic_pipeline.py
+          test/test_semantic_cli.py -q

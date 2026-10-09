@@ -1,6 +1,7 @@
 """Python-subset compiler CLI with atomic outputs and opt-in stage caching."""
 
 import argparse
+from dataclasses import asdict
 import hashlib
 import json
 import os
@@ -15,6 +16,7 @@ from . import (
     compile_c_to_mg, C2MgError, translate_mg_to_mc, Mg2McError,
     iter_mc_to_mb, Mc2MbError,
 )
+from .ir import IRDependencyError, XDSL_VERSION, require_ir_support
 
 
 def _die(msg):
@@ -72,7 +74,8 @@ def _same_path(left, right):
 
 
 def _preflight(args):
-    outputs = [value for value in (args.emit_c, args.emit_mg, args.emit_mc, args.output)
+    outputs = [value for value in (args.emit_c, args.emit_mg, args.emit_mc,
+                                  args.emit_ir, args.emit_semantic_ir, args.output)
                if value is not None]
     for i, output in enumerate(outputs):
         if output != "-":
@@ -94,18 +97,26 @@ def _preflight(args):
 class _Cache:
     def __init__(self, directory, source, args):
         compiler_dir = Path(__file__).parent
-        toolchain = {path.name: _digest(path) for path in sorted(compiler_dir.glob("*.py"))}
+        toolchain = {str(path.relative_to(compiler_dir)): _digest(path)
+                     for path in sorted(compiler_dir.rglob("*.py"))}
         payload = {"source": hashlib.sha256(source.encode("utf8")).hexdigest(),
                    "backend": args.backend, "op_style": args.op_style,
                    "jmp_style": args.jmp_style, "python": list(sys.version_info),
                    "toolchain": toolchain}
+        if args.backend == "ir":
+            payload["ir_passes"] = list(args.ir_passes)
+            payload["xdsl_version"] = XDSL_VERSION
+            payload["ir_frontend"] = args.ir_frontend
+            payload["semantic_passes"] = list(args.semantic_pass_names)
         key = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
         self.root = Path(directory) / key
         self.root.mkdir(parents=True, exist_ok=True)
         self.manifest = self.root / "manifest.json"
-        reserved = [self.manifest] + [self.path(stage) for stage in ("c", "mg", "mc", "mb")]
+        reserved = [self.manifest] + [self.path(stage) for stage in
+                                     ("c", "semantic", "mg", "mc-source", "ir", "mc", "mb")]
         requested = [args.source] + [value for value in (
-            args.emit_c, args.emit_mg, args.emit_mc, args.output)
+            args.emit_c, args.emit_mg, args.emit_mc, args.emit_ir,
+            args.emit_semantic_ir, args.output)
             if value is not None and value != "-"]
         for target in reserved:
             if any(_same_path(target, value) for value in requested):
@@ -140,6 +151,15 @@ class _Cache:
 def _compile(args, source):
     started = time.perf_counter()
     stats = {"backend": args.backend, "stages": []}
+    if args.backend == "ir":
+        stats["ir"] = {"xdsl_version": XDSL_VERSION,
+                       "passes": list(args.ir_passes), "reports": [],
+                       "cache_hit": False}
+        stats["ir_frontend"] = args.ir_frontend
+        if args.ir_frontend == "semantic":
+            stats["semantic_ir"] = {"xdsl_version": XDSL_VERSION,
+                                    "passes": list(args.semantic_pass_names),
+                                    "reports": [], "cache_hit": False}
     cache = _Cache(args.cache_dir, source, args) if args.cache_dir else None
 
     def stage(name, extension, fn, value):
@@ -164,9 +184,14 @@ def _compile(args, source):
 
     # A complete cached image can be copied without loading all intermediates.
     if (cache and args.output is not None and args.emit_c is None
-            and args.emit_mg is None and args.emit_mc is None):
+            and args.emit_mg is None and args.emit_mc is None and args.emit_ir is None
+            and args.emit_semantic_ir is None):
         cached = cache.hit("mb")
         if cached:
+            if args.backend == "ir":
+                stats["ir"].update(cache_hit=True, cached_stage="mb")
+                if args.ir_frontend == "semantic":
+                    stats["semantic_ir"].update(cache_hit=True, cached_stage="mb")
             _copy_image(cached, args.output)
             stats["stages"].append({"stage": "mc2mb", "cache_hit": True,
                                     "seconds": time.perf_counter() - started,
@@ -174,7 +199,33 @@ def _compile(args, source):
             finish_stats()
             return
 
-    if args.backend == "direct":
+    if args.backend == "ir" and args.ir_frontend == "semantic":
+        from .ir.semantic import parse_semantic, print_semantic, verify_semantic
+        from .ir.semantic_passes import compile_python_semantic_result, summarize_semantic
+        from .ir.lowering import lower_semantic_to_mg
+
+        def to_semantic(value):
+            result = compile_python_semantic_result(value, args.semantic_pass_names)
+            stats["semantic_ir"] = result.to_dict()
+            stats["semantic_ir"]["cache_hit"] = False
+            return print_semantic(result.module)
+
+        semantic_text = stage("python-to-semantic", "semantic", to_semantic, source)
+        module = parse_semantic(semantic_text)
+        verify_semantic(module)
+        if stats["stages"][-1]["cache_hit"]:
+            stats["semantic_ir"].update(cache_hit=True, cached_stage="semantic")
+        reports = stats["semantic_ir"]["reports"]
+        stats["semantic_ir"]["summary"] = (reports[-1]["after"] if reports
+                                             else asdict(summarize_semantic(module)))
+        if args.emit_semantic_ir is not None:
+            _write(args.emit_semantic_ir, semantic_text, "semantic IR")
+        if all(value is None for value in
+               (args.emit_mg, args.emit_mc, args.emit_ir, args.output)):
+            finish_stats()
+            return
+        mg = stage("semantic-to-mg", "mg", lower_semantic_to_mg, module)
+    elif args.backend in ("direct", "ir"):
         mg = stage("py2mg", "mg", compile_python_to_mg, source)
     else:
         c = stage("py2c", "c", compile_python_to_c, source)
@@ -186,11 +237,37 @@ def _compile(args, source):
         mg = stage("c2mg", "mg", compile_c_to_mg, c)
     if args.emit_mg is not None:
         _write(args.emit_mg, mg, ".mg")
-    if args.emit_mc is None and args.output is None:
+    if args.emit_mc is None and args.emit_ir is None and args.output is None:
         finish_stats()
         return
-    mc = stage("mg2mc", "mc", lambda value: translate_mg_to_mc(
+    mc = stage("mg2mc", "mc-source" if args.backend == "ir" else "mc",
+               lambda value: translate_mg_to_mc(
         value, op_style=args.op_style, jmp_style=args.jmp_style), mg)
+    if args.backend == "ir":
+        from .ir.bridge import mc_to_ir_result
+        from .ir.lal import emit_mc, parse_lal, print_lal, verify_lal
+        from .ir.passes import summarize_ir
+
+        def to_ir(value):
+            result = mc_to_ir_result(value, passes=args.ir_passes)
+            stats["ir"] = result.to_dict()
+            stats["ir"]["cache_hit"] = False
+            return print_lal(result.module)
+
+        ir_text = stage("lal-passes", "ir", to_ir, mc)
+        module = parse_lal(ir_text)
+        verify_lal(module)
+        if stats["stages"][-1]["cache_hit"]:
+            stats["ir"].update(cache_hit=True, cached_stage="ir")
+        reports = stats["ir"]["reports"]
+        stats["ir"]["summary"] = (reports[-1]["after"] if reports
+                                    else asdict(summarize_ir(module)))
+        if args.emit_ir is not None:
+            _write(args.emit_ir, ir_text, "LAL IR")
+        if args.emit_mc is None and args.output is None:
+            finish_stats()
+            return
+        mc = stage("lal-to-mc", "mc", emit_mc, module)
     if args.emit_mc is not None:
         _write(args.emit_mc, mc, ".mc")
     if args.output is not None:
@@ -238,22 +315,65 @@ def main(argv):
     parser.add_argument("--emit-c", metavar="PATH", help="write C ('-' for stdout)")
     parser.add_argument("--emit-mg", metavar="PATH", help="write .mg ('-' for stdout)")
     parser.add_argument("--emit-mc", metavar="PATH", help="write .mc ('-' for stdout)")
+    parser.add_argument("--emit-ir", metavar="PATH",
+                        help="write verified LAL IR with --backend=ir ('-' for stdout)")
+    parser.add_argument("--emit-semantic-ir", metavar="PATH",
+                        help="write source-semantic IR before target lowering ('-' for stdout)")
     parser.add_argument("-o", "--output", metavar="MB", help="write Malbolge20 source")
-    parser.add_argument("--backend", choices=("c", "direct"), default="c")
+    parser.add_argument("--backend", choices=("c", "direct", "ir"), default="c")
+    parser.add_argument("--passes", metavar="NAMES",
+                        help="comma-separated IR passes (default: verify-lal; IR backend only)")
+    parser.add_argument("--ir-frontend", choices=("compat", "semantic"),
+                        help="IR source path (default: compat; semantic for --emit-semantic-ir)")
+    parser.add_argument("--semantic-passes", metavar="NAMES",
+                        help="semantic pass sequence (default: verify-semantic)")
     parser.add_argument("--op-style", choices=("cluster", "inline"), default="cluster")
     parser.add_argument("--jmp-style", choices=("main", "direct"), default="main")
     parser.add_argument("--cache-dir", metavar="PATH", help="opt-in content-addressed stage cache")
     parser.add_argument("--stats", action="store_true", help="write JSON compilation metrics to stderr")
     args = parser.parse_args(argv)
+    if args.backend != "ir" and any(value is not None for value in
+                                     (args.ir_frontend, args.emit_semantic_ir, args.semantic_passes)):
+        _die("semantic IR and frontend options require --backend=ir")
+    args.ir_frontend = args.ir_frontend or (
+        "semantic" if args.emit_semantic_ir is not None or args.semantic_passes is not None
+        else "compat")
+    if args.ir_frontend != "semantic" and (
+            args.emit_semantic_ir is not None or args.semantic_passes is not None):
+        _die("--emit-semantic-ir and --semantic-passes require --ir-frontend=semantic")
     if args.output is None and all(value is None for value in
-                                  (args.emit_c, args.emit_mg, args.emit_mc)):
-        if args.backend == "direct":
+                                  (args.emit_c, args.emit_mg, args.emit_mc, args.emit_ir,
+                                   args.emit_semantic_ir)):
+        if args.backend == "ir" and args.ir_frontend == "semantic":
+            args.emit_semantic_ir = "-"
+        elif args.backend == "ir":
+            args.emit_ir = "-"
+        elif args.backend == "direct":
             args.emit_mg = "-"
         else:
             args.emit_c = "-"
-    if args.backend == "direct" and args.emit_c is not None:
-        _die("--emit-c is not available with --backend=direct")
+    if args.backend in ("direct", "ir") and args.emit_c is not None:
+        _die("--emit-c is not available with --backend={}".format(args.backend))
+    if args.backend != "ir" and (args.emit_ir is not None or args.passes is not None):
+        _die("--emit-ir and --passes require --backend=ir")
+    ir_errors = ()
     try:
+        if args.backend == "ir":
+            require_ir_support()
+            from .ir.lal import LalIRError
+            from .ir.passes import PipelineError, validate_pass_names
+            ir_errors = (LalIRError, PipelineError)
+            names = None if args.passes is None else tuple(
+                name.strip() for name in args.passes.split(","))
+            args.ir_passes = validate_pass_names(names)
+            args.semantic_pass_names = ()
+            if args.ir_frontend == "semantic":
+                from .ir.semantic import SemanticIRError
+                from .ir.semantic_passes import validate_semantic_pass_names
+                ir_errors += (SemanticIRError,)
+                semantic_names = (None if args.semantic_passes is None else tuple(
+                    name.strip() for name in args.semantic_passes.split(",")))
+                args.semantic_pass_names = validate_semantic_pass_names(semantic_names)
         _preflight(args)
         with open(args.source, encoding="utf8") as stream:
             source = stream.read()
@@ -262,6 +382,10 @@ def main(argv):
         _die("{}: {}".format(args.source, error))
     except (C2MgError, Mg2McError, Mc2MbError) as error:
         _die("compiler stage failed: {}".format(error))
+    except IRDependencyError as error:
+        _die(str(error))
+    except ir_errors as error:
+        _die("IR stage failed: {}".format(error))
     except (OSError, UnicodeError) as error:
         _die("file I/O failed: {}".format(error))
     except KeyboardInterrupt:

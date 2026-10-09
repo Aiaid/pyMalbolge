@@ -56,6 +56,10 @@ uv run python -m malbolge debug --variant=malbolge20 program.mal
 ```bash
 uv run python -m malbolge compile foo.py -o foo.mb                    # default 'c' backend
 uv run python -m malbolge compile foo.py --backend=direct -o foo.mb   # py->.mg direct backend
+uv sync --extra dev --extra ir                                      # optional IR tools, Python 3.10+
+uv run --no-sync python -m malbolge compile foo.py --backend=ir --emit-ir foo.mlir
+uv run --no-sync python -m malbolge compile foo.py --backend=ir --emit-semantic-ir foo.semantic.mlir
+uv run --no-sync python -m malbolge compile foo.py --backend=ir --ir-frontend=semantic -o foo.mb
 uv run python -m malbolge --variant=malbolge20 foo.mb                 # run the result
 ```
 Bounded batch execution and opt-in compilation caching:
@@ -118,6 +122,7 @@ into public documentation without authorization. Check search exit codes:
 | `malbolge/compiler/c2mg.py` | C subset -> .mg (pure-Python port of nagoya-highlevel, bug-for-bug) |
 | `malbolge/compiler/mg2mc.py` | .mg -> .mc LAL (port of nagoya-ternary) |
 | `malbolge/compiler/mc2mb.py` | .mc -> .mb Malbolge20 (port of nagoya-lowass, deterministic padding) |
+| `malbolge/compiler/ir/` | Optional xDSL semantic/LAL dialects, direct AST frontend, independent IR oracle, verified named passes and target compatibility adapter; see `docs/design/semantic-ir.md` and `docs/design/compiler-ir.md` |
 | `malbolge/compiler/cli.py` | `uv run python -m malbolge compile` entry point |
 | `malbolge/debug_cli.py` | CLI debugger interface |
 | `malbolge/debug_tui.py` | TUI debugger (textual-based) |
@@ -136,6 +141,16 @@ into public documentation without authorization. Check search exit codes:
 
 - **Malbolge20 is NOT backward compatible** with original Malbolge programs. The 20-trit `crazy()` operation produces different results than 10-trit.
 - Malbolge20 programs must be specifically written for the 20-trit environment.
+- The `ir` extra pins xDSL for reproducibility. Keep optional IR imports lazy:
+  the base interpreter and C/direct compiler support Python 3.8 without xDSL.
+  IR passes must verify their input/output and use deterministic declaration
+  order. Keep new performance transformations separate from architecture work;
+  IR operation counts and digests are structural metrics, not speed claims.
+- Semantic IR has SSA expression values and explicit mutable source slots;
+  full variable SSA/dataflow is not yet implemented. Preserve lazy regions,
+  call/input/output/error ordering and source locations. The semantic target
+  adapter reconstructs Python AST from verified IR; do not reuse original
+  source or silently fall back to the old frontend on unsupported inputs.
 
 ## TODO
 

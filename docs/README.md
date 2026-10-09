@@ -23,6 +23,8 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 |---|---|---|
 | [highlevel-to-malbolge.md](design/highlevel-to-malbolge.md) | ✅ | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
 | [py2mg-backend.md](design/py2mg-backend.md) | ✅ | Design of the direct `py → .mg` backend (`--backend=direct`): frame strategy, recursion-cycle detection, size comparison against the C path |
+| [compiler-ir.md](design/compiler-ir.md) | ✅ | Optional structured LAL/semantic boundaries, verified pass infrastructure and migration milestones; variable SSA, optimization, layout and LLVM/MLIR remain future |
+| [semantic-ir.md](design/semantic-ir.md) | ✅ | Direct Python AST frontend, typed semantic IR, independent execution oracle, explicit target adapter, CLI selection and diagnostic limits |
 | [hell-assembler-design.md](design/hell-assembler-design.md) | 🧊 | Design for a Python HeLL assembler (shelved fallback route; §6 covers the GPL question) |
 | [tui-web-architecture.md](design/tui-web-architecture.md) | ✅ | Debugger UI architecture: three-layer split with a JSON-only `malbolge/view/` ViewModel shared by a Textual renderer and a (pending) Pyodide web build; the three backend APIs it needs; phasing and parallel boundaries |
 | [tui-redesign/README.md](design/tui-redesign/README.md) | ✅ | The imported TUI redesign canvas (four artboards: current-state reproduction, density-maximised, teaching-oriented, 80×24) plus an offline-viewable `preview.html` |
@@ -38,6 +40,8 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 
 | Document | Status | Contents |
 |---|---|---|
+| [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | First LAL/pass foundation acceptance and source fingerprints; later frontend/integration changes are covered by semantic-ir-validation.json |
+| [semantic-ir-validation.json](notes/semantic-ir-validation.json) | ✅ | Semantic frontend/oracle/adapter acceptance, source fingerprints, regression scope and optional-dependency packaging checks |
 | [perf-baseline.md](notes/perf-baseline.md) | 📌 | Pre-QoS profiling baseline; its runtime representation/hotspot description is superseded by compact periodic memory and python-qos-validation.json |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | Pre-QoS 2026-10-08 shared measurement data: ordinary-Python Fibonacci, direct compilation, optimized C reference execution, CPython comparison, and a resource-bounded project Python CLI stop; bilingual interpretation is in the main README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | Historical 11-group counterexamples; resolved by python-qos-validation.json, original evidence retained |

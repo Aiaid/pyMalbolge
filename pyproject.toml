@@ -35,6 +35,9 @@ dependencies = []
 [project.optional-dependencies]
 tui = ["textual>=0.40.0"]
 dev = ["pytest", "pytest-xdist", "textual>=0.40.0"]
+ir = [
+    "xdsl==0.69.0 ; python_full_version >= '3.10'",
+]
 
 [project.scripts]
 malbolge = "malbolge.malbolge:main"
