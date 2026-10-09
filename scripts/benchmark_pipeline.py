@@ -54,7 +54,7 @@ def digest(data):
 
 def fingerprint():
     paths = sorted((ROOT / "malbolge").glob("*.py"))
-    paths += sorted((ROOT / "malbolge/compiler").glob("*.py"))
+    paths += sorted((ROOT / "malbolge/compiler").rglob("*.py"))
     return {str(p.relative_to(ROOT)): digest(p.read_bytes()) for p in paths}
 
 
@@ -139,7 +139,7 @@ def oracle(source, input_text):
             })
     finally:
         sys.stdin = previous
-    return output.getvalue().encode("ascii")
+    return output.getvalue().encode("latin1")
 
 
 def text_structure(source):
@@ -207,7 +207,26 @@ def compile_sample(args, directory, source):
         result["system_after"] = system_context()
         return result
 
-    if args.backend == "c":
+    if args.backend == "ir":
+        from malbolge.compiler.ir.frontend import compile_python_to_semantic_ir
+        from malbolge.compiler.ir.semantic import print_semantic
+        from malbolge.compiler.ir.semantic_passes import run_semantic_pipeline, summarize_semantic
+        from malbolge.compiler.ir.lowering import lower_semantic_to_mg
+        from dataclasses import asdict
+        selected = getattr(args, "semantic_passes", None)
+        if isinstance(selected, str):
+            selected = tuple(name.strip() for name in selected.split(",")) if selected else ()
+        module = stage("python-to-semantic", lambda: compile_python_to_semantic_ir(source))
+        structure["semantic_before"] = asdict(summarize_semantic(module))
+        optimized = stage("semantic-passes", lambda: run_semantic_pipeline(module, selected))
+        structure["semantic_passes"] = optimized.to_dict()
+        structure["semantic_after"] = asdict(summarize_semantic(optimized.module))
+        (directory / "program.semantic.mlir").write_text(print_semantic(optimized.module), encoding="utf8")
+        legacy_arithmetic = bool(getattr(args, "legacy_arithmetic", False))
+        structure["legacy_target_arithmetic"] = legacy_arithmetic
+        mg = stage("semantic-to-mg", lambda: lower_semantic_to_mg(
+            optimized.module, arithmetic_optimizations=legacy_arithmetic))
+    elif args.backend == "c":
         c = stage("py2c", lambda: compile_python_to_c(source))
         (directory / "program.c").write_text(c, encoding="utf8")
         mg = stage("c2mg", lambda: compile_c_to_mg(c))
@@ -217,6 +236,10 @@ def compile_sample(args, directory, source):
     structure["mg_constructs"] = text_structure(mg)
     mc = stage("mg2mc", lambda: translate_mg_to_mc(
         mg, op_style=args.op_style, jmp_style=args.jmp_style))
+    if args.backend == "ir":
+        from malbolge.compiler.ir.lal import parse_mc, emit_mc
+        lal = stage("mc-to-lal", lambda: parse_mc(mc))
+        mc = stage("lal-to-mc", lambda: emit_mc(lal))
     (directory / "program.mc").write_text(mc, encoding="utf8")
     structure["mc_constructs"] = text_structure(mc)
     flags = Counter()
@@ -268,11 +291,14 @@ def runtime_sample(args, directory, source, input_text):
     # Compilation objects live in a different process and cannot inflate this peak.
     gc.collect()
     executing, cpu_executing = time.perf_counter(), time.process_time()
-    result = run_memory(memory, config, input_text.encode("ascii"),
+    input_hex = getattr(args, "stdin_hex", None)
+    input_bytes = bytes.fromhex(input_hex) if input_hex is not None else input_text.encode("ascii")
+    result = run_memory(memory, config, input_bytes,
                         max_steps=args.max_steps, max_output=4096)
     ended, cpu_ended = time.perf_counter(), time.process_time()
     system_after = system_context()
-    expected = oracle(source, input_text)
+    output_hex = getattr(args, "stdout_hex", None)
+    expected = bytes.fromhex(output_hex) if output_hex is not None else oracle(source, input_text)
     return {"read_seconds": loaded - start, "parse_validate_seconds": validated - loaded,
             "initialize_seconds": initialized - validated, "execute_seconds": ended - executing,
             "prepare_gc_seconds": executing - initialized,
@@ -288,7 +314,9 @@ def runtime_sample(args, directory, source, input_text):
             "wall_seconds": ended - start, "process_peak_rss_bytes": peak_rss(),
             "result": result.to_dict(), "output_hex": result.output.hex(),
             "expected_hex": expected.hex(),
-            "passed": result.stop_reason == "terminated" and result.output == expected}
+            "passed": (result.stop_reason == "terminated" and result.output == expected
+                       and (getattr(args, "expected_input_consumed", None) is None
+                            or result.input_consumed == args.expected_input_consumed))}
 
 
 def trace_sample(args, directory, source, input_text):
@@ -337,6 +365,10 @@ def trace_sample(args, directory, source, input_text):
 def worker(args):
     job = json.loads(args.job.read_text(encoding="utf8")) if args.job else None
     source, input_text = (job["source"], job["stdin"]) if job else CASES[args.case]
+    if job:
+        args.stdin_hex = job.get("stdin_hex")
+        args.stdout_hex = job.get("stdout_hex")
+        args.expected_input_consumed = job.get("expected_input_consumed")
     directory = Path(args.directory)
     profiler = cProfile.Profile() if args.profile else None
     if profiler:
@@ -375,7 +407,10 @@ def main():
     parser.add_argument("--workloads", nargs="+", help="select named manifest inputs")
     parser.add_argument("--list", action="store_true", help="list manifest programs without compiling")
     parser.add_argument("--stop-after", choices=["mc", "mb"], default="mb", help="use mc for quick lowering-only comparisons")
-    parser.add_argument("--backends", nargs="+", choices=["direct", "c"], default=["direct", "c"])
+    parser.add_argument("--backends", nargs="+", choices=["direct", "c", "ir"], default=["direct", "c"])
+    parser.add_argument("--semantic-passes", help="IR semantic pass names; exact order, comma-separated")
+    parser.add_argument("--legacy-arithmetic", action="store_true",
+                        help="IR comparison only: enable the old adapter arithmetic shortcuts")
     parser.add_argument("--styles", nargs="+", choices=["cluster/main", "cluster/direct", "inline/main", "inline/direct"], default=["cluster/main"])
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--output-dir", type=Path)
@@ -391,7 +426,7 @@ def main():
     parser.add_argument("--job", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--record", help=argparse.SUPPRESS)
     parser.add_argument("--runtime-record", help=argparse.SUPPRESS)
-    parser.add_argument("--backend", choices=["direct", "c"], help=argparse.SUPPRESS)
+    parser.add_argument("--backend", choices=["direct", "c", "ir"], help=argparse.SUPPRESS)
     parser.add_argument("--op-style", default="cluster", help=argparse.SUPPRESS)
     parser.add_argument("--jmp-style", default="main", help=argparse.SUPPRESS)
     parser.add_argument("--directory", help=argparse.SUPPRESS)
@@ -444,6 +479,10 @@ def main():
                                    "--max-steps", str(args.max_steps), "--stop-after", args.stop_after]
                         if args.profile:
                             command.append("--profile")
+                        if args.semantic_passes is not None:
+                            command.extend(["--semantic-passes", args.semantic_passes])
+                        if args.legacy_arithmetic:
+                            command.append("--legacy-arithmetic")
                         started = time.perf_counter()
                         try:
                             child = subprocess.run(command, capture_output=True, timeout=args.timeout)

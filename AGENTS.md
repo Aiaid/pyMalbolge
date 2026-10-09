@@ -60,6 +60,7 @@ uv sync --extra dev --extra ir                                      # optional I
 uv run --no-sync python -m malbolge compile foo.py --backend=ir --emit-ir foo.mlir
 uv run --no-sync python -m malbolge compile foo.py --backend=ir --emit-semantic-ir foo.semantic.mlir
 uv run --no-sync python -m malbolge compile foo.py --backend=ir --ir-frontend=semantic -o foo.mb
+uv run --no-sync python -m malbolge compile foo.py --backend=ir --opt-level=0 --emit-semantic-ir foo.raw.mlir
 uv run python -m malbolge --variant=malbolge20 foo.mb                 # run the result
 ```
 Bounded batch execution and opt-in compilation caching:
@@ -151,6 +152,11 @@ into public documentation without authorization. Check search exit codes:
   call/input/output/error ordering and source locations. The semantic target
   adapter reconstructs Python AST from verified IR; do not reuse original
   source or silently fall back to the old frontend on unsupported inputs.
+- Semantic optimization decisions belong to named passes. The accepted default
+  profile is in `ir/semantic_passes.py`; `--opt-level=0` verifies only.
+  The semantic target adapter disables duplicate legacy arithmetic shortcuts;
+  C/direct references retain their defaults. Decimal output lowering is an
+  explicit experiment, excluded from the accepted profile after regression.
 
 ## TODO
 

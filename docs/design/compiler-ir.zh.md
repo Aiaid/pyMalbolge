@@ -2,7 +2,7 @@
 
 > [English](compiler-ir.md) | **中文**
 >
-> 状态，2026-10-09：LAL 基础层与可选语义前端已实现；优化 pass、完整变量
+> 状态，2026-10-09：LAL、可选语义前端与已验收 pass 已实现；完整变量
 > SSA、新布局及 LLVM/MLIR 适配器仍属计划。本文件独立于私有研究笔记描述新增的公开架构，
 > 不声称带来性能提升。
 
@@ -148,7 +148,7 @@ pass 正确。语义优化可以产生不同 MC/MB，此时行为、效果/错�
 | 可选 LAL IR 基础层与 Python 兼容桥接 | 已实现 | 结构化 operation、解析/emitter、verifier、具名 pass runner、确定性检查与 CLI 集成 |
 | 高级语义 dialect | 已实现 | 字环类型、有序 I/O/调用、惰性/控制 regions、返回契约及独立执行器；源变量仍用可变槽位 |
 | Python 前端发射语义 IR | 已实现，显式选择 | 直接 AST 发射、源码诊断、明确兼容边界及权威目标适配器，见 semantic-ir.zh.md |
-| 数据流与优化 pass | 计划 | 定义效果模型、合法合流/失效及变换专属证据 |
+| 数据流与优化 pass | 有界 profile 已验收 | 具名算术/控制/数据流/发射 pass；完整变量 SSA、活性仍待实现，见 semantic-optimization-passes.zh.md |
 | 布局/自举重构 | 计划 | 构造式不变量、反例回归与逐产物验证 |
 | MLIR/LLVM 互操作 | 计划 | 显式类型/效果/lowering 适配器及经测量的引入理由 |
 

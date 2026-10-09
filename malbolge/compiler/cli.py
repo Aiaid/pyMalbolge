@@ -326,21 +326,26 @@ def main(argv):
     parser.add_argument("--ir-frontend", choices=("compat", "semantic"),
                         help="IR source path (default: compat; semantic for --emit-semantic-ir)")
     parser.add_argument("--semantic-passes", metavar="NAMES",
-                        help="semantic pass sequence (default: verify-semantic)")
+                        help="explicit semantic pass sequence (default: accepted optimization profile)")
+    parser.add_argument("--opt-level", choices=("0", "1"),
+                        help="semantic optimization profile: 0 verifies only, 1 enables arithmetic/dataflow passes")
     parser.add_argument("--op-style", choices=("cluster", "inline"), default="cluster")
     parser.add_argument("--jmp-style", choices=("main", "direct"), default="main")
     parser.add_argument("--cache-dir", metavar="PATH", help="opt-in content-addressed stage cache")
     parser.add_argument("--stats", action="store_true", help="write JSON compilation metrics to stderr")
     args = parser.parse_args(argv)
     if args.backend != "ir" and any(value is not None for value in
-                                     (args.ir_frontend, args.emit_semantic_ir, args.semantic_passes)):
+                                     (args.ir_frontend, args.emit_semantic_ir, args.semantic_passes, args.opt_level)):
         _die("semantic IR and frontend options require --backend=ir")
+    if args.opt_level is not None and args.semantic_passes is not None:
+        _die("--opt-level and --semantic-passes are alternative selections")
     args.ir_frontend = args.ir_frontend or (
-        "semantic" if args.emit_semantic_ir is not None or args.semantic_passes is not None
+        "semantic" if (args.emit_semantic_ir is not None or args.semantic_passes is not None
+                       or args.opt_level is not None)
         else "compat")
     if args.ir_frontend != "semantic" and (
-            args.emit_semantic_ir is not None or args.semantic_passes is not None):
-        _die("--emit-semantic-ir and --semantic-passes require --ir-frontend=semantic")
+            args.emit_semantic_ir is not None or args.semantic_passes is not None or args.opt_level is not None):
+        _die("--emit-semantic-ir, --semantic-passes and --opt-level require --ir-frontend=semantic")
     if args.output is None and all(value is None for value in
                                   (args.emit_c, args.emit_mg, args.emit_mc, args.emit_ir,
                                    args.emit_semantic_ir)):
@@ -369,10 +374,14 @@ def main(argv):
             args.semantic_pass_names = ()
             if args.ir_frontend == "semantic":
                 from .ir.semantic import SemanticIRError
-                from .ir.semantic_passes import validate_semantic_pass_names
+                from .ir.semantic_passes import validate_semantic_pass_names, CANDIDATE_OPTIMIZATION_PASSES
                 ir_errors += (SemanticIRError,)
                 semantic_names = (None if args.semantic_passes is None else tuple(
                     name.strip() for name in args.semantic_passes.split(",")))
+                if args.opt_level == "0":
+                    semantic_names = ("verify-semantic",)
+                elif args.opt_level == "1":
+                    semantic_names = CANDIDATE_OPTIMIZATION_PASSES
                 args.semantic_pass_names = validate_semantic_pass_names(semantic_names)
         _preflight(args)
         with open(args.source, encoding="utf8") as stream:

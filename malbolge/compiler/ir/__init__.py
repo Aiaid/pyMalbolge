@@ -40,6 +40,14 @@ def require_ir_support():
 
 
 _LAZY_EXPORTS = {
+    'InlinePureArithmeticPass': 'expression_passes',
+    'FoldArithmeticPass': 'arithmetic_passes',
+    'SimplifyArithmeticPass': 'arithmetic_passes',
+    'LowerConstantMultiplyPass': 'arithmetic_passes',
+    'SimplifyControlPass': 'arithmetic_passes',
+    'ConstantPropagationPass': 'dataflow_passes',
+    'EliminatePureComputationPass': 'dataflow_passes',
+    'LowerDecimalOutputPass': 'decimal_passes',
     "compile_python_to_semantic_ir": "frontend",
     "compile_python_semantic_result": "semantic_passes",
     "run_semantic_pipeline": "semantic_passes",

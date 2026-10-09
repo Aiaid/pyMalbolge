@@ -143,6 +143,10 @@ def run_manifest(args, pipeline):
                    "--max-steps", str(budget)]
         if args.profile and task != "oracle":
             command.append("--profile")
+        if getattr(args, "semantic_passes", None) is not None:
+            command.extend(["--semantic-passes", args.semantic_passes])
+        if getattr(args, "legacy_arithmetic", False):
+            command.append("--legacy-arithmetic")
         if runtime_record:
             command.extend(["--runtime-record", runtime_record])
         started = time.perf_counter()

@@ -3,8 +3,8 @@
 > [English](semantic-ir.md) | **中文**
 >
 > 状态，2026-10-09：直接 AST 前端、结构化语义 dialect、独立执行器及显式
-> 目标适配器已实现。优化 pass、完整源变量 SSA 和直接语义→LAL lowering
-> 仍待完成。本阶段属于架构工作，不是性能结果。
+> 目标适配器与已验收优化 pass 已实现。完整源变量 SSA 和直接语义→LAL
+> lowering 仍待完成；性能证据与本架构契约分开记录。
 
 ## 1. 两条明确的前端路径
 
@@ -28,7 +28,7 @@ direct→MG→MC→LAL 桥。用 `--ir-frontend=semantic` 选择新前端；请�
 ```sh
 uv sync --extra dev --extra ir
 uv run --no-sync python -m malbolge compile demo.py --backend=ir \
-  --emit-semantic-ir /private/tmp/demo.semantic.mlir
+  --opt-level 0 --emit-semantic-ir /private/tmp/demo.semantic.mlir
 uv run --no-sync python -m malbolge compile demo.py --backend=ir \
   --ir-frontend=semantic --emit-ir /private/tmp/demo.lal.mlir \
   -o /private/tmp/demo.mb --stats
@@ -52,8 +52,8 @@ putchar(next_byte(byte))
 ## 2. 表示与副作用契约
 
 `pysem.word` 固定为 20 trits，值域为 `[0, 3**20)`；加、减、乘在该域内
-回绕。整除/取模是带检查的操作，保留零除副作用。前端不折叠或强度削弱
-合法算术：`n * 17` 仍然是乘法。
+回绕。整除/取模是带检查的操作，保留零除副作用。原始前端不折叠或强度
+削弱合法算术；在显式选择/默认优化 pass 之前，`n * 17` 仍然是乘法。
 
 表达式结果使用 SSA；源变量仍是带 load/store 的显式 local/global 槽位。
 因此本阶段没有完整变量 SSA、phi 构造、全程序活性分析或优化器。
@@ -101,7 +101,9 @@ argument，存入相应源码槽位。
 除法失败只输出一次 `error\n`，然后停止入口。操作计数用于该执行器的
 预算，不是 Malbolge 步数或性能指标。
 
-语义与 LAL pass 注册表分离，初始仅提供 verify-semantic 和 verify-lal。
+语义与 LAL pass 注册表分离；语义默认使用
+[已验收优化 profile](semantic-optimization-passes.zh.md)，等级 0 只做
+verify-semantic，LAL 默认仍为 verify-lal。
 共享 runner 校验输入及每个 pass 输出，默认克隆。语义报告只有 IR 字节/
 计数/摘要，不在 lowering 前虚构 MC/MB 成本。--semantic-passes 选择语义
 pass，--passes 继续选择 LAL pass。缓存标识包含前端与两层有序选择；

@@ -23,7 +23,7 @@ from malbolge.compiler.ir.passes import PipelineError, available_passes
 from malbolge.compiler.ir.semantic import MOD, ConstOp, parse_semantic, print_semantic
 from malbolge.compiler.ir.semantic_passes import (
     VerifySemanticPass, compile_python_semantic_result, run_semantic_pipeline,
-    validate_semantic_pass_names,
+    validate_semantic_pass_names, OPTIMIZATION_PASSES,
 )
 from malbolge.compiler.mc2mb import assemble_mc_to_mb
 from malbolge.malbolge20 import run
@@ -31,7 +31,7 @@ from malbolge.malbolge20 import run
 
 def test_dialects_have_separate_explicit_pass_selections(monkeypatch):
     assert available_passes() == ("verify-lal",)
-    assert validate_semantic_pass_names() == ("verify-semantic",)
+    assert validate_semantic_pass_names() == OPTIMIZATION_PASSES
     from malbolge.compiler.ir import frontend
     monkeypatch.setattr(frontend, 'compile_python_to_semantic_ir',
                         lambda _: pytest.fail('frontend ran before pass selection'))
@@ -40,7 +40,7 @@ def test_dialects_have_separate_explicit_pass_selections(monkeypatch):
 
 
 def test_semantic_reports_do_not_manufacture_target_metrics():
-    result = compile_python_semantic_result('putchar(65)', snapshots=True)
+    result = compile_python_semantic_result('putchar(65)', ('verify-semantic',), snapshots=True)
     payload = result.to_dict()
     json.dumps(payload)
     assert payload['passes'] == ['verify-semantic']

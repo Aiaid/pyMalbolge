@@ -192,11 +192,14 @@ class _DirectCompiler(c2mg.Compiler):
     temporary allocator and frame policy are overridden below.
     """
 
-    def __init__(self, source):
+    def __init__(self, source, *, arithmetic_optimizations=True):
         # Empty token list: we never use the C parser, only the codegen state
         # (constant cache pre-seed, CON0/1/2, global maps, etc.).
         super().__init__([])
         self.source = source
+        if type(arithmetic_optimizations) is not bool:
+            raise ValueError("arithmetic_optimizations must be a bool")
+        self.arithmetic_optimizations = arithmetic_optimizations
 
         # Per-function compile state.
         self._func = None            # current Func (also set during generate)
@@ -433,8 +436,10 @@ class _DirectCompiler(c2mg.Compiler):
             left = self._snapshot(left)
         right = self._lower_protecting(node.right, left)
         if isinstance(left, int) and isinstance(right, int):
-            return self._fold(op, left, right, node)
-        if right == 1 and isinstance(op, (ast.FloorDiv, ast.Mod)):
+            folded = self._fold(op, left, right, node)
+            if self.arithmetic_optimizations:
+                return folded
+        if self.arithmetic_optimizations and right == 1 and isinstance(op, (ast.FloorDiv, ast.Mod)):
             if isinstance(op, ast.FloorDiv):
                 return left
             self._release_if_temp(left)
@@ -445,7 +450,7 @@ class _DirectCompiler(c2mg.Compiler):
             return self._add_expr(lv, rv)
         if isinstance(op, ast.Sub):
             return self._sub_expr(lv, rv)
-        if isinstance(op, ast.Mult):
+        if self.arithmetic_optimizations and isinstance(op, ast.Mult):
             if isinstance(left, int) and 0 <= left <= 16:
                 return self._multiply_small(right, left)
             if isinstance(right, int) and 0 <= right <= 16:
@@ -957,7 +962,7 @@ class _DirectCompiler(c2mg.Compiler):
                 "true division '/=' is unsupported; use '//='", node)
         previous = self._snapshot(z) if self._may_call(node.value) else z
         val = self._lower_protecting(node.value, previous)
-        if val == 1 and isinstance(op, (ast.FloorDiv, ast.Mod)):
+        if self.arithmetic_optimizations and val == 1 and isinstance(op, (ast.FloorDiv, ast.Mod)):
             if isinstance(op, ast.FloorDiv):
                 result = previous
             else:
@@ -967,7 +972,7 @@ class _DirectCompiler(c2mg.Compiler):
             result = self._add_expr(self._as_var(previous), self._as_var(val))
         elif isinstance(op, ast.Sub):
             result = self._sub_expr(self._as_var(previous), self._as_var(val))
-        elif isinstance(op, ast.Mult) and isinstance(val, int) and 0 <= val <= 16:
+        elif self.arithmetic_optimizations and isinstance(op, ast.Mult) and isinstance(val, int) and 0 <= val <= 16:
             result = self._multiply_small(previous, val)
         elif type(op) in _OP_HELPER:
             f = self._ensure_helper(_OP_HELPER[type(op)])
@@ -1998,13 +2003,13 @@ class _DirectCompiler(c2mg.Compiler):
         self.global_variables.setdefault(name, Variable(INT, name))
 
 
-def compile_python_to_mg(source):
+def compile_python_to_mg(source, *, arithmetic_optimizations=True):
     """Compile a subset of Python `source` directly to ``.mg`` text.
 
     Returns the generated ``.mg`` string.  Raises :class:`Py2MgError` (carrying
     a source line and snippet) for unsupported or invalid input.
     """
-    return _DirectCompiler(source).compile()
+    return _DirectCompiler(source, arithmetic_optimizations=arithmetic_optimizations).compile()
 
 
 _CMP = {ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq}

@@ -23,6 +23,7 @@
 | [py2mg-backend.zh.md](design/py2mg-backend.zh.md) | ✅ | `py → .mg` 直连后端(`--backend=direct`)设计:栈帧策略、递归环检测、与 C 路径的体积对比 |
 | [compiler-ir.zh.md](design/compiler-ir.zh.md) | ✅ | 可选 LAL/语义边界、可校验 pass 基础与迁移里程碑；变量 SSA、优化、布局和 LLVM/MLIR 仍待实现 |
 | [semantic-ir.zh.md](design/semantic-ir.zh.md) | ✅ | 直接 Python AST 前端、类型化语义 IR、独立执行器、显式目标适配器、CLI 选择与诊断边界 |
+| [semantic-optimization-passes.zh.md](design/semantic-optimization-passes.zh.md) | ✅ profile 已验收，十进制实验 | 具名语义算术/数据流/控制/发射 pass、目标算术开关、等级 0/1 与完整比较契约 |
 | [hell-assembler-design.zh.md](design/hell-assembler-design.zh.md) | 🧊 | Python 版 HeLL 汇编器设计(已搁置的备选路线;§6 讨论 GPL 问题) |
 | [tui-web-architecture.zh.md](design/tui-web-architecture.zh.md) | ✅ | 调试器 UI 架构:三层切分,`malbolge/view/` ViewModel 仅输出 JSON,由 Textual 渲染层与(待定的)Pyodide web 版共用;所需的三个后端 API;分阶段与并行边界 |
 | [tui-redesign/README.zh.md](design/tui-redesign/README.zh.md) | ✅ | 导入的 TUI 重设计画布(四块画板:现状复刻、信息密度最大化、教学向、80×24),附可离线打开的 `preview.html` |
@@ -39,7 +40,8 @@
 | 文档 | 状态 | 内容 |
 |---|---|---|
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | 首次 LAL/pass 基础验收及源码指纹；后续前端/集成变更由 semantic-ir-validation.json 覆盖 |
-| [semantic-ir-validation.json](notes/semantic-ir-validation.json) | ✅ | 语义前端/执行器/适配器验收、源码指纹、回归范围与可选依赖打包验证 |
+| [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | pass 启用前的语义架构验收；后续变更由 semantic-pass-validation.json 覆盖 |
+| [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | pass/默认策略验收、回归与包/源码指纹，测量证据保存在私有 research |
 | [perf-baseline.zh.md](notes/perf-baseline.zh.md) | 📌 | QoS 修复前性能剖析基线；运行时表示/热点描述已由紧凑周期内存与 python-qos-validation.json 取代 |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | QoS 修复前的 2026-10-08 共享测量数据：普通 Python Fibonacci、direct 编译、优化 C 参考解释器执行、CPython 对照及项目 Python CLI 的资源受限停止；双语解读见主 README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | 历史十一组反例；由 python-qos-validation.json 结案，原证据保留 |

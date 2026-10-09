@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-09",
+  "architecture_commit": "aabe099",
+  "status": "accepted semantic default optimization profile",
+  "default_profile": [
+    "verify-semantic",
+    "propagate-constants",
+    "fold-arithmetic",
+    "simplify-arithmetic",
+    "lower-constant-multiply",
+    "simplify-control",
+    "eliminate-pure-computation",
+    "propagate-constants",
+    "fold-arithmetic",
+    "simplify-arithmetic",
+    "simplify-control",
+    "eliminate-pure-computation",
+    "inline-pure-arithmetic"
+  ],
+  "registered_passes": [
+    "eliminate-pure-computation",
+    "fold-arithmetic",
+    "inline-pure-arithmetic",
+    "lower-constant-multiply",
+    "lower-decimal-output",
+    "propagate-constants",
+    "simplify-arithmetic",
+    "simplify-control",
+    "verify-semantic"
+  ],
+  "experimental_not_default": [
+    "lower-decimal-output"
+  ],
+  "controls": {
+    "level0": "verification-only semantic passes, arithmetic-gated target adapter",
+    "level1": "accepted arithmetic/dataflow/control/emission",
+    "legacy_c_direct": "original defaults preserved",
+    "compat": "original frontend selection retained"
+  },
+  "regression": {
+    "passed": 1814,
+    "skipped": 27,
+    "subtests_passed": 3573,
+    "seconds": 42.51,
+    "excluded": [
+      "test_py2c_e2e",
+      "test_py2mg_e2e",
+      "test_hell_examples"
+    ],
+    "command": "uv run --offline --no-sync pytest test/ -q -n 2 --ignore=test/test_py2c_e2e.py --ignore=test/test_py2mg_e2e.py --ignore=test/test_hell_examples.py"
+  },
+  "correctness": [
+    "all32fixedsemanticworkloads underindividual/combinedpasses",
+    "legacyMG21sourcesbyteidentical",
+    "independentwordfactorandSSAscopeaudits",
+    "actualMBinput/output/terminationandmutation tests",
+    "stale/forgedinlinehintsrechecked,max16inlinedlevels+materializedconsumer",
+    "2000nodechainbounded",
+    "level0/1andcachepassorder verified"
+  ],
+  "performance_evidence": "Private companion research: performance/2026-10-09-semantic-passes.md withfrozenv1/v2sources andfullcompile-size-runtime JSON/CSV; notcopiedinto publicdistribution.",
+  "promotion_limits": [
+    "no universal speedup claimed; neutral casesretainstructure andsmallhostoverhead",
+    "decimalcandidatecorrectbuttargetsize/runtime regression, optinonly",
+    "sourcevariablesremainmutable; fullSSA/liveness/dynamicmulhelper/layoutremainseparate",
+    "host/VM lookupandassemblercaches stayimplementationlayer",
+    "hostedCIconfigurednotexecuted"
+  ],
+  "source_sha256": {
+    "malbolge/compiler/__init__.py": "607190f8f92a477c007eceb3b5db1582b1f7175740ae2762c8be86c84f0c8eeb",
+    "malbolge/compiler/c2mg.py": "5599e24291d52ab1e6ae8effc3a3052faf1b78566ddc8d9a58ba7c4ae3406549",
+    "malbolge/compiler/cli.py": "e295b7f15b222056f82970e02921620606fb01126098cbc2df7e853e2a21494b",
+    "malbolge/compiler/decimal_io.py": "89e30084a2175568d9cb46be0d826e801402d4e6deb9ea01fa1caa0f2cde3f69",
+    "malbolge/compiler/ir/__init__.py": "e8a66c0ec589cb4d60a285e1e725bf96e36971ef020f8c9ce9ac99edc8a5dcc2",
+    "malbolge/compiler/ir/arithmetic_passes.py": "7e9822fbf233e00cdd3d13e83387cf6e7db035bd4a506672083e871d6b046f93",
+    "malbolge/compiler/ir/bridge.py": "4c39424c7d6a6953bbfde47753c056d33b78bb9f25a88b8fa86704d8fdc71087",
+    "malbolge/compiler/ir/dataflow_passes.py": "c850365a895bcdb2af95794a8b300d3d54511d264fd4b0d82dbcf8383d9ff089",
+    "malbolge/compiler/ir/decimal_passes.py": "37c02b0f5290250e7076a08a50ef8a7d97f1edfedabc434870cd67dd48a33f36",
+    "malbolge/compiler/ir/expression_passes.py": "86ec4da4ae93db17f2610a996019e7880148e7521d8ebd315c9eeab2b7115181",
+    "malbolge/compiler/ir/frontend.py": "6f5834161d9cf1f475abe980d28a1725fa705bff777cfd4d45cacfb506976c7c",
+    "malbolge/compiler/ir/interpreter.py": "f90f261cfa8363722e194db6e593ab09894715fa2bc76e3cf53c0c942e693e8b",
+    "malbolge/compiler/ir/lal.py": "528158f135aae18a851dd5de52b1ec36239077b9bf1b7e6eccafc4789f5e639d",
+    "malbolge/compiler/ir/lowering.py": "1e86c282b37fcb9ba3ff3208a793acd82175866a5d8acb03dafdc72c19f4461a",
+    "malbolge/compiler/ir/passes.py": "3e875d7341f719cf99ea25cd52c9ebab0c226dac5a4f60fb795b939ab0c0a6af",
+    "malbolge/compiler/ir/semantic.py": "59bd132b19c4c9ee8d92c1c9a56bcf0ad82dcfe26baab4187cc7139467ac65ff",
+    "malbolge/compiler/ir/semantic_passes.py": "f3d4fb6e2a8bb176bdda82ae9167db5766ea6b1fd08b59958bb87caf646dbad2",
+    "malbolge/compiler/mc2mb.py": "bac1ca8196c108cf91b8925c17f1f143bd1fe29fc5fcbeaa87e1f666b63fa58d",
+    "malbolge/compiler/mg2mc.py": "596fdebaba0d4ffa93b8e7a6cf899c51de42c61de8b76492883b1f300964a67d",
+    "malbolge/compiler/py2c.py": "2d4a102dd20a96aaebee2bdf03e35ca10360e1df2ca8a251cca8a306b207f959",
+    "malbolge/compiler/py2mg.py": "9628cc73421dcc36f8cd70acaae1526dabb886b38c58da75a3ee0d9fff2d6a64",
+    "malbolge/compiler/python_normalize.py": "6a6716f79c54bff2bb3863f22523143662eabafb33fa2f36b27429e66040ae41",
+    "scripts/benchmark_pipeline.py": "d60e56085b583d5510354058484c89e2d30931d0cd1ae69006fdf6ad0175d657",
+    "scripts/benchmark_suite.py": "e0ae34322a81b1731a145ff2d1d6b99f62a8cd4de4b2b983efd1acfcce07bf81",
+    "scripts/benchmark_semantic_passes.py": "480de1183393229ee026d34de0178dd69d5b8947fd2ef9c609fd79d268f6caae",
+    "test/test_arithmetic_passes.py": "008cbb4d8acdd30c760b8bb0f080e452074a079a966d5d614e733adee8d12f38",
+    "test/test_dataflow_passes.py": "05c40d354bf16b14cccb724e95be2fb33c5be75015d836c98d12b354844c1194",
+    "test/test_decimal_passes.py": "0089fb11b6aa620f0a2247678f08f0bf896f8958aba9030e806e68b5464a2d2c",
+    "test/test_expression_passes.py": "d1f7e0908b1a3da9c9f9261873006c33de1b934a11f1c1ed8ab5d1311af595e2",
+    "test/test_semantic_benchmark.py": "a3f322fbbc5f4772d8fe82a83e6ff8d0b89131c5f82e5b4778f8beae29ea33fb",
+    "test/test_semantic_optimizer_integration.py": "f0560092f1e4106653348fd7c4f74e659c795d5d1a94b4277cfb280c094b75ad",
+    "test/test_semantic_cli.py": "1aff1f98f7ec279e0a824d88e30f81f9b3adf14898060a924f0845bdb8978c23",
+    "test/test_semantic_pipeline.py": "b2c8a19ae7ae068cf90a4fb67625ade24bd7fcb0454c5e23dfdcab3ee3afa9ec"
+  },
+  "untracked_uv_lock_sha256": "7e350eba5ee25236333a80bf7f2c3f8e10cb71271c6ffb50f292efd1fac89a45"
+}

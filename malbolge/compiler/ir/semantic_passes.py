@@ -18,6 +18,13 @@ from xdsl.passes import ModulePass
 
 from .passes import run_verified_pipeline, validate_pass_names
 from .semantic import create_semantic_context, print_semantic, verify_semantic
+from .arithmetic_passes import (
+    FoldArithmeticPass, SimplifyArithmeticPass, LowerConstantMultiplyPass,
+    SimplifyControlPass,
+)
+from .dataflow_passes import ConstantPropagationPass, EliminatePureComputationPass
+from .decimal_passes import LowerDecimalOutputPass
+from .expression_passes import InlinePureArithmeticPass
 
 
 @dataclass(frozen=True)
@@ -28,8 +35,25 @@ class VerifySemanticPass(ModulePass):
         verify_semantic(op)
 
 
-SEMANTIC_PASS_REGISTRY = MappingProxyType({VerifySemanticPass.name: VerifySemanticPass})
-DEFAULT_SEMANTIC_PASSES = (VerifySemanticPass.name,)
+SEMANTIC_PASS_REGISTRY = MappingProxyType({cls.name: cls for cls in (
+    VerifySemanticPass, FoldArithmeticPass, SimplifyArithmeticPass,
+    LowerConstantMultiplyPass, SimplifyControlPass,
+    ConstantPropagationPass, EliminatePureComputationPass, LowerDecimalOutputPass,
+    InlinePureArithmeticPass,
+)})
+VERIFY_SEMANTIC_PASSES = (VerifySemanticPass.name,)
+
+# Accepted arithmetic/dataflow order. Decimal output remains an opt-in candidate.
+OPTIMIZATION_PASSES = (
+    'verify-semantic', 'propagate-constants', 'fold-arithmetic',
+    'simplify-arithmetic', 'lower-constant-multiply', 'simplify-control',
+    'eliminate-pure-computation', 'propagate-constants', 'fold-arithmetic',
+    'simplify-arithmetic', 'simplify-control', 'eliminate-pure-computation',
+    'inline-pure-arithmetic',
+)
+CANDIDATE_OPTIMIZATION_PASSES = OPTIMIZATION_PASSES  # benchmark API compatibility
+DEFAULT_SEMANTIC_PASSES = OPTIMIZATION_PASSES
+CANDIDATE_DECIMAL_PASSES = CANDIDATE_OPTIMIZATION_PASSES + ('lower-decimal-output',)
 
 
 @dataclass(frozen=True)

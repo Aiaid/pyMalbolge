@@ -24,6 +24,7 @@ representation detail, not a new source-language return value or IR rewrite.
 from __future__ import annotations
 
 import ast
+from copy import deepcopy
 
 from . import require_ir_support
 
@@ -74,6 +75,8 @@ def _word_boolean(condition: ast.expr) -> ast.IfExp:
 class _Lowerer:
     def __init__(self, program: ProgramOp):
         self.program = program
+        from .expression_passes import verified_inline_arithmetic_hints
+        self.inline_arithmetic = verified_inline_arithmetic_hints(program)
         self.functions = list(program.body.block.ops)
         source_names = list(strings(program.globals))
         for func in self.functions:
@@ -90,7 +93,7 @@ class _Lowerer:
             name: f"{self.prefix}g{index}" for index, name in enumerate(strings(program.globals))
         }
         self.local_names: dict[str, str] = {}
-        self.values: dict[SSAValue, str | int] = {}
+        self.values: dict[SSAValue, str | int | ast.expr] = {}
         self.truths: dict[SSAValue, bool] = {}
         self.counter = 0
         self.returns_word = False
@@ -105,6 +108,8 @@ class _Lowerer:
             stored = self.values[value]
         except KeyError as exc:
             raise SemanticLoweringError("SSA value has no preceding lowered producer") from exc
+        if isinstance(stored, ast.expr):
+            return deepcopy(stored)
         return ast.Constant(value=stored) if isinstance(stored, int) else _name(stored)
 
     def slot(self, name: str, scope: str) -> str:
@@ -199,8 +204,12 @@ class _Lowerer:
                     divisor = self.fresh()
                     statements.append(_assign(divisor, right))
                     right = _name(divisor)
-                statements.append(self.capture(op.result, ast.BinOp(
-                    left=self.value(op.lhs), op=_BINARY[op.kind.data](), right=right)))
+                expression = ast.BinOp(
+                    left=self.value(op.lhs), op=_BINARY[op.kind.data](), right=right)
+                if op in self.inline_arithmetic:
+                    self.values[op.result] = expression
+                else:
+                    statements.append(self.capture(op.result, expression))
             elif isinstance(op, UnaryOp):
                 operator = ast.Not() if op.kind.data == "not" else ast.UAdd()
                 expression = ast.UnaryOp(op=operator, operand=self.value(op.value))
@@ -315,13 +324,13 @@ def lower_semantic_to_python(module: ModuleOp | ProgramOp) -> str:
     return ast.unparse(lower_semantic_to_python_ast(module)) + "\n"
 
 
-def lower_semantic_to_mg(module: ModuleOp | ProgramOp) -> str:
+def lower_semantic_to_mg(module: ModuleOp | ProgramOp, *, arithmetic_optimizations=False) -> str:
     """Use the existing direct compiler on the newly reconstructed AST text."""
     from ..py2mg import Py2MgError, compile_python_to_mg
 
     source = lower_semantic_to_python(module)
     try:
-        return compile_python_to_mg(source)
+        return compile_python_to_mg(source, arithmetic_optimizations=arithmetic_optimizations)
     except Py2MgError as exc:
         raise SemanticLoweringError(f"semantic IR compatibility lowering failed: {exc}") from exc
 

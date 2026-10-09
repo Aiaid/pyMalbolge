@@ -4,9 +4,9 @@
 >
 > Status, 2026-10-09: the direct AST frontend, structured semantic dialect,
 > independent execution oracle and explicit target adapter are implemented.
-> Optimizing passes, full source-variable SSA and direct semantic-to-LAL
-> lowering remain future work. This is an architecture milestone, not a
-> performance result.
+> Accepted optimization passes are now available; full source-variable SSA
+> and direct semantic-to-LAL lowering remain future work. Performance evidence
+> is tracked separately from this architecture contract.
 
 ## 1. Two explicit frontend paths
 
@@ -34,7 +34,7 @@ their optional-dependency independence.
 ```sh
 uv sync --extra dev --extra ir
 uv run --no-sync python -m malbolge compile demo.py --backend=ir \
-  --emit-semantic-ir /private/tmp/demo.semantic.mlir
+  --opt-level 0 --emit-semantic-ir /private/tmp/demo.semantic.mlir
 uv run --no-sync python -m malbolge compile demo.py --backend=ir \
   --ir-frontend=semantic --emit-ir /private/tmp/demo.lal.mlir \
   -o /private/tmp/demo.mb --stats
@@ -60,8 +60,9 @@ the call and I/O, with original source locations.
 
 `pysem.word` has exactly 20 trits. Values lie in `[0, 3**20)`; addition,
 subtraction and multiplication wrap in that domain. Floor division/modulo are
-checked operations, with zero-divisor effects retained. The frontend does not
-fold or strength-reduce valid arithmetic: `n * 17` remains a multiplication.
+checked operations, with zero-divisor effects retained. The raw frontend does
+not fold or strength-reduce valid arithmetic: `n * 17` remains a multiplication
+before explicitly selected/default optimization passes.
 
 Expression results use SSA. Source variables remain explicit local/global
 slots with load/store operations. Thus this milestone does not provide full
@@ -115,8 +116,10 @@ VM; literal output uses the subset's byte-codepoint contract. Runtime decimal
 input/division failures emit `error\n` once and stop the entry. Its operation
 counts are oracle budgets, not Malbolge steps or performance measurements.
 
-Semantic and LAL pass registries are separate. Initially they provide only
-`verify-semantic` and `verify-lal`. The shared runner verifies input and every
+Semantic and LAL pass registries are separate. The semantic default is the
+accepted [optimization profile](semantic-optimization-passes.md); level 0
+selects only `verify-semantic`, while LAL defaults to `verify-lal`.
+The shared runner verifies input and every
 pass output, cloning by default. Semantic reports contain IR bytes/counts and
 digests, with no invented MC/MB cost before lowering. `--semantic-passes`
 selects semantic passes; `--passes` continues to select LAL passes. Cache

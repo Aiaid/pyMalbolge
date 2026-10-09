@@ -16,6 +16,7 @@ pytest.importorskip("xdsl")
 from malbolge.compiler import cli
 from malbolge.compiler.ir.interpreter import run_semantic
 from malbolge.compiler.ir.semantic import parse_semantic
+from malbolge.compiler.ir.semantic_passes import OPTIMIZATION_PASSES
 from malbolge.malbolge20 import run
 
 
@@ -48,7 +49,7 @@ def test_semantic_frontend_inspection_never_invokes_target_lowering(source):
         text, stderr = invoke(source, ['--ir-frontend=semantic', '--stats'])
     assert run_semantic(parse_semantic(text)).output == b'A'
     stats = json.loads(stderr.splitlines()[-1])
-    assert stats['semantic_ir']['passes'] == ['verify-semantic']
+    assert stats['semantic_ir']['passes'] == list(OPTIMIZATION_PASSES)
     assert [stage['stage'] for stage in stats['stages']] == ['python-to-semantic']
 
 
@@ -63,7 +64,7 @@ def test_semantic_and_lal_outputs_plus_real_mb_execution(source, tmp_path):
     stats = json.loads(stderr.splitlines()[-1])
     assert stats['ir_frontend'] == 'semantic'
     assert stats['ir']['passes'] == ['verify-lal']
-    assert stats['semantic_ir']['passes'] == ['verify-semantic']
+    assert stats['semantic_ir']['passes'] == list(OPTIMIZATION_PASSES)
 
 
 def test_frontend_options_and_semantic_output_aliases(source, tmp_path):
@@ -114,6 +115,24 @@ def test_complete_image_cache_retains_both_pass_selections(source, tmp_path):
         _, stderr = invoke(source, arguments)
     stats = json.loads(stderr.splitlines()[-1])
     assert stats['semantic_ir']['cached_stage'] == stats['ir']['cached_stage'] == 'mb'
-    assert stats['semantic_ir']['passes'] == ['verify-semantic']
+    assert stats['semantic_ir']['passes'] == list(OPTIMIZATION_PASSES)
     assert stats['ir']['passes'] == ['verify-lal']
     assert stats['semantic_ir']['reports'] == stats['ir']['reports'] == []
+
+
+def test_optimization_levels_are_explicit_and_preserve_observables(source):
+    source.write_text('x=65\ny=x+1\nputchar(y)\n')
+    raw, raw_stats = invoke(source, ['--opt-level=0', '--stats'])
+    optimized, optimized_stats = invoke(source, ['--opt-level=1', '--stats'])
+    raw_module, optimized_module = parse_semantic(raw), parse_semantic(optimized)
+    assert run_semantic(raw_module).output == run_semantic(optimized_module).output == b'B'
+    assert json.loads(raw_stats.splitlines()[-1])['semantic_ir']['passes'] == ['verify-semantic']
+    assert json.loads(optimized_stats.splitlines()[-1])['semantic_ir']['passes'] == list(OPTIMIZATION_PASSES)
+    assert sum(op.name == 'pysem.load' for op in optimized_module.walk()) < sum(
+        op.name == 'pysem.load' for op in raw_module.walk())
+
+
+def test_profile_and_named_passes_cannot_conflict(source):
+    expect_error(source, ['--backend=ir', '--opt-level=0', '--semantic-passes=verify-semantic'],
+                 'alternative selections')
+    expect_error(source, ['--opt-level=1'], 'require --backend=ir')

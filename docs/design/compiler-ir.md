@@ -3,7 +3,7 @@
 > **English** | [中文](compiler-ir.zh.md)
 >
 > Status, 2026-10-09: LAL foundation and the opt-in semantic frontend are
-> implemented; optimizing passes, full variable SSA, new layout and
+> implemented, with accepted semantic passes; full variable SSA, new layout and
 > LLVM/MLIR adapters remain planned.
 > This document describes the new public architecture, independently of the
 > private research notes. It makes no performance-improvement claim.
@@ -102,7 +102,7 @@ it exposes the same boundary future transformations must satisfy.
 |---|---|---|
 | Structural verification | LAL IR now; each future dialect | Shape, attributes, references and admissible machine values |
 | Normalization/canonicalization | The dialect whose semantics justify the rule | Deterministic form; no hidden effects or error changes |
-| Source-semantic optimization | Semantic IR; transformations still planned | Word arithmetic, ordered effects, error flow and dataflow facts |
+| Source-semantic optimization | Semantic IR; accepted bounded profile | Word arithmetic, ordered effects, error flow and conservative dataflow facts |
 | Protocol optimization | LAL IR | Preserve flag transitions, instruction mutation and dispatch behavior |
 | Layout/bootstrap transformation | Layout layer after LAL | Constructive placement/initialization invariants and artifact validation |
 | Host implementation optimization | Parser, emitter, assembler or VM | Separate host speed from target-program behavior/cost |
@@ -179,7 +179,7 @@ and classify whole-process timeouts separately from measured VM time.
 | Optional LAL IR foundation and Python compatibility bridge | Implemented | Structured operations, parser/emitter, verifier, named pass runner, deterministic inspection and CLI integration |
 | High-level semantic dialect | Implemented | Typed word ring, ordered I/O/calls, lazy/control regions, return contracts and independent oracle; mutable slots remain |
 | Python frontend emission into semantic IR | Implemented, opt-in | Direct AST emission, source diagnostics, declared compatibility limits and authoritative target adapter; see semantic-ir.md |
-| Dataflow and optimization passes | Planned | Defined effect model, valid joins/invalidation and transformation-specific evidence |
+| Dataflow and optimization passes | Bounded profile accepted | Named arithmetic/control/dataflow/emission passes; full variable SSA and liveness remain planned; see semantic-optimization-passes.md |
 | Layout/bootstrap redesign | Planned | Constructive invariants, counterexample regression and per-artifact validation |
 | MLIR/LLVM interoperability | Planned | Explicit type/effect/lowering adapter and a measured reason to add the boundary |
 
