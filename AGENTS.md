@@ -122,8 +122,10 @@ into public documentation without authorization. Check search exit codes:
 | `malbolge/compiler/py2c.py` | Python subset -> Nagoya C subset (front-end, 'c' backend) |
 | `malbolge/compiler/py2mg.py` | Python subset -> .mg directly ('direct' backend, smaller output, native double recursion) |
 | `malbolge/compiler/c2mg.py` | C subset -> .mg (pure-Python port of nagoya-highlevel, bug-for-bug) |
-| `malbolge/compiler/mg2mc.py` | .mg -> .mc LAL (port of nagoya-ternary) |
-| `malbolge/compiler/mc2mb.py` | .mc -> .mb Malbolge20 (port of nagoya-lowass, deterministic padding) |
+| `malbolge/compiler/mg2mc.py` | .mg -> textual or structured LAL (port of nagoya-ternary) |
+| `malbolge/compiler/lal_model.py` | Dependency-free ordered LAL records, verification and optional MC export |
+| `malbolge/compiler/memory_image.py` | Ordered typed memory segments and optional .data import/export |
+| `malbolge/compiler/mc2mb.py` | Textual/structured LAL -> memory image -> .mb (nagoya-lowass port, deterministic padding) |
 | `malbolge/compiler/ir/` | Optional xDSL semantic/LAL dialects, direct AST frontend, independent IR oracle, verified named passes and target compatibility adapter; see `docs/design/semantic-ir.md` and `docs/design/compiler-ir.md` |
 | `malbolge/compiler/cli.py` | `uv run python -m malbolge compile` entry point |
 | `malbolge/debug_cli.py` | CLI debugger interface |
@@ -158,6 +160,13 @@ into public documentation without authorization. Check search exit codes:
   The semantic target adapter disables duplicate legacy arithmetic shortcuts;
   C/direct references retain their defaults. Decimal output lowering is an
   explicit experiment, excluded from the accepted profile after regression.
+- `--target-pipeline=structured` is an explicit native LAL/image handoff
+  experiment; the default `text` path remains available. Base C/direct use no
+  xDSL. Preserve ordered UNIT offsets, continuation gaps and address biases.
+  Byte identity is regression evidence for an interface-only change, not an
+  optimization objective: generation changes may reduce MB bytes/steps while
+  preserving observable semantics and necessary machine invariants. Measure
+  compile time, final image size and actual execution separately.
 
 ## TODO
 

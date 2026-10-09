@@ -40,8 +40,11 @@ def compile_python_ir_result(
     snapshots: bool = False,
     frontend: str = "compat",
     semantic_passes: Sequence[str] | None = None,
+    target_pipeline: str = "text",
 ) -> PipelineResult:
     """Select a frontend explicitly and return verified low-level LAL reports."""
+    if target_pipeline not in ("text", "structured"):
+        raise ValueError("target_pipeline must be 'text' or 'structured'")
     require_ir_support()
     from .passes import validate_pass_names
 
@@ -60,6 +63,12 @@ def compile_python_ir_result(
         mg_source = compile_python_to_mg(source)
     else:
         raise ValueError("IR frontend must be 'compat' or 'semantic'")
+    if target_pipeline == "structured":
+        from ..mg2mc import translate_mg_to_lal
+        from .lal import model_to_lal
+        from .passes import run_pipeline
+        model = translate_mg_to_lal(mg_source, op_style=op_style, jmp_style=jmp_style)
+        return run_pipeline(model_to_lal(model), names, snapshots=snapshots)
     mc_source = translate_mg_to_mc(mg_source, op_style=op_style, jmp_style=jmp_style)
     return mc_to_ir_result(mc_source, names, snapshots=snapshots)
 
@@ -70,10 +79,12 @@ def compile_python_to_ir(
     jmp_style: str = "main",
     passes: Sequence[str] | None = None,
     *, frontend: str = "compat", semantic_passes: Sequence[str] | None = None,
+    target_pipeline: str = "text",
 ) -> ModuleOp:
     """Return a verified xDSL LAL module from the existing direct frontend."""
     return compile_python_ir_result(source, op_style, jmp_style, passes,
-                                    frontend=frontend, semantic_passes=semantic_passes).module
+                                    frontend=frontend, semantic_passes=semantic_passes,
+                                    target_pipeline=target_pipeline).module
 
 
 def compile_python_via_ir_to_mc(
@@ -82,10 +93,12 @@ def compile_python_via_ir_to_mc(
     jmp_style: str = "main",
     passes: Sequence[str] | None = None,
     *, frontend: str = "compat", semantic_passes: Sequence[str] | None = None,
+    target_pipeline: str = "text",
 ) -> str:
     """Return canonical MC emitted from the verified compatibility IR."""
     module = compile_python_to_ir(source, op_style, jmp_style, passes,
-                                  frontend=frontend, semantic_passes=semantic_passes)
+                                  frontend=frontend, semantic_passes=semantic_passes,
+                                  target_pipeline=target_pipeline)
     from .lal import emit_mc
 
     return emit_mc(module)

@@ -39,6 +39,9 @@ from __future__ import annotations
 import enum
 from typing import Dict, List, Optional
 
+from .lal_model import (DataWord, FlagDecl, Label, LalInstruction, LalProgram,
+                        RoutineDecl, Target, UnitCell, UnitDecl, UnitLabel)
+
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -392,6 +395,177 @@ class Generator:
     def output_code(self) -> str:
         # Mirrors ``std::cout << code.str() << std::endl;`` -- one trailing newline.
         return "".join(self._parts) + "\n"
+
+
+def _lal_target(text):
+    """Decode a generated symbolic operand, not a generated MC program."""
+    label, separator, routine = text.partition("@")
+    return Target(label, routine if separator else "")
+
+
+def _fixed_lal_template(source):
+    """Convert only the four immutable upstream templates once.
+
+    Dynamic MG lowering never enters this helper. These fixed templates are
+    kept beside their byte-exact spelling to avoid maintaining two copies of
+    the machine protocol. No model record contains an opaque assembly line.
+    """
+    records, unit = [], None
+    for original in source.splitlines():
+        line = original.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if line == "UNIT{":
+            unit = []
+        elif line == "}":
+            records.append(UnitDecl(tuple(unit)))
+            unit = None
+        elif line.startswith("FLAG "):
+            state, name = line[5:].split(",")
+            initial, period = state.strip().split("/")
+            records.append(FlagDecl(name.strip(), int(initial), int(period)))
+        elif unit is not None:
+            before, after = line.split(":", 1)
+            if after.strip():
+                unit.append(UnitCell(int(before), after.strip()))
+            else:
+                unit.append(UnitLabel(before))
+        elif line.endswith(":"):
+            records.append(Label(line[:-1]))
+        else:
+            opcode, _, operand = line.partition(" ")
+            if opcode == "DUP":
+                records.append(LalInstruction("DUP"))
+            elif opcode in ("IF", "BRANCH", "NEXT", "REV", "JMP"):
+                records.append(LalInstruction(opcode, _lal_target(operand)
+                                               if operand else None))
+            elif opcode in ("END", "OUTPUT", "SKIP", "INPUT", "ROT", "OPR",
+                             "IND_OPR", "DJMP") or opcode.startswith("UNIT2_"):
+                records.append(LalInstruction("CALL", Target(opcode),
+                                               _lal_target(operand) if operand else None))
+            else:
+                records.append(LalInstruction("ADDRESS", _lal_target(line)))
+    return tuple(records)
+
+
+# One-time conversion of immutable upstream protocol templates only.
+_FIXED_LAL_TEMPLATES = {
+    source: _fixed_lal_template(source)
+    for source in (RAW_IND_OPR_FLAGS, RAW_IND_OPR_UNIT,
+                   RAW_IND_OPR_REV, RAW_DJMP_UNIT)
+}
+
+
+class LalGenerator:
+    """Generator sink which emits typed records directly from MG lowering."""
+
+    def __init__(self):
+        self.entry = None
+        self.declarations = []
+        self.body = None
+        self.routine = None
+
+    def program_start_to(self, entry):
+        self.entry = Target("ENTRY", entry)
+        return self
+
+    def routine_start(self, name):
+        self.routine, self.body = name, []
+        return self
+
+    def routine_end(self):
+        self.declarations.append(RoutineDecl(self.routine, tuple(self.body)))
+        self.routine, self.body = None, None
+        return self
+
+    def flag(self, name, val):
+        self.declarations.append(FlagDecl(name, val, 2))
+        return self
+
+    def label(self, name):
+        self.body.append(Label(name))
+        return self
+
+    def _ins(self, opcode, target=None, continuation=None):
+        self.body.append(LalInstruction(opcode, target, continuation))
+        return self
+
+    def djmp(self, varname):
+        return self.label(LABEL_DJMP(varname)).unit_call("DJMP", varname)
+
+    def opr(self, varname):
+        return self.label(LABEL_OPR(varname)).unit_call("OPR", varname)
+
+    def rot(self, varname):
+        return (self.label(LABEL_ROT(varname)).next(FLAG_REV_OPR_ROT)
+                .unit_call("ROT", ""))
+
+    def ind_opr(self, varname):
+        return (self.label(LABEL_IND_OPR(varname)).next(FLAG_REV_IND_OPR)
+                .unit_call("IND_OPR", varname))
+
+    def rev_opr(self):
+        return self._ins("REV", Target("OPR"))
+
+    def rev_rot(self):
+        return self._ins("REV", Target("ROT"))
+
+    def dup(self):
+        return self._ins("DUP")
+
+    def end(self):
+        return self.unit_call("END", "")
+
+    def skip(self, labelname):
+        return self.unit_call("SKIP", labelname)
+
+    def var(self, varname, val):
+        self.label(varname)
+        value = str(val)
+        self.body.append(DataWord(int(value)) if value.isdecimal()
+                         else LalInstruction("ADDRESS", _lal_target(value)))
+        return self
+
+    def if_branch(self, flag, branch):
+        return self._ins("IF", Target(flag))._ins("BRANCH", _lal_target(branch))
+
+    def next(self, flag):
+        return self._ins("NEXT", Target(flag))
+
+    def output(self):
+        return self.unit_call("OUTPUT", "")
+
+    def input(self):
+        return self.unit_call("INPUT", "")
+
+    def rev_output(self):
+        return self._ins("REV", Target("OUTPUT"))
+
+    def rev_input(self):
+        return self._ins("REV", Target("INPUT"))
+
+    def jmp(self, jmp):
+        return self._ins("JMP", _lal_target(jmp))
+
+    def rev_jmp(self):
+        return self._ins("REV", Target("JMP"))
+
+    def ln(self):
+        return self
+
+    def raw(self, source):
+        if source not in _FIXED_LAL_TEMPLATES:
+            raise Mg2McError("Unknown fixed LAL protocol template.")
+        destination = self.declarations if self.body is None else self.body
+        destination.extend(_FIXED_LAL_TEMPLATES[source])
+        return self
+
+    def unit_call(self, unit, unit_arg):
+        return self._ins("CALL", Target(unit),
+                         _lal_target(unit_arg) if unit_arg else None)
+
+    def output_code(self):
+        return LalProgram(self.entry, tuple(self.declarations))
 
 
 # ---------------------------------------------------------------------------
@@ -1107,7 +1281,10 @@ class Program:
             raise Mg2McError("Undefined flag : " + flag_name, self.current_line)
 
     def generate(self) -> str:
-        g = Generator()
+        return self.emit(Generator())
+
+    def emit(self, g):
+        """Run the shared lowering against a text or typed generator sink."""
         g.program_start_to("MAIN")
         for name in sorted(self.flags.keys()):
             g.flag(name, self.flags[name])
@@ -1248,13 +1425,13 @@ class _Parser:
         raise Mg2McError("syntax error: " + msg + " (near '%s')" % t.value, t.line)
 
     # -- grammar -----------------------------------------------------------
-    def parse(self) -> str:
+    def parse(self, generator=None):
         self.global_var_flag_decl_list()
         self.prototypes()
         self.routines()
         if self.peek_type() != "EOF":
             self.error("unexpected input")
-        return self.p.generate()
+        return self.p.generate() if generator is None else self.p.emit(generator)
 
     def global_var_flag_decl_list(self):
         while self.peek_type() in ("VAR", "FLAG"):
@@ -1490,4 +1667,16 @@ def translate_mg_to_mc(mg_source: str, *, op_style: str = "cluster",
     return _Parser(tokens, program).parse()
 
 
-__all__ = ["translate_mg_to_mc", "Mg2McError", "Option"]
+def translate_mg_to_lal(mg_source: str, *, op_style: str = "cluster",
+                        jmp_style: str = "main") -> LalProgram:
+    """Lower MG directly to dependency-free, ordered LAL records.
+
+    This shares parsing and machine-protocol decisions with the legacy text
+    API, while bypassing its text generator and any full-MC parsing. Errors and
+    style defaults therefore retain the existing MG frontend behavior.
+    """
+    program = Program(Option(op_style=op_style, jmp_style=jmp_style))
+    return _Parser(_tokenize(mg_source), program).parse(LalGenerator())
+
+
+__all__ = ["translate_mg_to_mc", "translate_mg_to_lal", "Mg2McError", "Option"]

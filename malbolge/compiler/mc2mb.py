@@ -38,7 +38,12 @@ Reference: https://git.trs.css.i.nagoya-u.ac.jp/malbolge  (Nagoya Univ., MIT)
 
 from __future__ import annotations
 
-__all__ = ["assemble_mc_to_mb", "parse_mc_to_data", "data_to_mb", "Mc2MbError"]
+__all__ = ["assemble_mc_to_mb", "parse_mc_to_data", "data_to_mb", "Mc2MbError",
+           "parse_mc_to_image", "layout_lal_to_image", "image_to_mb",
+           "iter_image_to_mb", "assemble_lal_to_mb", "iter_lal_to_mb",
+           "iter_mc_to_mb"]
+
+from malbolge.compiler.memory_image import MemoryImage, MemorySegment
 
 
 class Mc2MbError(Exception):
@@ -178,6 +183,22 @@ def parse_mc_to_data(mc_source: str) -> str:
     The returned string is byte-identical to ``PERL_HASH_SEED=0 perl
     parse_mc2.pl`` output (CRLF line endings).
     """
+    return _layout_image(mc_source=mc_source, as_image=False)
+
+
+def parse_mc_to_image(mc_source: str) -> MemoryImage:
+    """Parse legacy MC directly into an ordered image without .data text."""
+    return _layout_image(mc_source=mc_source)
+
+
+def layout_lal_to_image(lal_program) -> MemoryImage:
+    """Lay out dependency-free LAL records without emitting or parsing MC."""
+    from malbolge.compiler.lal_model import verify_lal_program
+    verify_lal_program(lal_program)
+    return _layout_image(lal_program=lal_program)
+
+
+def _layout_image(mc_source=None, lal_program=None, as_image=True):
     # ---- fixed tables from parse_mc2.pl --------------------------------
     flag_cicle_addr = [
         [64, 60],
@@ -253,7 +274,7 @@ def parse_mc_to_data(mc_source: str) -> str:
     mode = 0
     TXT_line = 0
 
-    src_lines = mc_source.split("\n")
+    src_lines = mc_source.split("\n") if mc_source is not None else ()
     idx = 0
     redo_line = None  # holds a line to reprocess (Perl `redo`)
 
@@ -263,6 +284,97 @@ def parse_mc_to_data(mc_source: str) -> str:
         s = re.sub(r'^\s+', '', s)
         s = re.sub(r'\s+$', '', s)
         return s
+
+    if lal_program is not None:
+        from malbolge.compiler.lal_model import (
+            Align, DataWord, FlagDecl, JFlagDecl, Label, LalInstruction,
+            RoutineDecl, Target, UnitCell, UnitDecl, UnitLabel,
+        )
+        startLABEL[:] = [lal_program.entry.routine, lal_program.entry.label]
+        for declaration in lal_program.declarations:
+            if isinstance(declaration, (FlagDecl, JFlagDecl)):
+                is_jump = isinstance(declaration, JFlagDecl)
+                num = 0 if is_jump else declaration.initial
+                denom = 2 if is_jump else declaration.period
+                a = flag_map[denom]
+                b = flag_count[a]
+                c = len(flag_cicle_addr[a])
+                choices = jflag_cicle_addr[a] if is_jump else flag_cicle_addr[a]
+                base = choices[b]
+                u = ut(UT_count)
+                u[base - 1] = "DUP"
+                u[base] = ("JMP" if is_jump else "MOV_D") if num == 0 else \
+                    flag_cicle_value[a][(b + num) % denom]
+                u[base + 1] = "JMP"
+                UT_label[declaration.name] = [UT_count, base]
+                UT_check[UT_count] = 1 if num == 0 else -1
+                while True:
+                    flag_count[a] = (flag_count[a] + 1) % c
+                    if choices[flag_count[a]] != 0:
+                        break
+                UT_upper_addr[UT_count] = -1
+                UT_count += 1
+            elif isinstance(declaration, UnitDecl):
+                UT_check[UT_count] = 1
+                UT_upper_count, UT_lower_check = 0, -1
+                for cell in declaration.body:
+                    if isinstance(cell, UnitLabel):
+                        UT_label_tmp.append(cell.name)
+                        if cell.name in stdUT_check:
+                            stdUT_check[cell.name] = 2
+                    elif isinstance(cell, UnitCell):
+                        addr = cell.offset
+                        if UT_lower_check >= addr:
+                            UT_upper_count += 1
+                            UT_lower_check = -1
+                        else:
+                            UT_lower_check = addr
+                        tmp = UT_upper_count * 94 + addr
+                        ut(UT_count)[tmp] = cell.value
+                        if type(cell.value) is int or cell.value == "NOOP":
+                            UT_check[UT_count] = -1
+                        for label in UT_label_tmp:
+                            UT_label[label] = [UT_count, tmp]
+                        UT_label_tmp = []
+                    else:
+                        raise Mc2MbError("unsupported UNIT record %r" % (cell,))
+                UT_count += 1
+            elif isinstance(declaration, RoutineDecl):
+                rt(RT_count)
+                RT_name[declaration.name] = RT_count
+                RT_addr = 0
+                for cell in declaration.body:
+                    if isinstance(cell, Label):
+                        RT_label[RT_count][cell.name] = RT_addr
+                        RT_label_check[RT_count][cell.name] = 1
+                        continue
+                    if isinstance(cell, Align):
+                        raise Mc2MbError("ALIGN has no supported legacy memory-image lowering")
+                    if isinstance(cell, DataWord):
+                        cell = cell.value
+                    elif isinstance(cell, LalInstruction):
+                        if cell.opcode == "ADDRESS" and cell.target.routine:
+                            raise Mc2MbError("cross-routine ADDRESS has no supported legacy lowering")
+                        if cell.opcode == "BRANCH" and cell.target.subtract:
+                            raise Mc2MbError("BRANCH subtraction has no supported legacy lowering")
+                        if cell.opcode == "JMP":
+                            if cell.target is not None and cell.target.routine and cell.target.subtract:
+                                raise Mc2MbError("cross-routine JMP subtraction has no supported legacy lowering")
+                            stdUT_check["JMP"] = stdUT_check["JMP"] or 1
+                            rt(RT_count)[RT_addr] = LalInstruction("CALL", Target("JMP"))
+                            RT_addr += 1
+                            if cell.target is None:
+                                cell = LalInstruction("CALL", Target("JMP"))
+                        elif cell.opcode == "CALL" and cell.target.label in stdUT_check:
+                            name = cell.target.label
+                            stdUT_check[name] = stdUT_check[name] or 1
+                    else:
+                        raise Mc2MbError("unsupported routine record %r" % (cell,))
+                    rt(RT_count)[RT_addr] = cell
+                    RT_addr += 1
+                RT_count += 1
+            else:
+                raise Mc2MbError("unsupported LAL declaration %r" % (declaration,))
 
     while idx < len(src_lines) or redo_line is not None:
         if redo_line is not None:
@@ -477,6 +589,26 @@ def parse_mc_to_data(mc_source: str) -> str:
             data = rtc.get(addr)
             if data is None:
                 continue
+            if lal_program is not None:
+                if isinstance(data, LalInstruction) and data.continuation is not None:
+                    following = RT_label[count][data.continuation.label]
+                    length = following - (addr + 1)
+                    if length < 0:
+                        raise Mc2MbError("unit continuation must follow the call")
+                    if length:
+                        ua, ub = UT_label[data.target.label]
+                        if length >= ub:
+                            raise Mc2MbError("unit label noop error %r" % data.target.label)
+                        ud = ut(ua)
+                        for i2 in range(length):
+                            ud[ub - i2 - 1] = "NOOP"
+                        previous = ud.get(ub - length - 1)
+                        if _perl_num(previous) == 0:
+                            ud[ub - length - 1] = "NOOP"
+                        else:
+                            raise Mc2MbError("unit label noop error %r" % data.target.label)
+                        UT_check[ua] = -1
+                continue
             data = str(data)
             m = re.match(r'^(IF|REV|NEXT)\s+(.+)$', data)
             if m:
@@ -610,10 +742,37 @@ def parse_mc_to_data(mc_source: str) -> str:
     UT_indir_firstOffset = (offset - offset % 94) + 94
 
     # ---- pass 3: resolve RT cells to numeric addresses ----------------
+    def unit_address(label):
+        ua, ub = UT_label[label]
+        placement, page = relateUT[ua]
+        first = UT_dir_firstOffset if placement == 1 else UT_indir_firstOffset
+        return first + page * 94 + ub
+
     for count in range(len(RT)):
         rtc = RT[count]
         for addr in range(_maxidx(rtc) + 1):
             if addr not in rtc:
+                continue
+            if lal_program is not None:
+                cell = rtc[addr]
+                if type(cell) is int:
+                    continue
+                opcode, target = cell.opcode, cell.target
+                if opcode == "DUP":
+                    value = 0
+                elif opcode in ("NEXT", "REV", "IF", "CALL"):
+                    value = unit_address(target.label)
+                    if opcode == "IF":
+                        value -= 1
+                    elif opcode == "CALL":
+                        value -= (RT_label[count][cell.continuation.label] - addr
+                                  if cell.continuation is not None else 1)
+                elif opcode in ("ADDRESS", "BRANCH", "JMP"):
+                    owner = RT_name[target.routine] if target.routine else count
+                    value = RT_offset[owner] + RT_label[owner][target.label] - target.subtract - 1
+                else:
+                    raise Mc2MbError("unsupported LAL opcode %r" % opcode)
+                rtc[addr] = value
                 continue
             data = str(rtc[addr])
             if re.match(r'^[0-2]{20}t$', data):
@@ -750,6 +909,19 @@ def parse_mc_to_data(mc_source: str) -> str:
     a2 = RT_name[startLABEL[0]]
     b2 = RT_label[a2][startLABEL[1]]
     startADDR = RT_offset[a2] + b2
+
+    if as_image:
+        segments = []
+        for kind, groups, offsets in (
+                ("direct", output_UT_dir,
+                 [UT_dir_firstOffset + i * 94 for i in range(len(output_UT_dir))]),
+                ("routine", RT, RT_offset),
+                ("indirect", output_UT_indir,
+                 [UT_indir_firstOffset + i * 94 for i in range(len(output_UT_indir))])):
+            for index, group in enumerate(groups):
+                words = tuple(int(group.get(j, data_dup)) for j in range(_maxidx(group) + 1))
+                segments.append(MemorySegment(kind, index, offsets[index], words))
+        return MemoryImage(startADDR, tuple(segments))
 
     out = []
     out.append("ENTRY_ADDRESS:%d\r\n" % startADDR)
@@ -1666,6 +1838,26 @@ class _Assembler:
                 self.code_generate(offset, dataLen)
             # "END" and anything else: ignore
 
+        self._finish_memory_initialization(entryNum, tmp)
+
+    def memory_init_image(self, image):
+        """Generate initialization directly from ordered typed segments."""
+        if not isinstance(image, MemoryImage):
+            raise Mc2MbError("expected a MemoryImage")
+        last_direct_offset = 0
+        for segment in image.segments:
+            if segment.kind == "direct":
+                last_direct_offset = segment.offset
+                for position, word in enumerate(segment.words, segment.offset):
+                    if 32 < word < 127:
+                        self.setchr(chr(_xlat1(word, position)), position)
+            else:
+                for position, word in enumerate(segment.words, segment.offset):
+                    self.dataLine[position] = word
+                self.code_generate(segment.offset, len(segment.words))
+        self._finish_memory_initialization(image.entry, last_direct_offset)
+
+    def _finish_memory_initialization(self, entryNum, tmp):
         # final-address adjustment (0-branch)
         self.dataLine[59048 * 59049 + 59046] = 74
         self.dataLine[59048 * 59049 + 59047] = 74
@@ -1764,3 +1956,32 @@ def iter_mc_to_mb(mc_source: str, chunk_size=65536):
     asm.setup_data_module()
     asm.memory_init_code1(parse_mc_to_data(mc_source))
     yield from asm.iter_finish(chunk_size)
+
+
+def iter_image_to_mb(image: MemoryImage, chunk_size=65536):
+    """Assemble an image to byte chunks without an intermediate .data file."""
+    if type(chunk_size) is not int or chunk_size <= 0:
+        raise ValueError("chunk_size must be a positive integer")
+    if not isinstance(image, MemoryImage):
+        raise Mc2MbError("expected a MemoryImage")
+    asm = _Assembler()
+    asm.setup_data_module()
+    asm.memory_init_image(image)
+    yield from asm.iter_finish(chunk_size)
+
+
+def image_to_mb(image: MemoryImage) -> str:
+    """Assemble an ordered memory image into deterministic Malbolge20 source."""
+    return b"".join(iter_image_to_mb(image)).decode("ascii")
+
+
+def assemble_lal_to_mb(lal_program) -> str:
+    """Assemble LAL records without serializing MC or .data text."""
+    return image_to_mb(layout_lal_to_image(lal_program))
+
+
+def iter_lal_to_mb(lal_program, chunk_size=65536):
+    """Stream assembly of LAL records without MC or .data text."""
+    if type(chunk_size) is not int or chunk_size <= 0:
+        raise ValueError("chunk_size must be a positive integer")
+    yield from iter_image_to_mb(layout_lal_to_image(lal_program), chunk_size)

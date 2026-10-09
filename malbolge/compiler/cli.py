@@ -13,9 +13,11 @@ import time
 
 from . import (
     compile_python_to_c, CompileError, compile_python_to_mg, Py2MgError,
-    compile_c_to_mg, C2MgError, translate_mg_to_mc, Mg2McError,
-    iter_mc_to_mb, Mc2MbError,
+    compile_c_to_mg, C2MgError, translate_mg_to_mc, translate_mg_to_lal, Mg2McError,
+    iter_mc_to_mb, iter_lal_to_mb, Mc2MbError,
 )
+from .lal_model import LalModelError, emit_lal_to_mc
+from .memory_image import MemoryImageError
 from .ir import IRDependencyError, XDSL_VERSION, require_ir_support
 
 
@@ -102,6 +104,7 @@ class _Cache:
         payload = {"source": hashlib.sha256(source.encode("utf8")).hexdigest(),
                    "backend": args.backend, "op_style": args.op_style,
                    "jmp_style": args.jmp_style, "python": list(sys.version_info),
+                   "target_pipeline": args.target_pipeline,
                    "toolchain": toolchain}
         if args.backend == "ir":
             payload["ir_passes"] = list(args.ir_passes)
@@ -148,9 +151,54 @@ class _Cache:
         _atomic_write(self.manifest, (json.dumps(self.entries, sort_keys=True).encode(),))
 
 
+def _structured_target(args, mg, stats, cache):
+    """Build native LAL, verifying optional IR without MC/data text adapters."""
+    started = time.perf_counter()
+    model = translate_mg_to_lal(mg, op_style=args.op_style, jmp_style=args.jmp_style)
+    stats["stages"].append({"stage": "mg2lal", "cache_hit": False,
+                            "seconds": time.perf_counter() - started,
+                            "representation": "structured",
+                            "declarations": len(model.declarations)})
+    if args.backend != "ir":
+        return model
+
+    from .ir.lal import lal_to_model, model_to_lal, parse_lal, print_lal, verify_lal
+    from .ir.passes import run_pipeline, summarize_ir
+
+    started = time.perf_counter()
+    cached = cache.hit("ir") if cache else None
+    if cached:
+        ir_text = cached.read_text(encoding="utf8")
+        module = parse_lal(ir_text)
+        verify_lal(module)
+        stats["ir"].update(cache_hit=True, cached_stage="ir")
+    else:
+        result = run_pipeline(model_to_lal(model), args.ir_passes)
+        module = result.module
+        stats["ir"] = result.to_dict()
+        stats["ir"]["cache_hit"] = False
+        ir_text = print_lal(module) if cache or args.emit_ir is not None else None
+        if cache:
+            _atomic_write(cache.path("ir"), (ir_text.encode("utf8"),))
+            cache.record("ir")
+    reports = stats["ir"]["reports"]
+    stats["ir"]["summary"] = (reports[-1]["after"] if reports
+                                else asdict(summarize_ir(module)))
+    record = {"stage": "lal-passes", "cache_hit": bool(cached),
+              "seconds": time.perf_counter() - started,
+              "representation": "structured"}
+    if ir_text is not None:
+        record["bytes"] = len(ir_text.encode("utf8"))
+    stats["stages"].append(record)
+    if args.emit_ir is not None:
+        _write(args.emit_ir, ir_text, "LAL IR")
+    return lal_to_model(module)
+
+
 def _compile(args, source):
     started = time.perf_counter()
-    stats = {"backend": args.backend, "stages": []}
+    stats = {"backend": args.backend, "target_pipeline": args.target_pipeline,
+             "stages": []}
     if args.backend == "ir":
         stats["ir"] = {"xdsl_version": XDSL_VERSION,
                        "passes": list(args.ir_passes), "reports": [],
@@ -240,36 +288,43 @@ def _compile(args, source):
     if args.emit_mc is None and args.emit_ir is None and args.output is None:
         finish_stats()
         return
-    mc = stage("mg2mc", "mc-source" if args.backend == "ir" else "mc",
-               lambda value: translate_mg_to_mc(
-        value, op_style=args.op_style, jmp_style=args.jmp_style), mg)
-    if args.backend == "ir":
-        from .ir.bridge import mc_to_ir_result
-        from .ir.lal import emit_mc, parse_lal, print_lal, verify_lal
-        from .ir.passes import summarize_ir
+    if args.target_pipeline == "structured":
+        model = _structured_target(args, mg, stats, cache)
+        if args.emit_mc is not None:
+            _write(args.emit_mc, emit_lal_to_mc(model), ".mc")
+        image_chunks = lambda: iter_lal_to_mb(model)
+    else:
+        mc = stage("mg2mc", "mc-source" if args.backend == "ir" else "mc",
+                   lambda value: translate_mg_to_mc(
+            value, op_style=args.op_style, jmp_style=args.jmp_style), mg)
+        if args.backend == "ir":
+            from .ir.bridge import mc_to_ir_result
+            from .ir.lal import emit_mc, parse_lal, print_lal, verify_lal
+            from .ir.passes import summarize_ir
 
-        def to_ir(value):
-            result = mc_to_ir_result(value, passes=args.ir_passes)
-            stats["ir"] = result.to_dict()
-            stats["ir"]["cache_hit"] = False
-            return print_lal(result.module)
+            def to_ir(value):
+                result = mc_to_ir_result(value, passes=args.ir_passes)
+                stats["ir"] = result.to_dict()
+                stats["ir"]["cache_hit"] = False
+                return print_lal(result.module)
 
-        ir_text = stage("lal-passes", "ir", to_ir, mc)
-        module = parse_lal(ir_text)
-        verify_lal(module)
-        if stats["stages"][-1]["cache_hit"]:
-            stats["ir"].update(cache_hit=True, cached_stage="ir")
-        reports = stats["ir"]["reports"]
-        stats["ir"]["summary"] = (reports[-1]["after"] if reports
-                                    else asdict(summarize_ir(module)))
-        if args.emit_ir is not None:
-            _write(args.emit_ir, ir_text, "LAL IR")
-        if args.emit_mc is None and args.output is None:
-            finish_stats()
-            return
-        mc = stage("lal-to-mc", "mc", emit_mc, module)
-    if args.emit_mc is not None:
-        _write(args.emit_mc, mc, ".mc")
+            ir_text = stage("lal-passes", "ir", to_ir, mc)
+            module = parse_lal(ir_text)
+            verify_lal(module)
+            if stats["stages"][-1]["cache_hit"]:
+                stats["ir"].update(cache_hit=True, cached_stage="ir")
+            reports = stats["ir"]["reports"]
+            stats["ir"]["summary"] = (reports[-1]["after"] if reports
+                                        else asdict(summarize_ir(module)))
+            if args.emit_ir is not None:
+                _write(args.emit_ir, ir_text, "LAL IR")
+            if args.emit_mc is None and args.output is None:
+                finish_stats()
+                return
+            mc = stage("lal-to-mc", "mc", emit_mc, module)
+        if args.emit_mc is not None:
+            _write(args.emit_mc, mc, ".mc")
+        image_chunks = lambda: iter_mc_to_mb(mc)
     if args.output is not None:
         t = time.perf_counter()
         cached = cache.hit("mb") if cache else None
@@ -278,17 +333,17 @@ def _compile(args, source):
             count = cached.stat().st_size
         elif cache:
             image = cache.path("mb")
-            _atomic_write(image, iter_mc_to_mb(mc))
+            _atomic_write(image, image_chunks())
             cache.record("mb")
             _copy_image(image, args.output)
             count = image.stat().st_size
         elif args.output == "-":
             count = 0
-            for chunk in iter_mc_to_mb(mc):
+            for chunk in image_chunks():
                 sys.stdout.buffer.write(chunk)
                 count += len(chunk)
         else:
-            _atomic_write(args.output, iter_mc_to_mb(mc))
+            _atomic_write(args.output, image_chunks())
             count = Path(args.output).stat().st_size
             sys.stderr.write("wrote {} (Malbolge20)\n".format(args.output))
         stats["stages"].append({"stage": "mc2mb", "cache_hit": bool(cached),
@@ -321,6 +376,8 @@ def main(argv):
                         help="write source-semantic IR before target lowering ('-' for stdout)")
     parser.add_argument("-o", "--output", metavar="MB", help="write Malbolge20 source")
     parser.add_argument("--backend", choices=("c", "direct", "ir"), default="c")
+    parser.add_argument("--target-pipeline", choices=("text", "structured"),
+                        default="text", help="target handoff (structured is experimental)")
     parser.add_argument("--passes", metavar="NAMES",
                         help="comma-separated IR passes (default: verify-lal; IR backend only)")
     parser.add_argument("--ir-frontend", choices=("compat", "semantic"),
@@ -389,7 +446,7 @@ def main(argv):
         _compile(args, source)
     except (CompileError, Py2MgError) as error:
         _die("{}: {}".format(args.source, error))
-    except (C2MgError, Mg2McError, Mc2MbError) as error:
+    except (C2MgError, Mg2McError, Mc2MbError, LalModelError, MemoryImageError) as error:
         _die("compiler stage failed: {}".format(error))
     except IRDependencyError as error:
         _die(str(error))

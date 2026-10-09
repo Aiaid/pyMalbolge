@@ -250,6 +250,112 @@ def create_lal_context() -> Context:
     return context
 
 
+def model_to_lal(model) -> ModuleOp:
+    """Import dependency-free LAL records without an MC text round trip.
+
+    The base model and xDSL representation carry the same symbolic addresses,
+    declaration order, and continuation gaps. Verification remains explicit at
+    this boundary; unsupported object kinds cannot become opaque source lines.
+    """
+    from ..lal_model import (
+        Align, DataWord, FlagDecl, JFlagDecl, Label, LalInstruction, LalProgram,
+        RoutineDecl, UnitCell, UnitDecl, UnitLabel, LalModelError, validate_lal,
+    )
+
+    if not isinstance(model, LalProgram):
+        raise LalIRError("expected a structured LalProgram")
+    try:
+        validate_lal(model)
+    except LalModelError as exc:
+        raise LalIRError("invalid structured LAL: {}".format(exc)) from exc
+
+    def target(value):
+        return (None if value is None else
+                TargetAttr(value.label, value.routine, value.subtract))
+
+    def unit_child(value):
+        if isinstance(value, UnitLabel):
+            return UnitLabelOp(value.name)
+        if isinstance(value, UnitCell):
+            return UnitCellOp(value.offset, value.value)
+        raise LalIRError("unsupported structured UNIT record {!r}".format(type(value).__name__))
+
+    def routine_child(value):
+        if isinstance(value, Label):
+            return LabelOp(value.name)
+        if isinstance(value, DataWord):
+            return DataOp(value.value, value.radix)
+        if isinstance(value, LalInstruction):
+            return InstructionOp(value.opcode, target(value.target), target(value.continuation))
+        if isinstance(value, Align):
+            return AlignOp(value.remainder)
+        raise LalIRError("unsupported structured routine record {!r}".format(type(value).__name__))
+
+    ops = [EntryOp(target(model.entry))]
+    for value in model.declarations:
+        if isinstance(value, FlagDecl):
+            ops.append(FlagOp(value.name, value.initial, value.period))
+        elif isinstance(value, JFlagDecl):
+            ops.append(JFlagOp(value.name))
+        elif isinstance(value, UnitDecl):
+            ops.append(UnitOp(unit_child(child) for child in value.body))
+        elif isinstance(value, RoutineDecl):
+            ops.append(RoutineOp(value.name, (routine_child(child) for child in value.body)))
+        else:
+            raise LalIRError("unsupported structured LAL declaration {!r}".format(type(value).__name__))
+    module = ModuleOp(ops)
+    verify_lal(module)
+    return module
+
+
+def lal_to_model(module: ModuleOp):
+    """Export the verified, possibly transformed IR as structured records."""
+    from ..lal_model import (
+        Align, DataWord, FlagDecl, JFlagDecl, Label, LalInstruction, LalProgram,
+        RoutineDecl, Target, UnitCell, UnitDecl, UnitLabel,
+    )
+
+    verify_lal(module)
+
+    def target(value):
+        return (None if value is None else
+                Target(value.label.data, value.routine.data, value.subtract.data))
+
+    def unit_child(value):
+        if isinstance(value, UnitLabelOp):
+            return UnitLabel(value.sym_name.data)
+        if isinstance(value, UnitCellOp):
+            return UnitCell(value.offset.data, value.value.data)
+        raise LalIRError("unsupported LAL UNIT operation {!r}".format(value.name))
+
+    def routine_child(value):
+        if isinstance(value, LabelOp):
+            return Label(value.sym_name.data)
+        if isinstance(value, DataOp):
+            return DataWord(value.value.data, value.radix.data)
+        if isinstance(value, InstructionOp):
+            return LalInstruction(value.opcode.data, target(value.target), target(value.continuation))
+        if isinstance(value, AlignOp):
+            return Align(value.remainder.data)
+        raise LalIRError("unsupported LAL routine operation {!r}".format(value.name))
+
+    ops = list(module.ops)
+    declarations = []
+    for value in ops[1:]:
+        if isinstance(value, FlagOp):
+            declarations.append(FlagDecl(value.sym_name.data, value.initial.data, value.period.data))
+        elif isinstance(value, JFlagOp):
+            declarations.append(JFlagDecl(value.sym_name.data))
+        elif isinstance(value, UnitOp):
+            declarations.append(UnitDecl(tuple(unit_child(child) for child in value.body.block.ops)))
+        elif isinstance(value, RoutineOp):
+            declarations.append(RoutineDecl(value.sym_name.data,
+                                           tuple(routine_child(child) for child in value.body.block.ops)))
+        else:
+            raise LalIRError("unsupported LAL declaration {!r}".format(value.name))
+    return LalProgram(target(ops[0].target), tuple(declarations))
+
+
 def _name(value: str, what: str) -> None:
     if re.fullmatch(_NAME, value) is None:
         raise LalIRError(f"invalid {what} name {value!r}")

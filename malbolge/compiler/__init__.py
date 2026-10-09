@@ -25,14 +25,18 @@ Individual stages are also exported for tooling and debugging.
 from .py2c import compile_python_to_c, CompileError
 from .py2mg import compile_python_to_mg, Py2MgError
 from .c2mg import compile_c_to_mg, C2MgError
-from .mg2mc import translate_mg_to_mc, Mg2McError
-from .mc2mb import assemble_mc_to_mb, iter_mc_to_mb, Mc2MbError
+from .mg2mc import translate_mg_to_mc, translate_mg_to_lal, Mg2McError
+from .mc2mb import (
+    assemble_mc_to_mb, iter_mc_to_mb, assemble_lal_to_mb, iter_lal_to_mb,
+    layout_lal_to_image, image_to_mb, iter_image_to_mb, Mc2MbError,
+)
 
 
 def compile_python_to_mb(py_source: str, backend: str = "c", *,
                          op_style: str = "cluster",
                          jmp_style: str = "main", passes=None,
-                         ir_frontend="compat", semantic_passes=None) -> str:
+                         ir_frontend="compat", semantic_passes=None,
+                         target_pipeline="text") -> str:
     """Compile a Python-subset program all the way to Malbolge20 source.
 
     ``backend`` selects the front half of the pipeline:
@@ -51,8 +55,23 @@ def compile_python_to_mb(py_source: str, backend: str = "c", *,
     ``jmp_style`` are the ``mg2mc`` code-generation styles (see
     :func:`~malbolge.compiler.mg2mc.translate_mg_to_mc`); the defaults keep the
     output byte-identical to the reference toolchain.
+
+    ``target_pipeline='structured'`` selects the experimental native LAL/image
+    handoff, avoiding mandatory MC/data serialization. It retains the existing
+    protocol, layout and padding. The default ``'text'`` remains the reference
+    path; neither selection changes the Python frontend or optimization profile.
     """
+    if target_pipeline not in ("text", "structured"):
+        raise ValueError("target_pipeline must be 'text' or 'structured'")
     if backend == "ir":
+        if target_pipeline == "structured":
+            from .ir.bridge import compile_python_ir_result
+            from .ir.lal import lal_to_model
+            result = compile_python_ir_result(
+                py_source, op_style=op_style, jmp_style=jmp_style, passes=passes,
+                frontend=ir_frontend, semantic_passes=semantic_passes,
+                target_pipeline=target_pipeline)
+            return assemble_lal_to_mb(lal_to_model(result.module))
         from .ir import compile_python_via_ir_to_mc
         mc_source = compile_python_via_ir_to_mc(
             py_source, op_style=op_style, jmp_style=jmp_style, passes=passes,
@@ -69,6 +88,10 @@ def compile_python_to_mb(py_source: str, backend: str = "c", *,
     else:
         raise ValueError("unknown backend {!r} (use 'c', 'direct' or 'ir')".format(
             backend))
+    if target_pipeline == "structured":
+        model = translate_mg_to_lal(mg_source, op_style=op_style,
+                                    jmp_style=jmp_style)
+        return assemble_lal_to_mb(model)
     mc_source = translate_mg_to_mc(mg_source, op_style=op_style,
                                    jmp_style=jmp_style)
     return assemble_mc_to_mb(mc_source)
@@ -76,7 +99,7 @@ def compile_python_to_mb(py_source: str, backend: str = "c", *,
 
 def compile_python_to_ir(py_source: str, *, op_style="cluster",
                          jmp_style="main", passes=None, frontend="compat",
-                         semantic_passes=None):
+                         semantic_passes=None, target_pipeline="text"):
     """Return verified low-level LAL IR through the optional compatibility bridge.
 
     Importing the compiler does not load xDSL. See
@@ -84,7 +107,8 @@ def compile_python_to_ir(py_source: str, *, op_style="cluster",
     """
     from .ir import compile_python_to_ir as compile_ir
     return compile_ir(py_source, op_style=op_style, jmp_style=jmp_style,
-                      passes=passes, frontend=frontend, semantic_passes=semantic_passes)
+                      passes=passes, frontend=frontend, semantic_passes=semantic_passes,
+                      target_pipeline=target_pipeline)
 
 
 def compile_python_to_semantic_ir(py_source: str):
@@ -97,7 +121,9 @@ __all__ = [
     "compile_python_to_c", "CompileError",
     "compile_python_to_mg", "Py2MgError",
     "compile_c_to_mg", "C2MgError",
-    "translate_mg_to_mc", "Mg2McError",
+    "translate_mg_to_mc", "translate_mg_to_lal", "Mg2McError",
     "assemble_mc_to_mb", "iter_mc_to_mb", "Mc2MbError",
+    "assemble_lal_to_mb", "iter_lal_to_mb", "layout_lal_to_image",
+    "image_to_mb", "iter_image_to_mb",
     "compile_python_to_mb", "compile_python_to_ir", "compile_python_to_semantic_ir",
 ]

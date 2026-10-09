@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-09",
+  "status": "local_accepted_explicit_experiment",
+  "default_target_pipeline": "text",
+  "native_selector": "--target-pipeline structured",
+  "regression": {
+    "passed": 652,
+    "skipped": 8,
+    "subtests_passed": 3149,
+    "wall_seconds": 59.58,
+    "skip_scope": "gated slow style and optimization-counterexample tests",
+    "scope": "lower-backend, library, CLI/cache, optional IR and diagnostic modules; not full project slow suite"
+  },
+  "package": {
+    "sdist_and_wheel_built": true,
+    "new_modules_in_wheel": true,
+    "isolated_dependency_free_wheel_import_compile_execute": [
+      "c",
+      "direct"
+    ],
+    "wheel_smoke_mode": "wheel import via sys.path in uv-created environment, no xDSL",
+    "installer_smoke": "uv pip panicked in macOS system-configuration dynamic_store inside sandbox; no installed-wheel claim"
+  },
+  "compatibility": {
+    "base_python_38_syntax": true,
+    "base_does_not_import_xdsl": true,
+    "optional_ir_verification_and_module_authority": true,
+    "legacy_layout_and_protocol_preserved_for_interface_migration": true
+  },
+  "optimization_policy": "Future generation optimizations may change MB bytes, addresses and steps; judge observable semantics, required machine invariants and compile/size/runtime costs. Byte identity is interface regression evidence only.",
+  "performance_scope": "Separate three-round MG-focused benchmark and profile in private companion; no general compile/runtime speed claim and no new generation algorithm enabled.",
+  "source_sha256": {
+    "malbolge/compiler/__init__.py": "3f83e7af27fdd5ab2779681bf2a88dfa0be6e717f519a159fda61ddfec5c8ce4",
+    "malbolge/compiler/cli.py": "02739dfe837b028e96ac2f9046fc55c6f19809f1c6c7ce0cdbabcef2b890c6ab",
+    "malbolge/compiler/mg2mc.py": "3389d02afc46b3bf64f4083b3a823668fec37146d6e8a2f72565850103a8cbc9",
+    "malbolge/compiler/lal_model.py": "632a2b506b616511ce64dcffe2fc36a8adc271782db6bda62963d62a453b8d32",
+    "malbolge/compiler/mc2mb.py": "34a4e5647fbbdfc031ba836b0ab09743162a51c32d89204924e30d1b5506152a",
+    "malbolge/compiler/memory_image.py": "bae995c3ec8f42a9cba14a3ff0f15093498222749c97e1729a26ddcf00cddfe5",
+    "malbolge/compiler/ir/lal.py": "4c61b67189e4e9439daad7a2767d97c7f26e8e6812e9887b4e4f57683f51fd4f",
+    "malbolge/compiler/ir/bridge.py": "439bc3162028cd79d138b53269589a7646526665b3cf7b2552d030dfa8a48c05",
+    "scripts/benchmark_lower_backend.py": "3ee42c58a0e4f11886cb5d3ba2968bc8d1520c6de2703308bf70b68883780618",
+    "test/test_mg_structured.py": "3049d8ad8c92082d07dab846dd361a787426b92763d5242f1067cfa177809705",
+    "test/test_memory_image.py": "41cab27d0cdba60b33f1ee70a0afa0d2b6616c2c598c44f3af95fe451516ae5f",
+    "test/test_lower_backend.py": "4808a5bcfff49cafffccb4e365873d14e5cc20d07bc62d12d9078912ed9493bb",
+    "test/test_structured_compiler.py": "5ec073cb1ea4692557e677126ed1aba67f6f3135de11d88eef134ffe94eb73c0"
+  },
+  "repository_instruction_audit": {
+    "CLAUDE.md": "already imports AGENTS.md and retains Claude-specific shell guidance",
+    "migration_needed": false
+  },
+  "commit_snapshot_regression": {
+    "base": "7e7df47",
+    "source": "plain HEAD export plus owned integration files",
+    "foreign_prototypes_excluded": true,
+    "passed": 652,
+    "skipped": 8,
+    "subtests_passed": 3149,
+    "wall_seconds": 59.41,
+    "reference_tools_available": true,
+    "no_worktree_used": true
+  }
+}
