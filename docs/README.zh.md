@@ -41,7 +41,8 @@
 |---|---|---|
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | 首次 LAL/pass 基础验收及源码指纹；后续前端/集成变更由 semantic-ir-validation.json 覆盖 |
 | [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | pass 启用前的语义架构验收；后续变更由 semantic-pass-validation.json 覆盖 |
-| [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | pass/默认策略验收、回归与包/源码指纹，测量证据保存在私有 research |
+| [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | 已提交的 pass/默认策略验收；本地目标接口实验另行记录 |
+| [target-interface-validation.json](notes/target-interface-validation.json) | 📌 | 尚未提交的本地原型：目标 AST 角色、默认策略、回归与实现指纹 |
 | [perf-baseline.zh.md](notes/perf-baseline.zh.md) | 📌 | QoS 修复前性能剖析基线；运行时表示/热点描述已由紧凑周期内存与 python-qos-validation.json 取代 |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | QoS 修复前的 2026-10-08 共享测量数据：普通 Python Fibonacci、direct 编译、优化 C 参考解释器执行、CPython 对照及项目 Python CLI 的资源受限停止；双语解读见主 README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | 历史十一组反例；由 python-qos-validation.json 结案，原证据保留 |

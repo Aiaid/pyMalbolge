@@ -8,6 +8,10 @@
 > and direct semantic-to-LAL lowering remain future work. Performance evidence
 > is tracked separately from this architecture contract.
 
+> Documentation-only checkpoint: the target-interface API described below is
+> a locally tested, uncommitted prototype. This commit records its design and
+> validation, not compiler integration or performance parity with direct.
+
 ## 1. Two explicit frontend paths
 
 The semantic path constructs IR before generating MG or MC:
@@ -18,9 +22,11 @@ Python AST → shared normalization and source checks → pysem semantic IR
   → LAL IR → verified LAL passes → MC → existing assembler → MB
 ```
 
-The adapter reconstructs ordered Python AST from the supplied semantic IR and
-uses the existing direct backend to generate MG. It does not reuse original
-source or store an AST inside an opaque IR operation. Editing semantic IR
+The committed adapter reconstructs ordered Python AST from semantic IR,
+serializes generated Python and uses the direct backend to generate MG. The
+local target-interface prototype instead passes Python-shaped target AST
+directly, removing the text round trip. Neither path reuses original source
+or stores an AST inside an opaque IR operation. Editing semantic IR
 changes downstream code and execution. A future target lowering can replace
 the adapter without replacing this frontend.
 
@@ -107,7 +113,42 @@ Lazy APIs in `malbolge.compiler.ir` include:
 | `print_semantic(module)` / `parse_semantic(text)` | Deterministic inspectable IR, including source locations |
 | `run_semantic(module, input_data=b'', ...)` | Independent dispatch of semantic operations, with operation/call/depth/output budgets |
 | `lower_semantic_to_python_ast(module)` / `lower_semantic_to_mg(module)` | Authoritative compatibility representation / target MG |
+| `lower_semantic_to_target_ast(module)` (local prototype) | Explicit backend contract preserving generated-local roles and loop condition preludes |
 | `compile_semantic_to_mc(module, ...)` | Adapter plus verified LAL target pipeline |
+
+The prototype backend contract lives in the uncommitted local
+`compiler/target_ast.py` and has no xDSL
+dependency. `TargetAST` carries generated local names explicitly per function;
+`TargetWhile` carries ordered `condition_prelude` statements evaluated before
+every test. Names are never classified by a prefix. Generated locals remain
+ordinary stored variables protected by recursive frames, not allocator
+temporaries. All ordinary syntax and definite-assignment checks still run.
+
+`compile_target_ast_to_mg` accepts the structured contract. The independent
+`skip_generated_initialization` and `structured_while` controls also exist on
+`lower_semantic_to_mg` for representation comparisons: the former omits only
+generated-local entry zero copies, and the latter avoids synthetic body breaks.
+Source slots, parameter copies, source break/continue and error propagation
+retain their contracts. The source Python entry remains separate.
+
+`native_conditions` is a third, independent adapter control. A terminal
+single comparison used only by the condition-region yield can become a
+native predicate. Prefix and left/right operand computations still execute
+in order using captured SSA values. Chained comparisons, additional uses and
+other condition producers keep their word representation. Comparisons used
+as numbers still produce 0/1; no boolean hint is trusted without inspecting
+the current verified graph.
+
+The local prototype enables all three interface controls. Passing all three as false
+retains the legacy target representation for explicit comparisons; this does
+not disable semantic optimization passes. Decimal algorithm selection remains
+independent: the experimental decimal pass is not part of the default profile.
+
+The structured target AST is not an ordinary executable Python AST: CPython
+does not execute its extra prelude field. Use `to_legacy_ast` to explicitly
+expand it for display or an ordinary-domain Python oracle, or use the original
+`lower_semantic_to_python_ast` view. The semantic interpreter remains the
+complete word/effect/error reference.
 
 The oracle uses neither Python `exec`/AST reconstruction nor the old compiler
 or target VM. It reports bytes, input consumption, globals, return value and

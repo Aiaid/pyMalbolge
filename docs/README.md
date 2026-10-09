@@ -43,7 +43,8 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 |---|---|---|
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | First LAL/pass foundation acceptance and source fingerprints; later frontend/integration changes are covered by semantic-ir-validation.json |
 | [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | Semantic architecture acceptance before pass promotion; later changes are covered by semantic-pass-validation.json |
-| [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | Accepted pass/default policy, regression and package/source fingerprints; measurement evidence retained in private research |
+| [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | Committed pass/default acceptance; local target-interface experiments recorded separately |
+| [target-interface-validation.json](notes/target-interface-validation.json) | 📌 | Local uncommitted prototype: target AST roles, defaults, regression and implementation fingerprints |
 | [perf-baseline.md](notes/perf-baseline.md) | 📌 | Pre-QoS profiling baseline; its runtime representation/hotspot description is superseded by compact periodic memory and python-qos-validation.json |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | Pre-QoS 2026-10-08 shared measurement data: ordinary-Python Fibonacci, direct compilation, optimized C reference execution, CPython comparison, and a resource-bounded project Python CLI stop; bilingual interpretation is in the main README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | Historical 11-group counterexamples; resolved by python-qos-validation.json, original evidence retained |

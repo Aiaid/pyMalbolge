@@ -6,6 +6,9 @@
 > 目标适配器与已验收优化 pass 已实现。完整源变量 SSA 和直接语义→LAL
 > lowering 仍待完成；性能证据与本架构契约分开记录。
 
+> 本次只提交文档：下文目标接口 API 属于已在本地验证、尚未提交的原型。
+> 记录设计与验证结果，不代表编译器实现已集成或性能已与 direct 持平。
+
 ## 1. 两条明确的前端路径
 
 语义路径在生成 MG 或 MC 之前构造 IR：
@@ -16,8 +19,10 @@ Python AST → 共享规范化与源码检查 → pysem 语义 IR
   → LAL IR → 可校验 LAL passes → MC → 现有汇编器 → MB
 ```
 
-适配器从传入的语义 IR 重建有序 Python AST，再使用既有 direct 后端生成
-MG。它不回放原始源码，也不在不透明 IR 操作里保存 AST。修改语义 IR 会
+已提交的适配器从语义 IR 重建有序 Python AST，序列化生成的 Python 后
+交给 direct 后端生成 MG。本地目标接口原型则直接交接采用 Python 结构
+的目标 AST，避免文本往返。两条路径均不回放原始源码，也不在不透明 IR
+操作里保存 AST。修改语义 IR 会
 改变后续代码与执行结果。未来可替换目标 lowering，而无需替换该前端。
 
 现有 `--backend=ir` 默认仍为 `--ir-frontend=compat`，即原有
@@ -93,7 +98,33 @@ argument，存入相应源码槽位。
 | print_semantic(module) / parse_semantic(text) | 包含源码位置、确定性且可检查的 IR |
 | run_semantic(module, input_data=b'', ...) | 独立分发语义操作，带操作/调用/深度/输出预算 |
 | lower_semantic_to_python_ast(module) / lower_semantic_to_mg(module) | 从 IR 重建的兼容表示 / 目标 MG |
+| lower_semantic_to_target_ast(module)（本地原型） | 显式保留生成局部角色和循环条件计算区的后端契约 |
 | compile_semantic_to_mc(module, ...) | 适配器及可校验 LAL 目标管线 |
+
+原型后端契约位于尚未提交的本地 `compiler/target_ast.py`，不依赖 xDSL。
+`TargetAST` 按函数显式
+携带生成局部名字；`TargetWhile` 携带每次判断前依序执行的
+`condition_prelude`。不按名字前缀分类。生成局部仍是有普通存储、受递归
+栈帧保护的变量，不是后端临时分配池中的变量。语法和确定赋值检查仍执行。
+
+`compile_target_ast_to_mg` 接收该结构化契约。`lower_semantic_to_mg` 同样
+提供独立的 `skip_generated_initialization` 和 `structured_while` 对照
+开关：前者只省生成局部的入口清零复制，后者避免在循环体伪造 break。
+源槽位、参数复制、源码 break/continue 与错误传播保持原契约；Python
+源码编译仍使用独立入口。
+
+`native_conditions` 是第三个独立的适配器开关。条件区末尾单一比较若只供
+该区 yield 使用，可以保留为原生 predicate；前缀及左右操作数仍依序计算，
+使用已捕获的 SSA 值。链式比较、额外消费者及其他条件 producer 保留字值
+表示。作为数字使用的比较仍输出 0/1；资格从当前已校验图重新检查。
+
+本地原型启用三个接口开关。全部传 false 可对照旧目标表示，但不会关闭语义
+优化 passes。十进制算法选择独立：实验十进制 pass 仍不属于默认 profile。
+
+结构化目标 AST 不能直接当普通 Python AST 执行：CPython 不会执行其额外
+prelude 字段。显示或普通域 Python oracle 应用 `to_legacy_ast` 显式展开，
+或使用原有 `lower_semantic_to_python_ast` 视图。字环、效果及错误的完整
+参考仍为独立语义执行器。
 
 执行器不使用 Python exec/AST 重建、旧编译器或目标 VM。它报告输出字节、
 输入消耗、全局状态、返回值及停止/预算/错误状态。文本输入按 UTF-8 编码，

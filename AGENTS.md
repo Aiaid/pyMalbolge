@@ -118,6 +118,7 @@ into public documentation without authorization. Check search exit codes:
 | `malbolge/view/` | ViewModel layer: debugger state as plain JSON-serialisable data, shared by every renderer. Never imports textual. Contracts: `docs/design/tui-web-architecture.md` §3 |
 | `malbolge/compiler/python_normalize.py` | Shared tuple/f-string normalization, keyword binding and return/error-callgraph contracts |
 | `malbolge/compiler/decimal_io.py` | Shared decimal input/output helpers, injected on demand by both Python frontends |
+| `malbolge/compiler/target_ast.py` | Uncommitted local prototype: explicit target AST roles and loop-condition preludes; documented in `docs/design/semantic-ir.md` |
 | `malbolge/compiler/py2c.py` | Python subset -> Nagoya C subset (front-end, 'c' backend) |
 | `malbolge/compiler/py2mg.py` | Python subset -> .mg directly ('direct' backend, smaller output, native double recursion) |
 | `malbolge/compiler/c2mg.py` | C subset -> .mg (pure-Python port of nagoya-highlevel, bug-for-bug) |
