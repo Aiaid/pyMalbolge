@@ -133,6 +133,45 @@ def _put_inst_value(inst, j):
     raise Mc2MbError('UNIT name is not correct "%s"' % inst)
 
 
+class _UnitPacker:
+    """Preserve first-fit unit packing while caching occupied address keys."""
+
+    def __init__(self):
+        self.units = []
+        self._masks = []
+        self._keys = []
+
+    def add(self, unit):
+        unit_keys = set(unit)
+        mask = 0
+        for address in unit_keys:
+            if not 0 <= address < 94:
+                # Raw UNIT declarations may span multiple pages. Keep sparse
+                # keys rather than shifting by an arbitrary address.
+                mask = None
+                break
+            mask |= 1 << address
+
+        for index, occupied in enumerate(self._masks):
+            if mask is not None and occupied is not None:
+                overlaps = bool(mask & occupied)
+            else:
+                overlaps = not self._keys[index].isdisjoint(unit_keys)
+            if overlaps:
+                continue
+            self.units[index].update(unit)
+            self._keys[index].update(unit_keys)
+            self._masks[index] = (mask | occupied
+                                 if mask is not None and occupied is not None
+                                 else None)
+            return index
+
+        self.units.append(dict(unit))
+        self._keys.append(unit_keys)
+        self._masks.append(mask)
+        return len(self.units) - 1
+
+
 def parse_mc_to_data(mc_source: str) -> str:
     """Port of parse_mc2.pl: LAL (.mc) text -> Malbolge20 ``.data`` text.
 
@@ -511,41 +550,17 @@ def parse_mc_to_data(mc_source: str) -> str:
             # else: numbers etc, nothing
 
     # ---- pack UT into UT_dir / UT_indir -------------------------------
-    UT_dir = []
-    UT_indir = []
+    direct = _UnitPacker()
+    indirect = _UnitPacker()
     relateUT = {}
-    count_dir = -1
-    count_indir = -1
-
-    for count in range(len(UT)):
-        if UT_check.get(count) == 1:
-            placed = False
-            for i in range(len(UT_dir)):
-                if set(UT_dir[i].keys()) & set(UT[count].keys()):
-                    continue
-                relateUT[count] = (1, i)
-                for k, v in UT[count].items():
-                    UT_dir[i][k] = v
-                placed = True
-                break
-            if not placed:
-                count_dir += 1
-                relateUT[count] = (1, count_dir)
-                UT_dir.append(dict(UT[count]))
-        elif UT_check.get(count) == -1:
-            placed = False
-            for i in range(len(UT_indir)):
-                if set(UT_indir[i].keys()) & set(UT[count].keys()):
-                    continue
-                relateUT[count] = (-1, i)
-                for k, v in UT[count].items():
-                    UT_indir[i][k] = v
-                placed = True
-                break
-            if not placed:
-                count_indir += 1
-                relateUT[count] = (-1, count_indir)
-                UT_indir.append(dict(UT[count]))
+    for count, unit in enumerate(UT):
+        placement = UT_check.get(count)
+        if placement == 1:
+            relateUT[count] = (1, direct.add(unit))
+        elif placement == -1:
+            relateUT[count] = (-1, indirect.add(unit))
+    UT_dir, UT_indir = direct.units, indirect.units
+    count_dir, count_indir = len(UT_dir) - 1, len(UT_indir) - 1
 
     # ---- offsets ------------------------------------------------------
     insNum_indir = 0
@@ -826,6 +841,13 @@ _OP_O = [
 
 _LEGAL = "ji*p</vo"
 
+# Each legal opcode has one source byte per address residue. Bootstrap
+# emission repeatedly uses these same 8 * 94 encodings.
+_INSTRUCTION_BYTES = {
+    char: bytes(_rev_xlat1_c(ord(char), pos) for pos in range(94))
+    for char in _LEGAL
+}
+
 
 def _op(x, y):
     """comm.cpp op(x,y): 20-trit crazy operation."""
@@ -1008,7 +1030,12 @@ class _Assembler:
     def setchr(self, chr_, pos):
         if chr_ not in _LEGAL:
             raise Mc2MbError("Error! '%s' is not an instruction" % chr_)
-        rc = _rev_xlat1_c(ord(chr_), pos)
+        try:
+            rc = _INSTRUCTION_BYTES[chr_][pos % 94]
+        except (KeyError, TypeError):
+            # Preserve the scalar path's errors for malformed private-method
+            # arguments, including empty opcodes and non-integer positions.
+            rc = _rev_xlat1_c(ord(chr_), pos)
         self.code[pos] = rc
         if pos + 1 > self.code_size:
             self.code_size = pos + 1

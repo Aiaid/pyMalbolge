@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "description": "The three current Python examples, matched by source with fixed demonstration inputs. Original .mal programs use a different machine variant and are audited separately.",
+  "programs": [
+    {
+      "id": "hello",
+      "path": "../examples/hello.py",
+      "description": "Literal output example",
+      "tags": [
+        "examples"
+      ],
+      "tier": "smoke",
+      "workloads": [
+        {
+          "id": "demo",
+          "stdin": "",
+          "stdout": "Hello, world!\n",
+          "max_steps": 400000000,
+          "timeout_seconds": 480
+        }
+      ]
+    },
+    {
+      "id": "countdown",
+      "path": "../examples/countdown.py",
+      "description": "Loops, break/continue and remainder",
+      "tags": [
+        "examples"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "demo",
+          "stdin": "",
+          "stdout": "ACE",
+          "max_steps": 400000000,
+          "timeout_seconds": 480
+        }
+      ]
+    },
+    {
+      "id": "fib",
+      "path": "../examples/fib.py",
+      "description": "Runtime decimal input and double recursion",
+      "tags": [
+        "examples"
+      ],
+      "tier": "stress",
+      "workloads": [
+        {
+          "id": "demo",
+          "stdin": "6\n",
+          "stdout": "8\n",
+          "max_steps": 400000000,
+          "timeout_seconds": 480
+        }
+      ]
+    }
+  ]
+}

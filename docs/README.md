@@ -49,5 +49,7 @@ live in a private companion repository that is not part of this one; documents
 here occasionally cite them by entry number.
 
 Runtime library docs: [`runtime/mg/README.md`](../runtime/mg/README.md);
+fixed Python benchmark programs and the CSV/JSON runner:
+[`benchmarks/README.md`](../benchmarks/README.md);
 test fixture provenance: `test/fixtures/hell/README.md` and
 `test/fixtures/nagoya/README.md`.

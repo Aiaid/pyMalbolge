@@ -429,6 +429,14 @@ class _Compiler:
             "unsupported binary operator: {}".format(type(op).__name__), node)
 
     def _binop_emit(self, op, left, right, node, dest=None):
+        # Both operands have already been lowered, including their calls and
+        # error guards. Avoid the runtime helper for these ring identities.
+        if right == 1 and isinstance(op, (ast.FloorDiv, ast.Mod)):
+            value = left if isinstance(op, ast.FloorDiv) else 0
+            if dest is not None:
+                self.emit("{} = {};".format(dest, _operand(value)))
+                return dest
+            return value
         d = dest if dest is not None else self.newtmp()
         lo, ro = _operand(left), _operand(right)
         if isinstance(op, ast.Add):

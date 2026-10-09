@@ -434,6 +434,11 @@ class _DirectCompiler(c2mg.Compiler):
         right = self._lower_protecting(node.right, left)
         if isinstance(left, int) and isinstance(right, int):
             return self._fold(op, left, right, node)
+        if right == 1 and isinstance(op, (ast.FloorDiv, ast.Mod)):
+            if isinstance(op, ast.FloorDiv):
+                return left
+            self._release_if_temp(left)
+            return 0
         lv = self._as_var(left)
         rv = self._as_var(right)
         if isinstance(op, ast.Add):
@@ -952,7 +957,13 @@ class _DirectCompiler(c2mg.Compiler):
                 "true division '/=' is unsupported; use '//='", node)
         previous = self._snapshot(z) if self._may_call(node.value) else z
         val = self._lower_protecting(node.value, previous)
-        if isinstance(op, ast.Add):
+        if val == 1 and isinstance(op, (ast.FloorDiv, ast.Mod)):
+            if isinstance(op, ast.FloorDiv):
+                result = previous
+            else:
+                self._release_if_temp(previous)
+                result = 0
+        elif isinstance(op, ast.Add):
             result = self._add_expr(self._as_var(previous), self._as_var(val))
         elif isinstance(op, ast.Sub):
             result = self._sub_expr(self._as_var(previous), self._as_var(val))

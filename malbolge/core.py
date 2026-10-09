@@ -10,6 +10,7 @@ This module provides shared infrastructure for:
 from array import array
 from dataclasses import dataclass
 from enum import Enum
+from operator import index
 from typing import Dict, Optional, Callable, List
 
 
@@ -25,6 +26,21 @@ TABLE_CRAZY = (
     (1, 0, 0),
     (1, 0, 2),
     (2, 2, 1)
+)
+
+# Combine independent trits into compact byte lookups. Four-trit results fit
+# in one byte; the two tables contain only 81 + 6561 result bytes. Building
+# the larger table from pairs avoids thousands of per-trit initialization
+# loops at import time.
+_CRAZY_PAIRS = tuple(
+    bytes(TABLE_CRAZY[b % 3][a % 3] + TABLE_CRAZY[b // 3][a // 3] * 3
+          for a in range(9))
+    for b in range(9)
+)
+_CRAZY_QUADS = tuple(
+    bytes(_CRAZY_PAIRS[b % 9][a % 9] + _CRAZY_PAIRS[b // 9][a // 9] * 9
+          for a in range(81))
+    for b in range(81)
 )
 
 # Encryption table for self-modifying code (shared)
@@ -82,18 +98,30 @@ def crazy(a: int, b: int, trit_width: int) -> int:
     """
     Malbolge's 'crazy' operation.
 
-    Performs digit-by-digit ternary lookup using TABLE_CRAZY.
+    Performs independent ternary lookups, grouped four trits at a time.
 
     Args:
         a: First operand
         b: Second operand
-        trit_width: Number of ternary digits to process (10 or 20)
+        trit_width: Number of ternary digits to process (usually 10 or 20)
     """
+    width = index(trit_width)
     result = 0
     d = 1
-    for _ in range(trit_width):
-        result += TABLE_CRAZY[(b // d) % 3][(a // d) % 3] * d
-        d *= 3
+    for _ in range(width // 4):
+        result += _CRAZY_QUADS[b % 81][a % 81] * d
+        a //= 81
+        b //= 81
+        d *= 81
+    if width > 0:
+        remainder = width % 4
+        if remainder >= 2:
+            result += _CRAZY_PAIRS[b % 9][a % 9] * d
+            a //= 9
+            b //= 9
+            d *= 9
+        if remainder % 2:
+            result += TABLE_CRAZY[b % 3][a % 3] * d
     return result
 
 

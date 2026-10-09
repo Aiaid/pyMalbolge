@@ -46,4 +46,6 @@
 本仓库;本目录其余文档偶尔会按条目编号引用它们。
 
 运行时库文档见 [`runtime/mg/README.md`](../runtime/mg/README.md);
+固定 Python 基准程序与 CSV/JSON 执行器见
+[`benchmarks/README.zh.md`](../benchmarks/README.zh.md);
 测试夹具出处见 `test/fixtures/hell/README.md` 与 `test/fixtures/nagoya/README.md`。

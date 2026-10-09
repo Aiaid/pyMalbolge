@@ -1,0 +1,378 @@
+{
+  "schema_version": 1,
+  "description": "Ordinary Python subset benchmark corpus with fixed valid inputs and CPython output oracles. Budgets bound execution and are not speed acceptance thresholds.",
+  "programs": [
+    {
+      "id": "literal_output",
+      "path": "programs/literal_output.py",
+      "description": "Tiny literal output and VM bootstrap baseline.",
+      "tags": [
+        "literal",
+        "bootstrap"
+      ],
+      "tier": "smoke",
+      "workloads": [
+        {
+          "id": "tiny",
+          "stdin": "",
+          "stdout": "Hi\n",
+          "max_steps": 5000000,
+          "timeout_seconds": 30
+        }
+      ]
+    },
+    {
+      "id": "folded_arithmetic",
+      "path": "programs/folded_arithmetic.py",
+      "description": "Constant arithmetic folded before VM execution.",
+      "tags": [
+        "literal",
+        "constant_folding",
+        "arithmetic"
+      ],
+      "tier": "smoke",
+      "workloads": [
+        {
+          "id": "tiny",
+          "stdin": "",
+          "stdout": "42\n",
+          "max_steps": 5000000,
+          "timeout_seconds": 30
+        }
+      ]
+    },
+    {
+      "id": "decimal_echo",
+      "path": "programs/decimal_echo.py",
+      "description": "Unsigned decimal input/output; inputs stay below 3**20.",
+      "tags": [
+        "decimal_io"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "7\n",
+          "stdout": "7\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "123456\n",
+          "stdout": "123456\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "sum_range",
+      "path": "programs/sum_range.py",
+      "description": "Accumulate range(n); bounded inputs avoid unsigned overflow.",
+      "tags": [
+        "loop",
+        "addition"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "10\n",
+          "stdout": "45\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "100\n",
+          "stdout": "4950\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "branch_count",
+      "path": "programs/branch_count.py",
+      "description": "Count loop indices below and above five.",
+      "tags": [
+        "loop",
+        "branch"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "0 0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "3\n",
+          "stdout": "3 0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "100\n",
+          "stdout": "5 95\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "gcd",
+      "path": "programs/gcd.py",
+      "description": "Euclid GCD including the guarded (0, 0) case.",
+      "tags": [
+        "loop",
+        "modulo",
+        "tuple_assignment"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n0\n",
+          "stdout": "0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "48\n18\n",
+          "stdout": "6\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "144\n89\n",
+          "stdout": "1\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "fibonacci_iterative",
+      "path": "programs/fibonacci_iterative.py",
+      "description": "Iterative Fibonacci matched to recursive inputs.",
+      "tags": [
+        "loop",
+        "addition",
+        "tuple_assignment"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "5\n",
+          "stdout": "5\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "10\n",
+          "stdout": "55\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "factorial",
+      "path": "programs/factorial.py",
+      "description": "Factorial for n <= 12, with 12! below 3**20.",
+      "tags": [
+        "loop",
+        "multiplication"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "1\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "5\n",
+          "stdout": "120\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "12\n",
+          "stdout": "479001600\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "multiply_literal",
+      "path": "programs/multiply_literal.py",
+      "description": "Runtime integer multiplied by literal 17.",
+      "tags": [
+        "multiplication",
+        "literal_operand"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "7\n",
+          "stdout": "119\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "123\n",
+          "stdout": "2091\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "multiply_dynamic",
+      "path": "programs/multiply_dynamic.py",
+      "description": "Runtime integers multiplied; factor 17 matches literal case.",
+      "tags": [
+        "multiplication",
+        "dynamic_operand"
+      ],
+      "tier": "standard",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n17\n",
+          "stdout": "0\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "small",
+          "stdin": "7\n17\n",
+          "stdout": "119\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "medium",
+          "stdin": "123\n17\n",
+          "stdout": "2091\n",
+          "max_steps": 1000000000,
+          "timeout_seconds": 300
+        }
+      ]
+    },
+    {
+      "id": "fibonacci_recursive",
+      "path": "programs/fibonacci_recursive.py",
+      "description": "Double-recursive Fibonacci matched to iterative inputs.",
+      "tags": [
+        "recursion",
+        "calls",
+        "addition"
+      ],
+      "tier": "stress",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "0\n",
+          "max_steps": 3000000000,
+          "timeout_seconds": 600
+        },
+        {
+          "id": "small",
+          "stdin": "5\n",
+          "stdout": "5\n",
+          "max_steps": 3000000000,
+          "timeout_seconds": 600
+        },
+        {
+          "id": "medium",
+          "stdin": "10\n",
+          "stdout": "55\n",
+          "max_steps": 3000000000,
+          "timeout_seconds": 600
+        }
+      ]
+    },
+    {
+      "id": "mutual_recursion",
+      "path": "programs/mutual_recursion.py",
+      "description": "Alternating parity calls with bounded stack depth.",
+      "tags": [
+        "mutual_recursion",
+        "calls",
+        "branch"
+      ],
+      "tier": "stress",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin": "0\n",
+          "stdout": "1\n",
+          "max_steps": 3000000000,
+          "timeout_seconds": 600
+        },
+        {
+          "id": "small",
+          "stdin": "7\n",
+          "stdout": "0\n",
+          "max_steps": 3000000000,
+          "timeout_seconds": 600
+        },
+        {
+          "id": "medium",
+          "stdin": "32\n",
+          "stdout": "1\n",
+          "max_steps": 3000000000,
+          "timeout_seconds": 600
+        }
+      ]
+    }
+  ]
+}

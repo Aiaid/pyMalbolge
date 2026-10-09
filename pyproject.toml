@@ -53,6 +53,7 @@ include = [
     "/malbolge",
     "/test",
     "/examples",
+    "/benchmarks",
     "/runtime",
     "/scripts",
     "/docs",
