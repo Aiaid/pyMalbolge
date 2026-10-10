@@ -21,6 +21,10 @@ uv run --no-sync python scripts/benchmark_pipeline.py \
 expected ASCII stdout, execution budgets, and suite membership. Paths are
 relative to the manifest. The corpus contains **12 programs and 32 workloads**:
 
+A workload may also declare `expected_input_consumed` (a nonnegative byte
+count). The target must consume exactly that many bytes; matching stdout alone
+does not satisfy this contract.
+
 | Tier | Programs | Workloads | Coverage |
 | --- | ---: | ---: | --- |
 | `smoke` | 2 | 2 | Literal output; folded arithmetic |
@@ -87,7 +91,11 @@ documented separately in `examples/README.md`.
 
 1. Establish correctness by comparing each workload with its fixed CPython
    output. A subprocess CPython baseline includes interpreter startup; label it
-   accordingly. Do not treat the oracle's validation time as a VM speed sample.
+accordingly. Do not treat the oracle's validation time as a VM speed sample.
+   Before timing a changed compiler, separately validate its actual MB images
+   against an independent interpreter: exact stdout, consumed input, errors
+   and normal termination. A step/output budget stop or child timeout remains
+   unvalidated until diagnosed and completed under justified bounds.
 2. Measure compiler stages independently: Python frontend (and C → MG on the
    `c` backend), MG → MC, assembly/bootstrap generation, and MB emission. Record
    source and artifact hashes, sizes, backend, environment, and repetitions.
@@ -122,3 +130,67 @@ uv run --no-sync pytest test/test_benchmark_corpus.py -q
 Frontend/MC acceptance does not establish runtime equivalence for the larger
 programs. Use a full benchmark runtime run to verify the MB execution of those
 workloads on the current compiler and VM.
+
+## Target pipeline and correctness-only reference
+
+`--target-pipeline text` remains the runner default. Use
+`--target-pipeline structured` for the native MG → LAL records → memory image
+handoff. The `ir` backend requires the optional IR dependencies and defaults to
+the semantic frontend in this runner; `--ir-frontend compat` selects the older
+compatibility frontend explicitly. Record these choices with every cohort.
+
+```bash
+uv sync --extra dev --extra ir
+uv run --no-sync python scripts/benchmark_pipeline.py \
+  --suite smoke --backends c direct ir \
+  --target-pipeline structured --ir-frontend semantic --discard-images
+```
+
+`--diagnostic-exports` produces inspectable MC/data files with separately
+labelled export costs. Native assembly consumes the typed records/image.
+
+`scripts/verify_mb_reference.py` builds a bounded, correctness-only copy of the
+pinned upstream Malbolge20 C interpreter. It requires that reference source
+and a C compiler. Its counters and bounds verify actual byte output, input
+consumption and HALT; instrumented-reference time is never a speed result.
+For a previously compiled literal-output image (`Hi` plus newline):
+
+```bash
+uv run --no-sync python scripts/verify_mb_reference.py build \
+  --output-dir /tmp/malbolge-reference-gate
+uv run --no-sync python scripts/verify_mb_reference.py verify \
+  --binary /tmp/malbolge-reference-gate/malbolge20-reference-gate \
+  --image path/to/literal-output.mb --expected-output-hex 48690a \
+  --expected-consumed 0 --max-steps 5000000 --max-output 4096 --timeout 30
+```
+
+Run correctness acceptance separately before the full timed matrix. The runner
+records attempted and normally completed workloads independently. Incomplete
+runs keep diagnostics and stop classifications, with complete CPU/wall/step
+metrics blank in CSV and excluded from timing summaries. A whole-child timeout
+does not supply a complete VM duration or its lower bound. Compilation is still
+counted once per program/backend/style/repetition, shared across inputs.
+
+## Fixed native VM artifact comparison
+
+`scripts/benchmark_fixed_vm.py` measures accepted MBs with one pinned,
+unmodified original C `-O3` binary. Every backend must use the same native
+manifest and the same per-input deadline. The manifest records actual source,
+binary and build provenance; the receipt binds the full image fingerprint to
+an independently passed reference gate and exact input/output contract.
+
+```bash
+uv run --no-sync python scripts/benchmark_fixed_vm.py \
+  --binary path/to/interpreter-O3 --native-manifest path/to/native-manifest.json \
+  --image path/to/literal-output.mb --receipt path/to/accepted-receipt.json \
+  --input-hex '' --expected-output-hex 48690a --timeout 30
+```
+
+The CLI rejects missing or mismatched evidence before starting the native
+process. Timings include the whole child (startup, reading, initialization and
+execution); image hashing and gate verification occur before the clock starts.
+Complete CPU uses that child's user+system resource usage. The unmodified VM
+has no internal execution clock or instruction counter, so previously accepted
+reference steps are labelled separately. Censored samples keep complete clocks
+null and supply no VM-time lower bound. Cold compile timing, MB bytes and
+interpreter throughput remain separate measurements.

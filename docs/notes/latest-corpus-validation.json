@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "recorded_date": "2026-10-10",
+  "scope": "Public summary of the dated latest-corpus run. Complete frozen sources and per-target evidence are retained in the private research companion. No private contents or host paths are embedded.",
+  "cohort": {
+    "committed_base": "8c8b3d0",
+    "working_latest": true,
+    "includes_uncommitted_target_interface_prototype": true,
+    "prototype_promoted_by_this_run": false,
+    "input_scope": "12 fixed ordinary-Python programs / 32 valid workloads plus 9 control, recursion and documented-error canaries; not full-Python or all-input proof"
+  },
+  "selection": {
+    "backends": [
+      "c",
+      "direct",
+      "ir"
+    ],
+    "ir_frontend": "semantic",
+    "target_pipeline": "structured",
+    "style": "cluster/main",
+    "repetitions": 1,
+    "compilation_cache": "disabled",
+    "profiled": false,
+    "rejected_decimal_experiment": false
+  },
+  "correctness": {
+    "independent_reference_source_sha256": "0ea5d2cfd8e597256f91bae3ea505f2f8467e3704e5c362b24fc91b56b9782b0",
+    "required_corpus_targets": 96,
+    "required_canary_targets": 27,
+    "unique_passed_targets": 123,
+    "attempts_preserved": 150,
+    "initial_insufficient_step_budget_stops_preserved": 19,
+    "checks": [
+      "exact_output_bytes",
+      "actual_input_consumption",
+      "normal_halt",
+      "source_and_full_image_identity"
+    ],
+    "instrumented_reference_is_performance_measurement": false,
+    "gate_open_before_timing": true,
+    "anomalies": []
+  },
+  "performance": {
+    "programs": 12,
+    "fixed_inputs": 32,
+    "requested_cold_compiles": 36,
+    "successful_cold_compiles": 36,
+    "requested_target_runs": 96,
+    "attempted_target_runs": 96,
+    "normal_completed_runs": 73,
+    "whole_child_timeouts": 23,
+    "step_limit_runs": 0,
+    "output_limit_runs": 0,
+    "invalid_instruction_runs": 0,
+    "output_mismatch_runs": 0,
+    "compile_failures": 0,
+    "run_state": "complete_with_failures",
+    "suite_elapsed_seconds": 16039.917181968689,
+    "suite_elapsed_is_program_runtime": false,
+    "clocks": [
+      "current_process_cpu",
+      "wall_perf_counter"
+    ],
+    "timeout_policy": "Censored whole-child runs have no complete VM CPU/wall/steps/throughput metrics. Independently accepted target counts remain correctness evidence.",
+    "compile_deduplication": "One compile per program/backend/style/repetition, shared across its inputs.",
+    "step_budget_policy": "Only known-insufficient step budgets increased after independent normal-HALT acceptance; original per-workload wall deadlines preserved.",
+    "single_pass_timings": "Exploratory; background load, frequency and thermal policy not controlled."
+  },
+  "postcheck": {
+    "all_requested_attempted": true,
+    "all_images_match": true,
+    "all_completed_output_input_steps_registers_match": true,
+    "source_hashes_start_equal_end": true,
+    "issues": []
+  },
+  "focused_test_scopes": [
+    {
+      "scope": "gate, runner and latest source-contract tests",
+      "passed": 108
+    },
+    {
+      "scope": "earlier source/target-interface regression",
+      "passed": 458
+    }
+  ],
+  "full_suite_count_claimed": false,
+  "github_ci_run_claimed": false,
+  "evidence_digests": {
+    "correctness_acceptance_sha256": "25c23f0bb3ffb5fb30d2163269244e675dc15ccef12bc5f94e4ff3dcb3bc74bd",
+    "performance_report_sha256": "2dd20cf6230daaa64327af34551ab8aa4f429708897ca8b6d1dd69e5c949d090",
+    "reference_postcheck_sha256": "3bcf5a5390d001ff02119e9c70eef167a5fc8a62b15134c3ffa818a652fc8fd8"
+  },
+  "original_nagoya_complex_comparison": {
+    "case": "GCD/medium",
+    "common_c_bytes": 3075,
+    "common_c_sha256": "83f2e107a2a2e6bbd7c5e9cb42d5c2f969438ab49b44e82dde65a9144cd907b8",
+    "input_hex": "3134340a38390a",
+    "output_hex": "310a",
+    "consumed_bytes": 7,
+    "compilation_boundary": "Common C input; shared Python frontend excluded",
+    "repetitions": 1,
+    "timing_policy": "One exploratory serial pair, uncontrolled load/frequency; source and binary hashes retained",
+    "original_initializer_build": "Unchanged upstream Makefile defaults -g -O2 with Clang++ in isolated output",
+    "original_parser_build_limitation": "Existing original parser binary hashes retained; historical compiler flags not re-audited",
+    "both_pilot_and_timed_images_pass_independent_correctness": true,
+    "mg_mc_data_equal": true,
+    "mb_bytes_each": 597973105,
+    "accepted_target_steps_each": 273501624,
+    "original_compile_cpu_seconds": 621.8211270000003,
+    "port_compile_cpu_seconds": 65.59765799999991,
+    "original_compile_wall_seconds": 625.9608920000028,
+    "port_compile_wall_seconds": 65.91877320800268,
+    "compiler_cpu_original_over_port": 9.479319017761291,
+    "same_image_runtime_scope": "Same port MB/input; whole-child CPU includes startup/read/validate/init/execute; uninstrumented original C-O3 versus frozen bounded Python",
+    "native_c_runtime_cpu_seconds": 19.27587100000028,
+    "python_runtime_cpu_seconds": 242.72564999999986,
+    "runtime_cpu_python_over_native_c": 12.592201410768745,
+    "runtime_passed": true,
+    "image_cleanup_complete": true,
+    "report_sha256": "3e5111c5b7fdd34fc9923472853a3692b89c2fce0bb6c1793f0fcdfb4fc70987"
+  }
+}

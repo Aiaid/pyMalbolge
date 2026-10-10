@@ -5,7 +5,53 @@
 > 快照：2026-10-09。区分已验收代码、显式实验和已记录的本地原型。
 > 带日期的完整测量保存在私有配套仓库的优化总览；公开验收记录见下方。
 
+> 2026-10-10 后续：最新冻结工作 cohort（含本地目标接口原型）在计时前
+> 通过全部 123 个独立真实映像契约。36 次冷编译及 96 个运行组合全部尝试，
+> 73 个 Python 样本正常完成，23 个触及整子进程期限；最终源码/映像/状态
+> 复核通过。[验收摘要](../notes/latest-corpus-validation.json)明确工作 cohort
+> 和单轮边界，此次不提升原型状态，也不证明普遍提速。
+
+> 2026-10-10 同 VM 后续：重建相同冻结已验收 MB，用同一固定、未改写原版
+> C-O3 二进制运行，包含真实原版 GCD。99 个身份全部尝试：97 正常完成、
+> 2 整子进程超时、无输出失败；源码/映像/VM/清理复核通过。direct GCD 为
+> 276.78 MB，原版为 597.97 MB；本轮整子进程墙钟为 9.11 秒和 18.83 秒。
+> [统一 VM 验收](../notes/common-vm-validation.json)将产物比较与解释器/
+> 默认引擎工作分开。
+
 ## 已实现的各层
+
+### 开启方式核对（2026-10-10）
+
+编译器默认是 `backend=c`、`ir_frontend=compat`、`target_pipeline=text`，
+风格为 `cluster/main`。体积/运行表显式比较不同路径；其中 direct 或 semantic
+的成绩，不是普通 compile 命令的默认结果。
+
+| 工作 | 开启方式 |
+|---|---|
+| C/direct 算术捷径、临时量/帧处理、MC 布局/编码缓存、启动代码存储/发射及共享 Python VM 原语 | 在适用实现中自动生效，无需额外优化开关。 |
+| direct Python→MG 前端 | 选择 `--backend=direct`，内部已验收优化自动生效。 |
+| semantic IR 和已验收具名优化 profile | 选择 `--backend=ir --ir-frontend=semantic` 并安装 `ir` extra。进入 semantic 后，已验收 profile 本身就是默认；`--opt-level=1` 显式声明该选择，`0` 则仅校验。单独 `--backend=ir` 仍是 compat 前端。 |
+| 原生结构化 LAL/image 传递 | 选择 `--target-pipeline=structured`，默认仍为 `text`。属于接口实验，direct 前端产物缩小来自其自身 lowering。 |
+| 编译缓存 | 传入 `--cache-dir`；默认关闭，冷编译测量不使用缓存。 |
+| 十进制输出候选及被拒绝的批量 NOP 实验 | 排除已验收默认策略；十进制候选需手动选择 pass。 |
+| 目标 AST 初始化/循环/谓词原型 | 当前未提交 semantic adapter 内，三个接口选项在选中该路径后默认开启。冻结工作 benchmark 包含它，但其源码状态及具名 semantic profile 分别标明。 |
+| 原生 VM / JIT | 已提交代码基线 `1a7b88b` 的 `run20` 默认 Python，native/JIT 通过库的 engine 显式选择。当前工作目录另有另一会话未提交的 `auto` 批处理原生优先策略，JIT 仍显式选择；原生安装/构建变化也属独立工作。 |
+
+已提交 direct 路径的选择：
+
+```bash
+uv run python -m malbolge compile program.py --backend=direct -o program.mb
+```
+
+显式 semantic 和 structured 选择：
+
+```bash
+uv sync --extra dev --extra ir
+uv run --no-sync python -m malbolge compile program.py --backend=ir \
+  --ir-frontend=semantic --opt-level=1 --target-pipeline=structured -o program.mb
+```
+
+统一产物对照直接调用固定原版 C 二进制，产品的默认引擎变化不影响该测量 cohort。
 
 | 层 | 已实现工作 | 状态与作用 |
 |---|---|---|
@@ -44,8 +90,11 @@ while 谓词仍是另一会话的未提交原型；其消融收益不能证明�
 完整变量 SSA/活性、动态乘法重设计、按调用点成本选择、分派/flag 最小化
 及新布局/启动策略仍待实现。
 
-完整程序库仍有整个子进程超时项，编译成功不代表这些目标的输出/终止
-已验证。历史及定向测试数量不相加成当前完整测试总数。
+最新独立正确性门禁已验证固定程序库的输出和终止，包括旧 C/direct 超时
+映像。2026-10-09 Python cohort 中 23 个不完整样本的完整耗时仍不可得；
+独立统一 C VM cohort 仅 C/semantic 的 `12!` 超时，direct 完成全部 32 个
+固定程序库输入。历史及定向测试
+数量不相加成当前完整测试总数。
 
 后续生成优化允许 MB 字节和步数减少，验收依据为可观察语义、必要机器
 不变量及完整编译时间/体积/运行成本。字节一致用于接口回归，不作为优化目标。

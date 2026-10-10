@@ -59,3 +59,6 @@ def test_real_pipeline_metrics_and_runtime_agree_with_artifact(tmp_path):
     bounded = BENCH.runtime_sample(args, tmp_path, source, input_text)
     assert not bounded["passed"]
     assert bounded["result"]["stop_reason"] == "step_limit"
+    assert not bounded["completed"]
+    assert "execute_seconds" not in bounded
+    assert bounded["partial_diagnostics"]["measurements"]["execute_seconds"] >= 0

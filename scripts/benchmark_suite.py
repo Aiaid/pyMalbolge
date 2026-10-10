@@ -46,6 +46,10 @@ def load_manifest(path):
                     raise ValueError("workload input/output must be ASCII text: " + name)
             if type(work.get("max_steps")) is not int or work["max_steps"] < 0:
                 raise ValueError("workload requires a nonnegative step budget: " + name)
+            consumed = work.get("expected_input_consumed")
+            if consumed is not None and (type(consumed) is not int or
+                                         not 0 <= consumed <= len(work["stdin"].encode("ascii"))):
+                raise ValueError("invalid expected_input_consumed for " + name)
             timeout = work.get("timeout_seconds")
             if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
                 raise ValueError("workload requires a positive timeout: " + name)
@@ -100,8 +104,12 @@ def run_manifest(args, pipeline):
             raise ValueError("hardware info must be a JSON object")
         hardware.update(supplied)
     report = {"schema_version": 2, "mode": "benchmark" if args.stop_after == "mb" else "lowering_check",
+              "selection": pipeline.selection_metadata(args),
+              "runner_sha256": pipeline.digest(Path(pipeline.__file__).read_bytes()),
+              "suite_runner_sha256": pipeline.digest(Path(__file__).read_bytes()),
               "manifest_sha256": pipeline.digest(path.read_bytes()),
-              "python": sys.version, "platform": platform.platform(),
+              "python": sys.version,
+              "platform": " ".join((platform.system(), platform.release(), platform.machine())),
               "source_hashes_at_start": pipeline.fingerprint(), "profiled": args.profile,
               "method": "One cold compilation per program/backend/style/repeat, shared by its fixed input workloads. Each compilation, CPython oracle and VM execution uses a fresh child process. No compilation cache. VM phases exclude process startup; whole-process times include it. RSS is cumulative per-process peak, not a stage-local allocation. No filesystem cache flush or formal aggregate score.",
               "samples": []}
@@ -118,14 +126,17 @@ def run_manifest(args, pipeline):
                   requested_target_runs=(sum(len(p["workloads"]) for p in programs) * len(args.backends) * len(args.styles) * args.repeats if args.runtime else 0),
                   image_retention="discard_after_workloads" if args.discard_images else "keep")
     rows, failed = [], False
-    fields = ["program", "backend", "style", "repeat", "workload", "status",
+    fields = ["program", "backend", "style", "target_pipeline", "ir_frontend", "repeat", "workload", "status",
               "compile_seconds", "compile_cpu_seconds", "compiler_stage_seconds", "mb_bytes", "mc_bytes", "run_seconds",
               "run_cpu_seconds", "steps", "execute_seconds", "execute_cpu_seconds", "execute_cpu_wall_ratio", "steps_per_second",
               "cpython_code_seconds", "cpython_code_cpu_seconds", "peak_rss_bytes"]
 
     def save():
         report["completed_program_compiles"] = sum("compile" in s for s in report["samples"])
-        report["completed_target_runs"] = sum("runtime" in w for s in report["samples"] for w in s["workloads"])
+        report["attempted_target_runs"] = sum("runtime" in w for s in report["samples"] for w in s["workloads"])
+        report["completed_target_runs"] = sum(
+            w.get("runtime", {}).get("result", {}).get("stop_reason") == "terminated"
+            for s in report["samples"] for w in s["workloads"])
         report["passed_target_runs"] = sum(w.get("runtime", {}).get("passed", False) for s in report["samples"] for w in s["workloads"])
         temporary = output / "report.json.tmp"
         temporary.write_text(json.dumps(report, indent=2) + "\n")
@@ -141,6 +152,7 @@ def run_manifest(args, pipeline):
                    "--backend", backend, "--op-style", style.split("/")[0],
                    "--jmp-style", style.split("/")[1], "--stop-after", args.stop_after,
                    "--max-steps", str(budget)]
+        command.extend(pipeline.selection_arguments(args))
         if args.profile and task != "oracle":
             command.append("--profile")
         if getattr(args, "semantic_passes", None) is not None:
@@ -158,16 +170,21 @@ def run_manifest(args, pipeline):
         except subprocess.TimeoutExpired:
             report["active"] = None
             return {"error": "timeout", "timeout_seconds": timeout,
-                    "whole_process_seconds": time.perf_counter() - started,
                     "whole_child_timeout_seconds": timeout,
-                    "passed": False}
+                    "completed": False, "passed": False,
+                    "partial_diagnostics": {"whole_process_seconds": time.perf_counter() - started}}
         report["active"] = None
         result_path = directory / (record + ".json")
         if proc.returncode or not result_path.exists():
             return {"error": proc.stderr.decode(errors="replace")[-4000:],
-                    "returncode": proc.returncode, "passed": False}
+                    "returncode": proc.returncode, "completed": False, "passed": False,
+                    "partial_diagnostics": {"whole_process_seconds": time.perf_counter() - started}}
         result = json.loads(result_path.read_text())
-        result["whole_process_seconds"] = time.perf_counter() - started
+        elapsed = time.perf_counter() - started
+        if task == "runtime" and result.get("result", {}).get("stop_reason") != "terminated":
+            result.setdefault("partial_diagnostics", {})["whole_process_seconds"] = elapsed
+        else:
+            result["whole_process_seconds"] = elapsed
         return result
 
     for program in programs:
@@ -178,6 +195,7 @@ def run_manifest(args, pipeline):
                     directory.mkdir(exist_ok=False)
                     (directory / "source.py").write_text(program["source"], encoding="utf8")
                     sample = {"program": program["id"], "backend": backend, "style": style,
+                              "selection": pipeline.selection_metadata(args),
                               "repeat": repeat, "source_sha256": pipeline.digest(program["source"].encode("utf8")),
                               "workloads": []}
                     report["samples"].append(sample)
@@ -211,7 +229,10 @@ def run_manifest(args, pipeline):
                         work["passed"] = bool(passed)
                         failed |= not passed
                         runtime = work.get("runtime", {})
+                        measured_runtime = runtime if pipeline.completed_runtime(runtime) else {}
                         rows.append({"program": program["id"], "backend": backend, "style": style,
+                                     "target_pipeline": pipeline.selection_metadata(args)["target_pipeline"],
+                                     "ir_frontend": pipeline.selection_metadata(args)["ir_frontend"],
                                      "repeat": repeat, "workload": work["id"],
                                      "status": "ok" if passed and args.runtime else ("compiled_" + args.stop_after if passed else "failed"),
                                      "compile_seconds": compilation.get("wall_seconds_including_artifact_and_metric_writes"),
@@ -219,16 +240,16 @@ def run_manifest(args, pipeline):
                                      "compiler_stage_seconds": sum(s["seconds"] for s in compilation.get("stages", [])) if compile_ok else None,
                                      "mb_bytes": compilation.get("image", {}).get("bytes"),
                                      "mc_bytes": next((s["bytes"] for s in compilation.get("stages", []) if s["stage"] == "mg2mc"), None),
-                                     "steps": runtime.get("result", {}).get("steps"),
-                                     "run_seconds": runtime.get("wall_seconds"),
-                                     "run_cpu_seconds": runtime.get("cpu_seconds"),
-                                     "execute_seconds": runtime.get("execute_seconds"),
-                                     "execute_cpu_seconds": runtime.get("execute_cpu_seconds"),
-                                     "execute_cpu_wall_ratio": runtime.get("execute_cpu_wall_ratio"),
-                                     "steps_per_second": runtime.get("result", {}).get("steps", 0) / runtime["execute_seconds"] if runtime.get("execute_seconds", 0) > 0 else None,
+                                     "steps": measured_runtime.get("result", {}).get("steps"),
+                                     "run_seconds": measured_runtime.get("wall_seconds"),
+                                     "run_cpu_seconds": measured_runtime.get("cpu_seconds"),
+                                     "execute_seconds": measured_runtime.get("execute_seconds"),
+                                     "execute_cpu_seconds": measured_runtime.get("execute_cpu_seconds"),
+                                     "execute_cpu_wall_ratio": measured_runtime.get("execute_cpu_wall_ratio"),
+                                     "steps_per_second": measured_runtime.get("result", {}).get("steps", 0) / measured_runtime["execute_seconds"] if measured_runtime.get("execute_seconds", 0) > 0 else None,
                                      "cpython_code_seconds": work["oracle"].get("code_seconds"),
                                      "cpython_code_cpu_seconds": work["oracle"].get("code_cpu_seconds"),
-                                     "peak_rss_bytes": runtime.get("process_peak_rss_bytes")})
+                                     "peak_rss_bytes": measured_runtime.get("process_peak_rss_bytes")})
                         save()
                     image_path = directory / "program.mb"
                     sample["image_retained"] = image_path.exists() and not args.discard_images

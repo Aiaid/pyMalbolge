@@ -50,6 +50,8 @@
 | [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | 已提交的 pass/默认策略验收；本地目标接口实验另行记录 |
 | [target-interface-validation.json](notes/target-interface-validation.json) | 📌 | 尚未提交的本地原型：目标 AST 角色、默认策略、回归与实现指纹 |
 | [structured-lowering-validation.json](notes/structured-lowering-validation.json) | ✅ 本地验收 | 原生低层接口回归、库/CLI/IR 接入和测量范围 |
+| [latest-corpus-validation.json](notes/latest-corpus-validation.json) | ✅ 带日期工作 cohort 验收 | 独立正确性 123/123；36 次冷编译 / 96 次运行尝试，73 正常完成 / 23 整子进程超时；明确本地原型及单轮边界 |
+| [common-vm-validation.json](notes/common-vm-validation.json) | ✅ 带日期统一 VM 验收 | 同一未改写原版 C-O3 二进制跑 96 个冻结程序库及真实原版 GCD 三输入；97 正常 / 2 截尾超时，精确体积及最终来源/清理复核 |
 | [perf-baseline.zh.md](notes/perf-baseline.zh.md) | 📌 | QoS 修复前性能剖析基线；运行时表示/热点描述已由紧凑周期内存与 python-qos-validation.json 取代 |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | QoS 修复前的 2026-10-08 共享测量数据：普通 Python Fibonacci、direct 编译、优化 C 参考解释器执行、CPython 对照及项目 Python CLI 的资源受限停止；双语解读见主 README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | 历史十一组反例；由 python-qos-validation.json 结案，原证据保留 |

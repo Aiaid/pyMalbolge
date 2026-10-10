@@ -18,6 +18,9 @@ uv run --no-sync python scripts/benchmark_pipeline.py \
 `manifest.json` 统一记录程序路径、固定 ASCII 输入、预期 ASCII 输出、执行预算及
 测试分组。路径相对于清单文件。程序库共 **12 个程序、32 组输入**：
 
+输入组还可声明 `expected_input_consumed`（非负字节数）。目标必须精确消耗
+该数量的输入字节；仅输出相同不能满足这个契约。
+
 | 分组 | 程序数 | 输入组数 | 覆盖内容 |
 | --- | ---: | ---: | --- |
 | `smoke` | 2 | 2 | 字面量输出、常量算术折叠 |
@@ -72,6 +75,9 @@ CPU 时间排除了调度等待，但仍受硬件、频率、温度和缓存影�
 
 1. 先将每组输入与固定 CPython 输出比较，确认正确性。CPython 子进程基线包含
    解释器启动，应明确标注；输出校验所耗时间不能作为 VM 速度采样。
+   对更改后的编译器开始计时之前，应另用独立解释器验证真实 MB 映像的精确输出、
+   输入消耗、错误及正常终止。步数/输出预算停止或子进程超时仍属未验证；需先
+   定位，再在有依据的充分预算下确认结束。
 2. 分别测量 Python 前端（`c` 后端还包括 C → MG）、MG → MC、汇编与引导代码生成、
    MB 写出。记录源码及产物哈希、体积、后端、环境和重复次数。
 3. 分开测量 MB 读取与校验、VM 内存初始化和执行。引导代码、十进制解析/格式化及
@@ -99,3 +105,59 @@ uv run --no-sync pytest test/test_benchmark_corpus.py -q
 
 前端/MC 接受源码并不能证明较大程序的运行时等价。要验证这些输入在当前编译器与
 VM 上的 MB 执行结果，需要运行完整基准并启用运行时检查。
+
+## 目标传递与仅正确性参考
+
+执行器仍默认 `--target-pipeline text`。用 `--target-pipeline structured`
+选择原生 MG → LAL 记录 → 内存映像传递。`ir` 后端需要可选 IR 依赖，且本执行器
+默认使用 semantic 前端；`--ir-frontend compat` 显式选择旧兼容前端。每个 cohort
+都应记录这些选择。
+
+```bash
+uv sync --extra dev --extra ir
+uv run --no-sync python scripts/benchmark_pipeline.py \
+  --suite smoke --backends c direct ir \
+  --target-pipeline structured --ir-frontend semantic --discard-images
+```
+
+`--diagnostic-exports` 输出可检查的 MC/data 文件，导出成本单独标记。
+原生汇编直接消费结构化记录/映像。
+
+`scripts/verify_mb_reference.py` 将固定指纹的上游 Malbolge20 C 解释器复制并加上
+有界计数，仅用于正确性验证，需要相应参考源码和 C 编译器。它核对真实字节输出、
+输入消耗及 HALT；插桩参考的耗时不作为速度结果。对已编译的字面量输出映像
+（`Hi` 后跟换行）：
+
+```bash
+uv run --no-sync python scripts/verify_mb_reference.py build \
+  --output-dir /tmp/malbolge-reference-gate
+uv run --no-sync python scripts/verify_mb_reference.py verify \
+  --binary /tmp/malbolge-reference-gate/malbolge20-reference-gate \
+  --image path/to/literal-output.mb --expected-output-hex 48690a \
+  --expected-consumed 0 --max-steps 5000000 --max-output 4096 --timeout 30
+```
+
+完整计时矩阵之前，先单独验收正确性。执行器分别记录尝试和正常完成的目标数；
+不完整运行保留诊断与停止分类，CSV 中完整 CPU/墙钟/步数指标留空，不进入耗时
+汇总。整子进程超时不提供完整 VM 耗时或其下界。编译仍按每个程序/后端/风格/轮次
+只计一次，由多组输入共享。
+
+## 固定原生 VM 产物对照
+
+`scripts/benchmark_fixed_vm.py` 使用同一个固定指纹、未改写的原版 C `-O3`
+二进制测量已验收 MB。各后端必须共用原生 VM 清单和相同的每输入期限。清单保留
+实际源码、二进制和构建来源；验收记录把完整映像指纹绑定到独立参考门禁及精确
+输入/输出契约。
+
+```bash
+uv run --no-sync python scripts/benchmark_fixed_vm.py \
+  --binary path/to/interpreter-O3 --native-manifest path/to/native-manifest.json \
+  --image path/to/literal-output.mb --receipt path/to/accepted-receipt.json \
+  --input-hex '' --expected-output-hex 48690a --timeout 30
+```
+
+证据缺失或不一致时，CLI 在启动原生进程前拒绝。计时包含整子进程的启动、读取、
+初始化和执行；映像指纹和门禁核对在时钟启动前完成。完整 CPU 使用该子进程的
+user+system 资源记录。未改写 VM 没有内部执行时钟或指令计数，因此已验收参考
+步数单独标明。截尾样本的完整时钟留空，不提供 VM 耗时下界。冷编译、MB 字节数
+和解释器吞吐分别衡量。

@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "recorded_date": "2026-10-10",
+  "scope": "Uniform original C VM artifact comparison. Frozen sources and per-target evidence are retained privately; no private contents or host paths are embedded.",
+  "cohort": {
+    "committed_base": "8c8b3d0",
+    "working_latest": true,
+    "includes_uncommitted_target_interface_prototype": true,
+    "prototype_promoted_by_this_run": false,
+    "backends": [
+      "c",
+      "direct",
+      "semantic"
+    ],
+    "target_pipeline": "structured",
+    "style": "cluster/main",
+    "repetitions": 1,
+    "product_vm_default_changes_are_separate": true
+  },
+  "correctness": {
+    "prior_unique_accepted_contracts": 123,
+    "prior_corpus_contracts": 96,
+    "all_corpus_receipts_verified_before_jobs": true,
+    "regenerated_corpus_image_groups_matching_accepted_bytes_and_sha256": 36,
+    "genuine_original_gcd_fresh_gate_inputs": 3,
+    "checks": [
+      "exact_output_bytes",
+      "actual_input_consumption",
+      "normal_halt",
+      "source_and_full_image_identity"
+    ],
+    "reference_instrumentation_is_performance": false
+  },
+  "native_vm": {
+    "binary_sha256": "6dcd2b2913794c122252cce85c634fe0a583d5f4819be1c0f33112ee42ffc2a1",
+    "compiler_flags": [
+      "-O3"
+    ],
+    "instrumented": false,
+    "source_sha256": "0ea5d2cfd8e597256f91bae3ea505f2f8467e3704e5c362b24fc91b56b9782b0"
+  },
+  "performance": {
+    "attempted": 99,
+    "censored": 2,
+    "complete": 97,
+    "failed": 0,
+    "pending": 0,
+    "requested": 99
+  },
+  "by_backend": {
+    "c": {
+      "censored": 1,
+      "complete": 31,
+      "failed": 0,
+      "requested": 32
+    },
+    "direct": {
+      "censored": 0,
+      "complete": 32,
+      "failed": 0,
+      "requested": 32
+    },
+    "original": {
+      "censored": 0,
+      "complete": 3,
+      "failed": 0,
+      "requested": 3
+    },
+    "semantic": {
+      "censored": 1,
+      "complete": 31,
+      "failed": 0,
+      "requested": 32
+    }
+  },
+  "measurement": {
+    "serial": true,
+    "fresh_process_each_runtime": true,
+    "clock_scope": "Whole child startup, image reading, initialization and execution",
+    "cpu_clock": "Per-child wait4 user plus system",
+    "image_hashing_and_correctness_gates_inside_timer": false,
+    "internal_vm_execution_clock_available": false,
+    "timed_native_instruction_count_available": false,
+    "deadlines": "Original 30/300/600 seconds, symmetric per input",
+    "censored_metrics": "Complete CPU/wall and paired ratios null; deadline is neither VM runtime nor its lower bound",
+    "new_compilation_performance_measurement": false,
+    "existing_cold_compile_groups": 36,
+    "filesystem_cache_flushed": false,
+    "background_frequency_thermal_policy_controlled": false,
+    "aggregate_score": null
+  },
+  "censored_identities": [
+    {
+      "program": "factorial",
+      "backend": "c",
+      "workload": "medium",
+      "deadline_seconds": 300
+    },
+    {
+      "program": "factorial",
+      "backend": "semantic",
+      "workload": "medium",
+      "deadline_seconds": 300
+    }
+  ],
+  "gcd_medium": [
+    {
+      "backend": "original",
+      "image_bytes": 597973105,
+      "whole_child_cpu_seconds": 18.775895,
+      "whole_child_wall_seconds": 18.82987120799953,
+      "accepted_reference_steps_correctness_only": 273501624
+    },
+    {
+      "backend": "direct",
+      "image_bytes": 276781121,
+      "whole_child_cpu_seconds": 9.090233,
+      "whole_child_wall_seconds": 9.114597208012128,
+      "accepted_reference_steps_correctness_only": 134668873
+    },
+    {
+      "backend": "semantic",
+      "image_bytes": 287656733,
+      "whole_child_cpu_seconds": 9.455376,
+      "whole_child_wall_seconds": 9.489545624994207,
+      "accepted_reference_steps_correctness_only": 140810455
+    },
+    {
+      "backend": "c",
+      "image_bytes": 597973105,
+      "whole_child_cpu_seconds": 19.285482000000002,
+      "whole_child_wall_seconds": 19.3887255419977,
+      "accepted_reference_steps_correctness_only": 273501624
+    }
+  ],
+  "postcheck": {
+    "accepted_fresh_image_groups": 36,
+    "corpus_identities": 96,
+    "genuine_original_fresh_gate_inputs": 3,
+    "genuine_original_gcd_identities": 3,
+    "owned_images_cleaned": true,
+    "passed": true,
+    "requested_unique_identities": 99,
+    "same_native_vm": true,
+    "source_and_fingerprints_stable": true
+  },
+  "focused_tests": {
+    "scope": "fixed VM runner, orchestration and canonical-lineage summarizer",
+    "passed": 53
+  },
+  "full_suite_count_claimed": false,
+  "github_ci_run_claimed": false,
+  "evidence_digests": {
+    "acceptance_sha256": "25c23f0bb3ffb5fb30d2163269244e675dc15ccef12bc5f94e4ff3dcb3bc74bd",
+    "common_vm_report_sha256": "535ea17245fb268bd7bfb5e467bc4cf6272e42555588af2259d7aa7de19c74b4",
+    "existing_compiler_report_sha256": "2dd20cf6230daaa64327af34551ab8aa4f429708897ca8b6d1dd69e5c949d090",
+    "performance_manifest_sha256": "9e83110a02107a4b87d51a9e924d881395fdb2f93e8a5522cbc5dac0f656ea50",
+    "validated_summary_sha256": "be223d5d898ffb6d0b3f71013fb4f48af025dd1286707558458f62914d92ee28"
+  }
+}
