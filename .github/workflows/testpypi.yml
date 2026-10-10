@@ -129,6 +129,14 @@ jobs:
         with:
           name: testpypi-wheel-${{ needs.build.outputs.version }}
           path: dist
+      - name: Require the configured TestPyPI credential
+        env:
+          TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          if [ -z "$TEST_PYPI_API_TOKEN" ]; then
+            echo '::error::TEST_PYPI_API_TOKEN is not configured; no upload was attempted'
+            exit 1
+          fi
       - name: Publish unique development version to the test site
         uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
@@ -137,6 +145,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: dist/
           attestations: false
+          verbose: false
 
   verify-testpypi:
     name: Verify exact version installed from TestPyPI
