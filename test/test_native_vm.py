@@ -402,11 +402,11 @@ def test_invalid_io_arguments_do_not_mutate_memory(arguments, exception):
 
 
 @requires_native
-def test_run20_opt_in_matches_default_engine():
+def test_run20_native_matches_explicit_python_engine():
     source = program(23, 5, 81)
-    assert run20(source, "é", engine="native") == run20(source, "é")
+    assert run20(source, "é", engine="native") == run20(source, "é", engine="python")
     wide_halt = chr(81 + 94 * 100)
-    assert run20(wide_halt, engine="native") == run20(wide_halt)
+    assert run20(wide_halt, engine="native") == run20(wide_halt, engine="python")
 
 
 @requires_native

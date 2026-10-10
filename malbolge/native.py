@@ -1,7 +1,8 @@
-"""Opt-in native Malbolge20 execution with the bounded Python VM contract.
+"""Native Malbolge20 execution with the bounded Python VM contract.
 
-Build the extension with ``uv run python scripts/build_native_vm.py``.
-Importing this module never compiles code or changes the default interpreter.
+Build the extension with ``uv run --with setuptools --with wheel python scripts/build_native_vm.py``.
+Importing this module never compiles code. Automatic selection prefers an
+available native extension; JIT remains an explicit choice.
 """
 from array import array
 from importlib import import_module
@@ -19,7 +20,7 @@ def _extension():
     except ImportError as error:
         raise RuntimeError(
             "Native VM is unavailable for this Python interpreter; build it with "
-            "'uv run python scripts/build_native_vm.py'."
+            "'uv run --with setuptools --with wheel python scripts/build_native_vm.py'."
         ) from error
 
 
@@ -30,6 +31,19 @@ def native_available():
     except ImportError:
         return False
     return True
+
+
+def resolve_engine(engine="auto"):
+    """Select an engine without running guest code or enabling JIT.
+
+    Only automatic selection falls back when the extension cannot be loaded.
+    Explicit selections retain their execution-time availability errors.
+    """
+    if engine == "auto":
+        return "native" if native_available() else "python"
+    if engine not in ("python", "native", "jit"):
+        raise ValueError("engine must be 'auto', 'python', 'native', or 'jit'")
+    return engine
 
 
 def jit_available():
