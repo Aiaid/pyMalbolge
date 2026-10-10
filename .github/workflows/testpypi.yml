@@ -52,7 +52,7 @@ jobs:
             --expect-no-jit --forbid-source-root "{project}"
             --report-dir "/native-provenance"
         run: >-
-          uvx --python 3.12 cibuildwheel==4.3.0 --platform linux
+          uvx --python 3.12 cibuildwheel==4.3.0
           --only cp312-manylinux_x86_64 --output-dir wheelhouse
       - name: Record wheel and verification-helper provenance
         env:
