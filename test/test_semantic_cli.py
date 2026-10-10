@@ -68,9 +68,9 @@ def test_semantic_and_lal_outputs_plus_real_mb_execution(source, tmp_path):
 
 
 def test_frontend_options_and_semantic_output_aliases(source, tmp_path):
-    expect_error(source, ['--emit-semantic-ir', '-'], 'require --backend=ir')
+    expect_error(source, ['--backend=c', '--emit-semantic-ir', '-'], "requires backend='ir'")
     expect_error(source, ['--backend=ir', '--ir-frontend=compat', '--emit-semantic-ir', '-'],
-                 'require --ir-frontend=semantic')
+                 'requires --ir-frontend=semantic')
     expect_error(source, ['--backend=ir', '--emit-semantic-ir', str(source)], 'overwrite')
     target = str(tmp_path / 'same')
     expect_error(source, ['--backend=ir', '--emit-semantic-ir', target, '--emit-ir', target], 'distinct')
@@ -135,4 +135,17 @@ def test_optimization_levels_are_explicit_and_preserve_observables(source):
 def test_profile_and_named_passes_cannot_conflict(source):
     expect_error(source, ['--backend=ir', '--opt-level=0', '--semantic-passes=verify-semantic'],
                  'alternative selections')
-    expect_error(source, ['--opt-level=1'], 'require --backend=ir')
+
+
+
+def test_level_one_applies_to_non_ir_compilation(source):
+    stdout, stderr = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        cli.main([str(source), '--opt-level=1', '--no-cache', '--stats'])
+    stats = json.loads(stderr.getvalue().splitlines()[-1])
+    from malbolge.compiler import compile_python_to_mg
+    assert stdout.getvalue() == compile_python_to_mg(source.read_text())
+    assert stats['backend'] == 'direct'
+    assert stats['optimization']['opt_level'] == 1
+    assert stats['optimization']['arithmetic_optimizations'] is True
+    assert stats['cache']['mode'] == 'disabled'

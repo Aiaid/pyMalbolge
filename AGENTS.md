@@ -54,8 +54,9 @@ uv run python -m malbolge debug --variant=malbolge20 program.mal
 
 ### Compile Python to Malbolge20
 ```bash
-uv run python -m malbolge compile foo.py -o foo.mb                    # default 'c' backend
+uv run python -m malbolge compile foo.py -o foo.mb                    # default automatic O3
 uv run python -m malbolge compile foo.py --backend=direct -o foo.mb   # py->.mg direct backend
+uv run python -m malbolge compile foo.py -O0 --no-cache -o foo.mb      # disable optional transforms/cache
 uv sync --extra dev --extra ir                                      # optional IR tools, Python 3.10+
 uv run --no-sync python -m malbolge compile foo.py --backend=ir --emit-ir foo.mlir
 uv run --no-sync python -m malbolge compile foo.py --backend=ir --emit-semantic-ir foo.semantic.mlir
@@ -63,11 +64,20 @@ uv run --no-sync python -m malbolge compile foo.py --backend=ir --ir-frontend=se
 uv run --no-sync python -m malbolge compile foo.py --backend=ir --opt-level=0 --emit-semantic-ir foo.raw.mlir
 uv run python -m malbolge --variant=malbolge20 foo.mb                 # run the result
 ```
-Bounded batch execution and opt-in compilation caching:
+Bounded batch execution and explicit compilation cache selection:
 ```bash
 uv run python -m malbolge --variant=malbolge20 foo.mb --input '7' --max-steps 10000000 --max-output 1024 --eof sentinel --stats
 uv run python -m malbolge compile foo.py -o foo.mb --cache-dir .cache/malbolge --stats
 ```
+Compiler CLI and `compile_python_to_mb` default to O3/auto. The policy compares
+Direct with accepted semantic lowering when optional IR is available, choosing
+the smaller predicted final MB before generating one bootstrap. O2/O3 default
+to the structured target handoff; explicit backend/frontend/text choices lock
+their path. O0 disables optional Direct/semantic transforms; the C reference
+frontend retains its existing intrinsics. O3 CLI caching is automatic under the
+source directory, with a 64 MiB cap per artifact; `--no-cache` disables it and
+explicit `--cache-dir` has no artifact cap. Library APIs do not persist a cache.
+Policy and bounds: `docs/design/compiler-optimization.md`.
 Execution budgets return exit 3; invalid instructions return exit 2. Metrics
 are JSON on stderr; program output remains bytes on stdout. Use explicit
 `--input`/`--input-file` for batch execution from a TTY.
@@ -118,7 +128,8 @@ into public documentation without authorization. Check search exit codes:
 | `malbolge/view/` | ViewModel layer: debugger state as plain JSON-serialisable data, shared by every renderer. Never imports textual. Contracts: `docs/design/tui-web-architecture.md` §3 |
 | `malbolge/compiler/python_normalize.py` | Shared tuple/f-string normalization, keyword binding and return/error-callgraph contracts |
 | `malbolge/compiler/decimal_io.py` | Shared decimal input/output helpers, injected on demand by both Python frontends |
-| `malbolge/compiler/target_ast.py` | Uncommitted local prototype: explicit target AST roles and loop-condition preludes; documented in `docs/design/semantic-ir.md` |
+| `malbolge/compiler/target_ast.py` | Explicit target AST roles and loop-condition preludes for semantic lowering; documented in `docs/design/semantic-ir.md` |
+| `malbolge/compiler/optimization.py` | Shared O0–O3 policy, optional candidate selection and prepared compilation plans |
 | `malbolge/compiler/py2c.py` | Python subset -> Nagoya C subset (front-end, 'c' backend) |
 | `malbolge/compiler/py2mg.py` | Python subset -> .mg directly ('direct' backend, smaller output, native double recursion) |
 | `malbolge/compiler/c2mg.py` | C subset -> .mg (pure-Python port of nagoya-highlevel, bug-for-bug) |
@@ -160,8 +171,8 @@ into public documentation without authorization. Check search exit codes:
   The semantic target adapter disables duplicate legacy arithmetic shortcuts;
   C/direct references retain their defaults. Decimal output lowering is an
   explicit experiment, excluded from the accepted profile after regression.
-- `--target-pipeline=structured` is an explicit native LAL/image handoff
-  experiment; the default `text` path remains available. Base C/direct use no
+- O2/O3 use the native structured LAL/image handoff by default;
+  `--target-pipeline=text` explicitly selects the text path. Base C/direct use no
   xDSL. Preserve ordered UNIT offsets, continuation gaps and address biases.
   Byte identity is regression evidence for an interface-only change, not an
   optimization objective: generation changes may reduce MB bytes/steps while

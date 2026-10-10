@@ -1,4 +1,4 @@
-"""Python-subset compiler CLI with atomic outputs and opt-in stage caching."""
+"""Python-subset compiler CLI with default O3 and verified stage caching."""
 
 import argparse
 from dataclasses import asdict
@@ -19,6 +19,10 @@ from . import (
 from .lal_model import LalModelError, emit_lal_to_mc
 from .memory_image import MemoryImageError
 from .ir import IRDependencyError, XDSL_VERSION, require_ir_support
+from .optimization import resolve_optimization_policy, build_compilation_plan
+
+
+AUTO_CACHE_ARTIFACT_LIMIT = 64 * 1024 * 1024
 
 
 def _die(msg):
@@ -106,6 +110,7 @@ class _Cache:
                    "jmp_style": args.jmp_style, "python": list(sys.version_info),
                    "target_pipeline": args.target_pipeline,
                    "toolchain": toolchain}
+        payload["optimization"] = args.optimization_metadata
         if args.backend == "ir":
             payload["ir_passes"] = list(args.ir_passes)
             payload["xdsl_version"] = XDSL_VERSION
@@ -130,6 +135,10 @@ class _Cache:
                 self.entries = {}
         except (OSError, ValueError):
             self.entries = {}
+        if self.entries.get("optimization") != args.optimization_metadata:
+            self.entries = {}
+        self.entries["optimization"] = args.optimization_metadata
+        self.automatic = args.automatic_cache
 
     def path(self, stage):
         return self.root / ("program." + stage)
@@ -137,7 +146,12 @@ class _Cache:
     def hit(self, stage):
         path = self.path(stage)
         entry = self.entries.get(stage)
+        if (not isinstance(entry, dict) or type(entry.get("bytes")) is not int
+                or entry["bytes"] < 0):
+            return None
         try:
+            if self.automatic and entry["bytes"] > AUTO_CACHE_ARTIFACT_LIMIT:
+                return None
             if (isinstance(entry, dict) and path.stat().st_size == entry.get("bytes")
                     and _digest(path) == entry.get("sha256")):
                 return path
@@ -149,6 +163,110 @@ class _Cache:
         path = self.path(stage)
         self.entries[stage] = {"bytes": path.stat().st_size, "sha256": _digest(path)}
         _atomic_write(self.manifest, (json.dumps(self.entries, sort_keys=True).encode(),))
+
+    def store(self, stage, chunks, size=None):
+        if self.automatic and (size is None or size > AUTO_CACHE_ARTIFACT_LIMIT):
+            return False
+        try:
+            _atomic_write(self.path(stage), chunks)
+            self.record(stage)
+            return True
+        except OSError:
+            if not self.automatic:
+                raise
+            return False
+
+
+def _make_cache(args, source, stats):
+    if not args.cache_dir:
+        stats["cache"] = {"mode": "disabled"}
+        return None
+    try:
+        cache = _Cache(args.cache_dir, source, args)
+    except OSError as exc:
+        if not args.automatic_cache:
+            raise
+        stats["cache"] = {"mode": "unavailable", "reason": str(exc)}
+        return None
+    stats["cache"] = {"mode": "automatic" if args.automatic_cache else "explicit",
+                      "directory": str(Path(args.cache_dir)),
+                      "max_artifact_bytes": AUTO_CACHE_ARTIFACT_LIMIT if args.automatic_cache else None}
+    return cache
+
+
+def _compile_auto(args, source):
+    """Rank prepared images, then assemble only the winning target."""
+    from .mc2mb import iter_image_to_mb, predict_image_mb_size
+    started = time.perf_counter()
+    plan = build_compilation_plan(source, args.optimization_policy,
+                                  args.op_style, args.jmp_style)
+    inferred = args.optimization_metadata.get("backend_inferred", False)
+    args.optimization_metadata = plan.metadata()
+    args.optimization_metadata["backend_inferred"] = inferred
+    args.backend = plan.selected_backend
+    args.ir_frontend = plan.frontend if args.backend == "ir" else None
+    args.ir_passes = ()
+    args.semantic_pass_names = (() if plan.semantic_result is None else
+                                tuple(plan.semantic_result.to_dict()["passes"]))
+    stats = {"backend": plan.selected_backend, "ir_frontend": plan.frontend,
+             "target_pipeline": args.target_pipeline,
+             "optimization": args.optimization_metadata,
+             "stages": [{"stage": "optimization-selection", "cache_hit": False,
+                         "seconds": time.perf_counter() - started,
+                         "bootstrap_generated": False}]}
+    if plan.semantic_result is not None:
+        stats["semantic_ir"] = plan.semantic_result.to_dict()
+    cache = _make_cache(args, source, stats)
+
+    def save_text(extension, text):
+        if cache:
+            encoded = text.encode("utf8")
+            cache.store(extension, (encoded,), len(encoded))
+
+    save_text("mg", plan.mg)
+    if args.emit_mg is not None:
+        _write(args.emit_mg, plan.mg, ".mg")
+    if args.emit_mc is not None:
+        _write(args.emit_mc, plan.to_mc(), ".mc")
+    if args.output is not None:
+        t = time.perf_counter()
+        cached = cache.hit("mb") if cache else None
+        predicted = predict_image_mb_size(plan.image)
+        if cached:
+            _copy_image(cached, args.output)
+            count = cached.stat().st_size
+        else:
+            chunks = (lambda: iter_image_to_mb(plan.image)) if args.target_pipeline == "structured" else (
+                lambda: iter_mc_to_mb(plan.to_mc()))
+            cache_image = cache is not None and not cache.automatic
+            if cache_image:
+                _atomic_write(cache.path("mb"), chunks())
+                cache.record("mb")
+                _copy_image(cache.path("mb"), args.output)
+                count = cache.path("mb").stat().st_size
+            elif args.output == "-":
+                count = 0
+                for chunk in chunks():
+                    sys.stdout.buffer.write(chunk)
+                    count += len(chunk)
+            else:
+                _atomic_write(args.output, chunks())
+                count = Path(args.output).stat().st_size
+                sys.stderr.write("wrote {} (Malbolge20)\n".format(args.output))
+            if (cache and cache.automatic and args.output != "-"
+                    and count <= AUTO_CACHE_ARTIFACT_LIMIT):
+                try:
+                    with open(args.output, "rb") as artifact:
+                        cache.store("mb", iter(lambda: artifact.read(1024 * 1024), b""), count)
+                except OSError:
+                    # The requested image is complete; automatic caching is optional.
+                    pass
+        stats["stages"].append({"stage": "mc2mb", "cache_hit": bool(cached),
+                                "seconds": time.perf_counter() - t, "bytes": count,
+                                "predicted_final_bytes": predicted})
+    stats["seconds"] = time.perf_counter() - started
+    if args.stats:
+        sys.stderr.write(json.dumps(stats, sort_keys=True) + "\n")
 
 
 def _structured_target(args, mg, stats, cache):
@@ -179,8 +297,8 @@ def _structured_target(args, mg, stats, cache):
         stats["ir"]["cache_hit"] = False
         ir_text = print_lal(module) if cache or args.emit_ir is not None else None
         if cache:
-            _atomic_write(cache.path("ir"), (ir_text.encode("utf8"),))
-            cache.record("ir")
+            encoded = ir_text.encode("utf8")
+            cache.store("ir", (encoded,), len(encoded))
     reports = stats["ir"]["reports"]
     stats["ir"]["summary"] = (reports[-1]["after"] if reports
                                 else asdict(summarize_ir(module)))
@@ -196,9 +314,11 @@ def _structured_target(args, mg, stats, cache):
 
 
 def _compile(args, source):
+    if args.backend == "auto":
+        return _compile_auto(args, source)
     started = time.perf_counter()
     stats = {"backend": args.backend, "target_pipeline": args.target_pipeline,
-             "stages": []}
+             "optimization": args.optimization_metadata, "stages": []}
     if args.backend == "ir":
         stats["ir"] = {"xdsl_version": XDSL_VERSION,
                        "passes": list(args.ir_passes), "reports": [],
@@ -208,7 +328,7 @@ def _compile(args, source):
             stats["semantic_ir"] = {"xdsl_version": XDSL_VERSION,
                                     "passes": list(args.semantic_pass_names),
                                     "reports": [], "cache_hit": False}
-    cache = _Cache(args.cache_dir, source, args) if args.cache_dir else None
+    cache = _make_cache(args, source, stats)
 
     def stage(name, extension, fn, value):
         t = time.perf_counter()
@@ -218,8 +338,8 @@ def _compile(args, source):
         else:
             result = fn(value)
             if cache:
-                _atomic_write(cache.path(extension), (result.encode("utf8"),))
-                cache.record(extension)
+                encoded = result.encode("utf8")
+                cache.store(extension, (encoded,), len(encoded))
         stats["stages"].append({"stage": name, "cache_hit": bool(cached),
                                 "seconds": time.perf_counter() - t,
                                 "bytes": len(result.encode("utf8"))})
@@ -272,9 +392,14 @@ def _compile(args, source):
                (args.emit_mg, args.emit_mc, args.emit_ir, args.output)):
             finish_stats()
             return
-        mg = stage("semantic-to-mg", "mg", lower_semantic_to_mg, module)
+        enabled = args.opt_level > 0
+        mg = stage("semantic-to-mg", "mg", lambda value: lower_semantic_to_mg(
+            value, arithmetic_optimizations=False,
+            skip_generated_initialization=enabled, structured_while=enabled,
+            native_conditions=enabled), module)
     elif args.backend in ("direct", "ir"):
-        mg = stage("py2mg", "mg", compile_python_to_mg, source)
+        mg = stage("py2mg", "mg", lambda value: compile_python_to_mg(
+            value, arithmetic_optimizations=args.opt_level > 0), source)
     else:
         c = stage("py2c", "c", compile_python_to_c, source)
         if args.emit_c is not None:
@@ -331,7 +456,7 @@ def _compile(args, source):
         if cached:
             _copy_image(cached, args.output)
             count = cached.stat().st_size
-        elif cache:
+        elif cache and not cache.automatic:
             image = cache.path("mb")
             _atomic_write(image, image_chunks())
             cache.record("mb")
@@ -346,6 +471,13 @@ def _compile(args, source):
             _atomic_write(args.output, image_chunks())
             count = Path(args.output).stat().st_size
             sys.stderr.write("wrote {} (Malbolge20)\n".format(args.output))
+        if cache and cache.automatic and not cached and args.output != "-" and count <= AUTO_CACHE_ARTIFACT_LIMIT:
+            try:
+                with open(args.output, "rb") as artifact:
+                    cache.store("mb", iter(lambda: artifact.read(1024 * 1024), b""), count)
+            except OSError:
+                # A read-only cache copy must not turn a successful write into failure.
+                pass
         stats["stages"].append({"stage": "mc2mb", "cache_hit": bool(cached),
                                 "seconds": time.perf_counter() - t, "bytes": count})
     finish_stats()
@@ -375,34 +507,64 @@ def main(argv):
     parser.add_argument("--emit-semantic-ir", metavar="PATH",
                         help="write source-semantic IR before target lowering ('-' for stdout)")
     parser.add_argument("-o", "--output", metavar="MB", help="write Malbolge20 source")
-    parser.add_argument("--backend", choices=("c", "direct", "ir"), default="c")
+    parser.add_argument("--backend", choices=("auto", "c", "direct", "ir"),
+                        help="lock a frontend (default: O3 auto selects an applicable smaller target)")
     parser.add_argument("--target-pipeline", choices=("text", "structured"),
-                        default="text", help="target handoff (structured is experimental)")
+                        help="target handoff (default: structured at O2/O3, text at O0/O1)")
     parser.add_argument("--passes", metavar="NAMES",
                         help="comma-separated IR passes (default: verify-lal; IR backend only)")
     parser.add_argument("--ir-frontend", choices=("compat", "semantic"),
-                        help="IR source path (default: compat; semantic for --emit-semantic-ir)")
+                        help="lock the IR source path (optimized default: semantic)")
     parser.add_argument("--semantic-passes", metavar="NAMES",
                         help="explicit semantic pass sequence (default: accepted optimization profile)")
-    parser.add_argument("--opt-level", choices=("0", "1"),
-                        help="semantic optimization profile: 0 verifies only, 1 enables arithmetic/dataflow passes")
+    parser.add_argument("-O", "--opt-level", type=int, choices=(0, 1, 2, 3),
+                        help="optimization level (default: 3; 0 disables optional transformations)")
     parser.add_argument("--op-style", choices=("cluster", "inline"), default="cluster")
     parser.add_argument("--jmp-style", choices=("main", "direct"), default="main")
-    parser.add_argument("--cache-dir", metavar="PATH", help="opt-in content-addressed stage cache")
+    caching = parser.add_mutually_exclusive_group()
+    caching.add_argument("--cache-dir", metavar="PATH", help="explicit content-addressed stage cache")
+    caching.add_argument("--no-cache", action="store_true", help="disable the automatic O3 project cache")
     parser.add_argument("--stats", action="store_true", help="write JSON compilation metrics to stderr")
     args = parser.parse_args(argv)
-    if args.backend != "ir" and any(value is not None for value in
-                                     (args.ir_frontend, args.emit_semantic_ir, args.semantic_passes, args.opt_level)):
-        _die("semantic IR and frontend options require --backend=ir")
     if args.opt_level is not None and args.semantic_passes is not None:
         _die("--opt-level and --semantic-passes are alternative selections")
-    args.ir_frontend = args.ir_frontend or (
-        "semantic" if (args.emit_semantic_ir is not None or args.semantic_passes is not None
-                       or args.opt_level is not None)
-        else "compat")
-    if args.ir_frontend != "semantic" and (
-            args.emit_semantic_ir is not None or args.semantic_passes is not None or args.opt_level is not None):
-        _die("--emit-semantic-ir, --semantic-passes and --opt-level require --ir-frontend=semantic")
+    requested_backend = args.backend
+    args.opt_level = 3 if args.opt_level is None else args.opt_level
+    ir_output = args.emit_ir is not None or args.emit_semantic_ir is not None
+    if args.backend is None:
+        args.backend = ("c" if args.emit_c is not None else "ir" if (
+            ir_output or args.ir_frontend is not None or args.semantic_passes is not None
+            or args.passes is not None) else "auto")
+    if args.emit_c is not None and args.backend != "c":
+        _die("--emit-c requires --backend=c (or an omitted backend)")
+    if args.backend == "auto" and ir_output:
+        args.ir_frontend = args.ir_frontend or "semantic"
+    if args.emit_semantic_ir is not None:
+        if args.ir_frontend == "compat":
+            _die("--emit-semantic-ir requires --ir-frontend=semantic")
+        args.ir_frontend = "semantic"
+    semantic_names = (None if args.semantic_passes is None else
+                      tuple(name.strip() for name in args.semantic_passes.split(",")))
+    lal_names = (None if args.passes is None else
+                 tuple(name.strip() for name in args.passes.split(",")))
+    try:
+        policy = resolve_optimization_policy(
+            args.backend, opt_level=args.opt_level, ir_frontend=args.ir_frontend,
+            semantic_passes=semantic_names, target_pipeline=args.target_pipeline,
+            passes=lal_names)
+    except ValueError as error:
+        _die(str(error))
+    args.optimization_policy = policy
+    args.optimization_metadata = policy.metadata()
+    args.optimization_metadata["backend_inferred"] = requested_backend is None
+    args.backend = policy.backend
+    args.ir_frontend = policy.ir_frontend
+    args.target_pipeline = policy.target_pipeline
+    args.automatic_cache = not args.no_cache and args.cache_dir is None and args.opt_level == 3
+    if args.automatic_cache:
+        args.cache_dir = str(Path(args.source).resolve().parent / ".cache" / "malbolge")
+    elif args.no_cache:
+        args.cache_dir = None
     if args.output is None and all(value is None for value in
                                   (args.emit_c, args.emit_mg, args.emit_mc, args.emit_ir,
                                    args.emit_semantic_ir)):
@@ -410,7 +572,7 @@ def main(argv):
             args.emit_semantic_ir = "-"
         elif args.backend == "ir":
             args.emit_ir = "-"
-        elif args.backend == "direct":
+        elif args.backend in ("direct", "auto"):
             args.emit_mg = "-"
         else:
             args.emit_c = "-"
@@ -420,6 +582,17 @@ def main(argv):
         _die("--emit-ir and --passes require --backend=ir")
     ir_errors = ()
     try:
+        if args.backend == "auto":
+            try:
+                require_ir_support()
+            except IRDependencyError:
+                pass
+            else:
+                from .ir.lal import LalIRError
+                from .ir.passes import PipelineError
+                from .ir.semantic import SemanticIRError
+                from .ir.lowering import SemanticLoweringError
+                ir_errors = (LalIRError, PipelineError, SemanticIRError, SemanticLoweringError)
         if args.backend == "ir":
             require_ir_support()
             from .ir.lal import LalIRError
@@ -435,11 +608,12 @@ def main(argv):
                 ir_errors += (SemanticIRError,)
                 semantic_names = (None if args.semantic_passes is None else tuple(
                     name.strip() for name in args.semantic_passes.split(",")))
-                if args.opt_level == "0":
+                if args.opt_level == 0:
                     semantic_names = ("verify-semantic",)
-                elif args.opt_level == "1":
+                elif args.opt_level in (1, 2, 3) and args.semantic_passes is None:
                     semantic_names = CANDIDATE_OPTIMIZATION_PASSES
                 args.semantic_pass_names = validate_semantic_pass_names(semantic_names)
+                args.optimization_metadata["resolved_semantic_passes"] = list(args.semantic_pass_names)
         _preflight(args)
         with open(args.source, encoding="utf8") as stream:
             source = stream.read()

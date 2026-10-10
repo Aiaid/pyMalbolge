@@ -25,36 +25,42 @@
 
 ## Implemented layers
 
-### Activation audit (2026-10-10)
+### Activation audit (2026-10-10, current branch)
 
-The compiler defaults are `backend=c`, `ir_frontend=compat`,
-`target_pipeline=text`, and `cluster/main`. The size/runtime tables compare
-explicitly selected paths; their direct or semantic results are not the plain
-compile command's default result.
+The current integration defaults to `backend=auto`, O3, `target_pipeline=structured`
+and `cluster/main`. Direct and the applicable accepted semantic candidate compete
+by exact predicted final MB size before any bootstrap is generated; ties select
+direct. See [the complete policy](compiler-optimization.md). Final combined
+acceptance is tracked in [the integration receipt](../notes/compiler-optimization-validation.json).
+
+Before this integration, the activation audit recorded C/compat/text defaults
+and opt-in compilation caching. The dated performance tables above still describe
+explicitly selected frozen paths; they do not measure a new auto-selection run.
 
 | Work | Activation |
 |---|---|
-| C/direct arithmetic shortcuts, temporary/frame handling, MC layout/encoding caches, bootstrap storage/emission and shared Python VM primitives | Automatic in the applicable implementation; no extra optimization switch. |
-| Direct Python→MG frontend | Select `--backend=direct`; its internal accepted optimizations then apply automatically. |
-| Semantic IR and accepted named optimization profile | Select `--backend=ir --ir-frontend=semantic` and install the `ir` extra. The accepted profile is already the semantic default; `--opt-level=1` makes that choice explicit, while `0` selects verification only. `--backend=ir` alone retains the compat frontend. |
-| Native structured LAL/image handoff | Select `--target-pipeline=structured`; default remains `text`. This is an interface experiment, not the cause of the direct frontend's smaller images. |
-| Compilation cache | Supply `--cache-dir`; disabled by default. Cold benchmark measurements do not use it. |
+| Direct Python→MG frontend and arithmetic shortcuts | Direct is the required auto candidate; O1–O3 enable its shortcuts, O0 disables them. `--backend=direct` locks the frontend. |
+| Semantic IR and accepted named profile | Optional O3 candidate when the supported IR environment exists; explicit IR defaults to semantic. O0 verifies only; optimized levels use the accepted profile. `--ir-frontend=compat` selects the original bridge. |
+| Native structured LAL/image handoff | O2/O3 default; `--target-pipeline=text` is the explicit opt-out. Transport alone does not explain direct's smaller artifacts. |
+| Compilation cache | O3 CLI uses a source-local automatic cache with a 64 MiB per-artifact threshold; `--no-cache` disables it and `--cache-dir` selects an explicit cache. Library compilation has no persistent cache. |
+| C reference arithmetic, frames, MC layout/encoding caches, bootstrap storage/emission and shared Python VM primitives | Remain in their applicable implementations. C0 retains reference arithmetic intrinsics; it is not a no-optimization arithmetic baseline. |
+| Target-AST initialization/loop/predicate interface | Integrated and locally accepted. All three controls are enabled in semantic O1–O3 and disabled in O0; final combined acceptance is separate from old prototype receipts. |
 | Decimal-output candidate and rejected bulk-NOP experiment | Excluded from accepted defaults; the decimal candidate requires explicit pass selection. |
-| Target-AST initialization/loop/predicate prototype | In the current uncommitted semantic adapter, its three interface options default on inside that selected path. The frozen working benchmark includes it; it is still separate from committed source and from the named semantic profile. |
-| Native VM / JIT | At committed code base `1a7b88b`, `run20` defaults to Python and native/JIT are explicit library engine choices. Current working code has a separately owned, uncommitted `auto` native-first batch policy; JIT remains explicit. Native install/build changes are also separately owned work. |
+| Native VM / JIT | Runtime engine and packaging work has separate ownership and acceptance. Compiler O3 does not enable JIT; JIT remains explicit. |
 
-For the committed direct path:
+Default selection and explicit direct selection:
 
 ```bash
-uv run python -m malbolge compile program.py --backend=direct -o program.mb
+uv run python -m malbolge compile program.py -o program.mb --stats
+uv run python -m malbolge compile program.py --backend=direct -o direct.mb
 ```
 
-For explicit semantic and structured selection:
+Explicit semantic selection:
 
 ```bash
 uv sync --extra dev --extra ir
 uv run --no-sync python -m malbolge compile program.py --backend=ir \
-  --ir-frontend=semantic --opt-level=1 --target-pipeline=structured -o program.mb
+  --ir-frontend=semantic --opt-level=1 --target-pipeline=structured -o semantic.mb
 ```
 
 The uniform artifact comparison always invokes its pinned original C binary
@@ -64,16 +70,16 @@ directly. Product engine defaults do not change that measurement cohort.
 |---|---|---|
 | Python→MG frontend | Direct lowering, per-function reusable temporaries, recursion graph, recursive-frame and live-temporary protection | Integrated; avoids the C representation and unnecessary nonrecursive self-frame protection. Calls to recursive callees can still require return-address/scratch preservation. |
 | C/direct arithmetic | Constant folding, divide/modulo-one elimination, small literal multiply chains, on-demand arithmetic/decimal helpers | Integrated defaults; reduces generated operations when applicable while preserving evaluation, effects, errors and 20-trit ring behavior. |
-| Semantic IR | Seven named arithmetic/dataflow/control/expression transformations, verified pass boundaries, source locations and independent semantic oracle | Accepted default profile when semantic frontend is explicitly selected; raw frontend API and opt-level 0 remain unoptimized/verification-only. |
-| MG→LAL | Four existing deterministic styles and native dependency-free structured emitter | Explicit style choices; native target pipeline is an opt-in interface experiment. No automatic per-call-site cost selection yet. |
-| LAL→MB | Version-aware movement search cache, opcode encoding tables, first-fit occupancy/key caching, compact paged source storage, streamed output and typed image handoff | Integrated host/storage improvements; some preserve image bytes and improve compiler overhead rather than target execution. Native handoff remains opt-in. |
+| Semantic IR | Seven named arithmetic/dataflow/control/expression transformations, verified pass boundaries, source locations and independent semantic oracle | Accepted profile for the applicable O3 semantic candidate or explicit semantic frontend; raw frontend API and semantic O0 remain unoptimized/verification-only. |
+| MG→LAL | Four existing deterministic styles and native dependency-free structured emitter | Styles remain explicit; native target handoff is the O2/O3 default. Auto compares frontends, not per-call-site styles. |
+| LAL→MB | Version-aware movement search cache, opcode encoding tables, first-fit occupancy/key caching, compact paged source storage, streamed output and typed image handoff | Integrated host/storage improvements; some preserve image bytes and improve compiler overhead rather than target execution. Native handoff is the O2/O3 default. |
 | VM/debugger | Compact immutable source, periodic defaults, typed copy-on-write memory, grouped-trit crazy lookup, bounded byte I/O/execution and bounded history | Integrated runtime/storage work; interpreter throughput and target instruction counts are distinct metrics. |
 | CLI/tooling | Atomic outputs, alias checks, integrity-checked content cache, stage metrics, reproducible fixed-workload benchmark and source audits | Integrated; warm cache behavior is separate from cold compiler performance. |
 
-The compiler still defaults to the C frontend, IR defaults to compat, and the
-target pipeline defaults to text. Semantic source passes and native lower
-handoff are independent selections. Optional xDSL stays lazy; C/direct base
-code keeps Python 3.8 support.
+The new default combines candidate selection and structured handoff while
+keeping explicit controls for each. Optional xDSL stays lazy; the dependency-free
+direct candidate and explicit C/direct paths retain Python 3.8 support. Size
+selection does not establish a universal compile-time or runtime optimum.
 
 ## Evidence and boundaries
 
@@ -85,7 +91,9 @@ code keeps Python 3.8 support.
   native interfaces, library/CLI/IR integration and HEAD-plus-owned-code
   regression independent of foreign local prototypes.
 - [Target interface prototype validation](../notes/target-interface-validation.json):
-  documented local experiment, not implementation integrated by this change.
+  the earlier local experiment, now followed by current-branch implementation integration.
+- [Compiler policy integration](../notes/compiler-optimization-validation.json):
+  final combined acceptance record for the new defaults and target interface.
 
 Performance conclusions remain workload/cohort-specific. Constant identities,
 expression folding and propagation can improve all three costs. Encoding and
@@ -99,9 +107,9 @@ can alter image size and execution steps independently of that interface.
 The compact decimal output experiment remains excluded from the accepted
 semantic profile after target cost regression. Bulk NOP emission was rejected
 after a host-time regression. Generated-local initialization omission,
-structured target loops and native while predicates remain another chat's
-uncommitted prototype; its causal-ablation gains do not establish parity with
-the original direct frontend. Full variable SSA/liveness, dynamic multiplication
+structured target loops and native while predicates are integrated and locally
+accepted; their earlier causal-ablation gains do not establish performance
+parity with the direct frontend. Full variable SSA/liveness, dynamic multiplication
 redesign, cost-driven call-site styles, dispatch/flag minimization and new
 layout/bootstrap strategies remain open.
 

@@ -2,8 +2,11 @@
 
 > [English](structured-lowering.md) | **中文**
 >
-> 状态：已实现为显式试验。默认目标管线仍为 `text`；本次接口迁移保持既有
-> 生成风格、协议、布局与填充策略。
+> 当前分支更新，2026-10-10：按[编译策略](compiler-optimization.zh.md)，
+> structured 已成为 O2/O3 默认；text 可显式选择，也是 O0/O1 默认。
+> 该接口最初以保持生成风格、协议、布局与填充策略的实验方式提供。
+> 原验收继续作为历史证据，本次组合集成见
+> [新增验收记录](../notes/compiler-optimization-validation.json)。
 
 ## 数据流
 
@@ -49,7 +52,8 @@ uv run python -m malbolge compile examples/hello.py \
   --emit-mc hello.mc -o hello.mb
 ```
 
-库入口为 `compile_python_to_mb(..., target_pipeline="structured")`。
+整程序编译现在默认 O3/structured，仍可显式使用
+`compile_python_to_mb(..., target_pipeline="structured")`。
 编译器另导出原生 MG→LAL、LAL→image 和 LAL/image→MB 函数，包含流式字节
 输出。旧 MC API 与 `target_pipeline="text"` 继续用于对照。
 

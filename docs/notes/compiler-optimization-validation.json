@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "recorded_date": "2026-10-10",
+  "scope": "Default O3 compiler policy and target-interface integration; local working-tree acceptance.",
+  "defaults": {
+    "backend": "auto",
+    "opt_level": 3,
+    "target_pipeline": "structured",
+    "op_style": "cluster",
+    "jmp_style": "main"
+  },
+  "controls": {
+    "level_range": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "o0_disables_optional_transforms": true,
+    "explicit_backend_frontend_handoff_are_authoritative": true,
+    "c0_retains_reference_intrinsics": true,
+    "automatic_cli_cache_max_bytes_per_artifact": 67108864,
+    "automatic_cache_has_no_total_directory_quota": true,
+    "library_has_no_persistent_cache": true
+  },
+  "tests": {
+    "full_working_tree": {
+      "passed": 2788,
+      "skipped": 29,
+      "subtests_passed": 3610,
+      "seconds": 1346.17,
+      "includes_separately_owned_native_work": true,
+      "log_sha256": "15892c442dea9410499e89937ab565f3ad1adef5d37d8f5e4642eef64c5535ce"
+    },
+    "final_post_followup_focused": {
+      "passed": 370,
+      "subtests_passed": 4,
+      "seconds": 12.76,
+      "log_sha256": "b3353abef633ea0852aa7e2f513e45d7564a41b429cad2ed03aade0b29610b15",
+      "overlaps_full_suite_not_additive": true
+    }
+  },
+  "correctness": {
+    "full_selected_images_matching_accepted_bytes_and_sha256": 12,
+    "prior_corpus_receipts_verified_before_emission": 96,
+    "applicable_reused_independent_execution_contracts": 32,
+    "exact_source_and_selected_mg_match": true,
+    "predicate_and_error_order_covered_by_target_tests": true,
+    "post_gate_changes": {
+      "malbolge/compiler/cli.py": "Guard optional cache-copy read errors; streaming reads for explicit frontend.",
+      "malbolge/compiler/optimization.py": "Metadata reporting only; actual target lowering controls unchanged."
+    },
+    "final_plans_keep_same_mg_sizes_and_winners": true,
+    "all_target_generator_file_hashes_unchanged": true,
+    "independent_reference_source_sha256": "0ea5d2cfd8e597256f91bae3ea505f2f8467e3704e5c362b24fc91b56b9782b0"
+  },
+  "selection": {
+    "direct_programs": 11,
+    "semantic_programs": 1,
+    "ties_select_direct": true,
+    "candidate_selection_generates_no_bootstrap": true,
+    "optional_ir_is_not_a_base_dependency": true,
+    "compiler_defects_are_not_fallback_conditions": true
+  },
+  "runtime_lineage": {
+    "new_runtime_timings": false,
+    "reused_complete_selected_inputs": 32,
+    "prior_common_vm_report_sha256": "535ea17245fb268bd7bfb5e467bc4cf6272e42555588af2259d7aa7de19c74b4",
+    "same_unmodified_vm_sha256": "6dcd2b2913794c122252cce85c634fe0a583d5f4819be1c0f33112ee42ffc2a1",
+    "source": "common-vm-validation.json",
+    "whole_child_includes_startup_read_initialization_execution": true
+  },
+  "compile_lineage": {
+    "new_auto_compile_speed_claim": false,
+    "source": "latest-corpus-validation.json",
+    "table_cpu_is_prior_explicit_selected_backend_not_new_auto": true,
+    "candidate_preparation_adds_work_even_when_direct_wins": true
+  },
+  "accepted_candidate_semantic_passes": [
+    "verify-semantic",
+    "propagate-constants",
+    "fold-arithmetic",
+    "simplify-arithmetic",
+    "lower-constant-multiply",
+    "simplify-control",
+    "eliminate-pure-computation",
+    "propagate-constants",
+    "fold-arithmetic",
+    "simplify-arithmetic",
+    "simplify-control",
+    "eliminate-pure-computation",
+    "inline-pure-arithmetic"
+  ],
+  "candidate_semantic_target_options": {
+    "native_conditions": true,
+    "skip_generated_initialization": true,
+    "structured_while": true
+  },
+  "compiler_source_sha256": {
+    "malbolge/compiler/__init__.py": "d01663df119753bcdcc1ba47f2ccf60c7eaa239ce160e996b1008e93047ce1a4",
+    "malbolge/compiler/c2mg.py": "5599e24291d52ab1e6ae8effc3a3052faf1b78566ddc8d9a58ba7c4ae3406549",
+    "malbolge/compiler/cli.py": "e2c06c3b71e95b3c5b620d60a6f54885fdc3e1037ba9a8bb158cf9866c0fde4f",
+    "malbolge/compiler/decimal_io.py": "89e30084a2175568d9cb46be0d826e801402d4e6deb9ea01fa1caa0f2cde3f69",
+    "malbolge/compiler/ir/__init__.py": "7fa842ef656f0debf31d58ca97dc43b81c44bdbe2681fbdbd1ea67f9018dcab7",
+    "malbolge/compiler/ir/arithmetic_passes.py": "7e9822fbf233e00cdd3d13e83387cf6e7db035bd4a506672083e871d6b046f93",
+    "malbolge/compiler/ir/bridge.py": "439bc3162028cd79d138b53269589a7646526665b3cf7b2552d030dfa8a48c05",
+    "malbolge/compiler/ir/dataflow_passes.py": "c850365a895bcdb2af95794a8b300d3d54511d264fd4b0d82dbcf8383d9ff089",
+    "malbolge/compiler/ir/decimal_passes.py": "37c02b0f5290250e7076a08a50ef8a7d97f1edfedabc434870cd67dd48a33f36",
+    "malbolge/compiler/ir/expression_passes.py": "86ec4da4ae93db17f2610a996019e7880148e7521d8ebd315c9eeab2b7115181",
+    "malbolge/compiler/ir/frontend.py": "6f5834161d9cf1f475abe980d28a1725fa705bff777cfd4d45cacfb506976c7c",
+    "malbolge/compiler/ir/interpreter.py": "f90f261cfa8363722e194db6e593ab09894715fa2bc76e3cf53c0c942e693e8b",
+    "malbolge/compiler/ir/lal.py": "4c61b67189e4e9439daad7a2767d97c7f26e8e6812e9887b4e4f57683f51fd4f",
+    "malbolge/compiler/ir/lowering.py": "85dc333db648bcbcc29c43c9155242ae773e5e64ac673c5ceb8334cc45edd312",
+    "malbolge/compiler/ir/passes.py": "3e875d7341f719cf99ea25cd52c9ebab0c226dac5a4f60fb795b939ab0c0a6af",
+    "malbolge/compiler/ir/semantic.py": "59bd132b19c4c9ee8d92c1c9a56bcf0ad82dcfe26baab4187cc7139467ac65ff",
+    "malbolge/compiler/ir/semantic_passes.py": "f3d4fb6e2a8bb176bdda82ae9167db5766ea6b1fd08b59958bb87caf646dbad2",
+    "malbolge/compiler/lal_model.py": "632a2b506b616511ce64dcffe2fc36a8adc271782db6bda62963d62a453b8d32",
+    "malbolge/compiler/mc2mb.py": "c81d9d3962b1ef3340fcda3f5d89ddf88063544adafa8953dd70c97df10716e6",
+    "malbolge/compiler/memory_image.py": "bae995c3ec8f42a9cba14a3ff0f15093498222749c97e1729a26ddcf00cddfe5",
+    "malbolge/compiler/mg2mc.py": "3389d02afc46b3bf64f4083b3a823668fec37146d6e8a2f72565850103a8cbc9",
+    "malbolge/compiler/optimization.py": "c35134282b4e8bc13cc1d76045949e586e03c1041449556a714212d87373950c",
+    "malbolge/compiler/py2c.py": "2d4a102dd20a96aaebee2bdf03e35ca10360e1df2ca8a251cca8a306b207f959",
+    "malbolge/compiler/py2mg.py": "b1b286948b272d1fb22c56f1e3d61f85228244e81f6d0a1b30a5d77a5758f3a4",
+    "malbolge/compiler/python_normalize.py": "6a6716f79c54bff2bb3863f22523143662eabafb33fa2f36b27429e66040ae41",
+    "malbolge/compiler/target_ast.py": "32af26f15210dd39b8539737ced6b7d9e290673a02a8ff8fee3a4b3a4b3e4f1c"
+  },
+  "corpus": [
+    {
+      "program": "literal_output",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 867433,
+        "sha256": "da68b00381fb2e398be858274a9925c0fcf58f14f537adbf35780ec872008022"
+      },
+      "candidate_sizes": {
+        "direct": 867433,
+        "semantic": 2546931
+      },
+      "c_reference_image_bytes": 868279,
+      "frozen_selected_backend_compile_cpu_seconds": 0.11154799999999998,
+      "reused_runtime_workload": "tiny",
+      "reused_whole_child_wall_seconds": 0.038504500000271946,
+      "reused_whole_child_cpu_seconds": 0.036962,
+      "independent_execution_contract_count": 1
+    },
+    {
+      "program": "folded_arithmetic",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 867433,
+        "sha256": "061effa6be54db321c2c0a70f3ee9ff5722bc074e15a48f5b296fb5ee7db539f"
+      },
+      "candidate_sizes": {
+        "direct": 867433,
+        "semantic": 2546931
+      },
+      "c_reference_image_bytes": 868279,
+      "frozen_selected_backend_compile_cpu_seconds": 0.109931,
+      "reused_runtime_workload": "tiny",
+      "reused_whole_child_wall_seconds": 0.05049841699656099,
+      "reused_whole_child_cpu_seconds": 0.037147,
+      "independent_execution_contract_count": 1
+    },
+    {
+      "program": "decimal_echo",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 223253197,
+        "sha256": "fc066e112ee027ce8d5e9c2e771e402964b75cddddf7df389304df2269998783"
+      },
+      "candidate_sizes": {
+        "direct": 223253197,
+        "semantic": 230210419
+      },
+      "c_reference_image_bytes": 467895905,
+      "frozen_selected_backend_compile_cpu_seconds": 24.329539,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 10.12003283300146,
+      "reused_whole_child_cpu_seconds": 10.093678,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "sum_range",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 236849827,
+        "sha256": "bbf9e8cdd622f4a533f8e371daab2f2e9c7cfd8f856cbebffad72cb54fbe3440"
+      },
+      "candidate_sizes": {
+        "direct": 236849827,
+        "semantic": 246850017
+      },
+      "c_reference_image_bytes": 511238365,
+      "frozen_selected_backend_compile_cpu_seconds": 26.776511000000003,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 9.781698874998256,
+      "reused_whole_child_cpu_seconds": 9.756112,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "branch_count",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 252349487,
+        "sha256": "9a6c9e1138aab4ac799c7a289da66a9f09a3beedb15fd7a2383fb413ba213f0c"
+      },
+      "candidate_sizes": {
+        "direct": 252349487,
+        "semantic": 269301071
+      },
+      "c_reference_image_bytes": 541534001,
+      "frozen_selected_backend_compile_cpu_seconds": 27.469643,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 9.05228254199028,
+      "reused_whole_child_cpu_seconds": 9.038537,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "gcd",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 276781121,
+        "sha256": "e295c9749218d3a246c6075d48656f6b86be2f5ba45c87621f27f0853224baa3"
+      },
+      "candidate_sizes": {
+        "direct": 276781121,
+        "semantic": 287656733
+      },
+      "c_reference_image_bytes": 597973105,
+      "frozen_selected_backend_compile_cpu_seconds": 29.703781,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 9.114597208012128,
+      "reused_whole_child_cpu_seconds": 9.090233,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "fibonacci_iterative",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 238934841,
+        "sha256": "6e81be4016318f641b26415cab5d0dccc8d4c7f4b3d5f966064dcc7049957479"
+      },
+      "candidate_sizes": {
+        "direct": 238934841,
+        "semantic": 252040039
+      },
+      "c_reference_image_bytes": 513323379,
+      "frozen_selected_backend_compile_cpu_seconds": 25.687654000000002,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 7.133790541003691,
+      "reused_whole_child_cpu_seconds": 7.118404999999999,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "factorial",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 288080203,
+        "sha256": "ab2ad9297b40d592cfb5f179b9bf695355b091aaa461fa98c17401b696353316"
+      },
+      "candidate_sizes": {
+        "direct": 288080203,
+        "semantic": 298652383
+      },
+      "c_reference_image_bytes": 604819031,
+      "frozen_selected_backend_compile_cpu_seconds": 31.185316999999998,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 280.0647359160066,
+      "reused_whole_child_cpu_seconds": 278.99674400000004,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "multiply_literal",
+      "selected_frontend": "semantic",
+      "image": {
+        "bytes": 251678891,
+        "sha256": "53e47b91233a8c0953e681818b6249fbe4852f253a9da27a62cc717409b03cb6"
+      },
+      "candidate_sizes": {
+        "direct": 274027109,
+        "semantic": 251678891
+      },
+      "c_reference_image_bytes": 567219219,
+      "frozen_selected_backend_compile_cpu_seconds": 29.224245,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 8.811804708006093,
+      "reused_whole_child_cpu_seconds": 8.795570999999999,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "multiply_dynamic",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 280149611,
+        "sha256": "835de1dee5f87060810b8b3ca4a0400da75e5098b8cbef1581e458c93aa1e411"
+      },
+      "candidate_sizes": {
+        "direct": 280149611,
+        "semantic": 288899601
+      },
+      "c_reference_image_bytes": 593831935,
+      "frozen_selected_backend_compile_cpu_seconds": 29.837532999999997,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 29.81867016699107,
+      "reused_whole_child_cpu_seconds": 29.779346,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "fibonacci_recursive",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 275329197,
+        "sha256": "d90a66e9d1dd60e4eab3d6b42163ad1a20e4d78437b504d7b1cb1b8618cf4834"
+      },
+      "candidate_sizes": {
+        "direct": 275329197,
+        "semantic": 365298289
+      },
+      "c_reference_image_bytes": 572553907,
+      "frozen_selected_backend_compile_cpu_seconds": 30.439037,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 10.311340291998931,
+      "reused_whole_child_cpu_seconds": 10.287599,
+      "independent_execution_contract_count": 3
+    },
+    {
+      "program": "mutual_recursion",
+      "selected_frontend": "direct",
+      "image": {
+        "bytes": 276747093,
+        "sha256": "fdf5cf3bbcd6d2f754dc69e13ba7ae63166b90e59a9613cf43fdf89591e5adf5"
+      },
+      "candidate_sizes": {
+        "direct": 276747093,
+        "semantic": 385132195
+      },
+      "c_reference_image_bytes": 583744043,
+      "frozen_selected_backend_compile_cpu_seconds": 31.913152999999998,
+      "reused_runtime_workload": "medium",
+      "reused_whole_child_wall_seconds": 8.168357792004826,
+      "reused_whole_child_cpu_seconds": 8.132287,
+      "independent_execution_contract_count": 3
+    }
+  ],
+  "limits": [
+    "Fixed accepted subset programs and inputs; not all Python or all inputs.",
+    "Ranks exact successful standard-layout MB size, not universal runtime or cold-compile optimum.",
+    "Optional IR availability can change the candidate set and output.",
+    "JIT and regressing experimental decimal lowering remain explicit.",
+    "Historical timing cohorts are not new default-policy timing runs."
+  ]
+}

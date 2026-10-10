@@ -42,9 +42,9 @@ class IRConfigurationErrors(unittest.TestCase):
         self.assertEqual(self.source.read_text(), 'putchar(65)\n')
 
     def test_ir_options_require_ir_backend(self):
-        self.error(['--emit-ir', '-'], 'require --backend=ir')
-        self.error(['--backend=direct', '--passes', 'verify-lal'], 'require --backend=ir')
-        self.error(['--backend=ir', '--emit-c', '-'], '--emit-c is not available')
+        self.error(['--backend=c', '--emit-ir', '-'], 'require --backend=ir')
+        self.error(['--backend=direct', '--passes', 'verify-lal'], 'only available')
+        self.error(['--backend=ir', '--emit-c', '-'], 'requires --backend=c')
 
     def test_missing_optional_dependency_precedes_any_output(self):
         target = self.root / 'out.mlir'
@@ -63,7 +63,8 @@ class IRCompilerCLI(IRConfigurationErrors):
     def invoke(self, arguments):
         stderr, stdout = io.StringIO(), io.StringIO()
         with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(stdout):
-            cli.main([str(self.source), '--backend=ir'] + arguments)
+            cli.main([str(self.source), '--backend=ir', '--ir-frontend=compat',
+                      '--target-pipeline=text'] + arguments)
         return stdout.getvalue(), stderr.getvalue()
 
     def test_default_ir_output_is_inspectable(self):
@@ -111,7 +112,8 @@ class IRCompilerCLI(IRConfigurationErrors):
         target = self.root / 'out.mlir'
         target.write_text('last good IR')
         with patch.object(cli, 'translate_mg_to_mc', return_value='unsupported MC'):
-            self.error(['--backend=ir', '--emit-ir', str(target)], 'IR stage failed')
+            self.error(['--backend=ir', '--ir-frontend=compat', '--target-pipeline=text',
+                        '--emit-ir', str(target)], 'IR stage failed')
         self.assertEqual(target.read_text(), 'last good IR')
 
     def test_cache_pass_configuration_and_corruption(self):

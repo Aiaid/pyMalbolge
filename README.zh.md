@@ -65,7 +65,7 @@ pip install malbolge[tui]     # 追加 TUI 调试器(textual)
 ### 命令行
 
 ```bash
-# 编译并运行
+# 默认自动 O3 编译并运行
 uv run python -m malbolge compile examples/hello.py -o hello.mb
 uv run python -m malbolge --variant=malbolge20 hello.mb
 
@@ -73,16 +73,23 @@ uv run python -m malbolge --variant=malbolge20 hello.mb
 # 并原生支持双重递归
 uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb
 
-# 按需启用阶段缓存与 stderr JSON 指标
-uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb \
-  --cache-dir .cache/malbolge --stats
+# 查看自动选择；显式关闭优化或缓存
+uv run python -m malbolge compile examples/fib.py -o fib.mb --stats
+uv run python -m malbolge compile examples/fib.py -O0 --no-cache -o fib.mb
 
 # 导出各个中间阶段
 uv run python -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
 ```
 
-缓存须主动启用，按内容、工具链、代码生成风格与 Python 版本生成键；损坏项
-重新构建。编译前检查输出路径，包括源码、symlink/hardlink 与多输出碰撞。
+编译默认 `-O3 --backend=auto`：可选 IR 环境可用时比较 Direct 和已验收
+Semantic 候选，经结构化目标传递生成最终 MB 更小的方案。显式后端、IR 前端
+和目标管线选择始终优先。`-O0` 关闭可选变换；`--backend=c` 保留参考 C 前端
+及其已有内建简化。详见[编译优化策略](docs/design/compiler-optimization.zh.md)。
+
+O3 CLI 默认在源码目录的 `.cache/malbolge` 缓存阶段，每个缓存产物上限
+64 MiB。`--no-cache` 关闭；`--cache-dir` 显式启用不限单个产物大小的缓存。
+键包含内容、工具链、实际优化策略、代码风格及 Python 版本；损坏项重新构建。
+编译前检查输出路径，包括源码、symlink/hardlink 与多输出碰撞。
 写入使用原子替换，CLI 将最终 `.mb` 流式写出，避免保留完整中间字符串；文件/编码
 失败给出简明诊断。
 
@@ -92,7 +99,7 @@ uv run python -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --em
 from malbolge.compiler import compile_python_to_mb
 from malbolge import eval20
 
-mb = compile_python_to_mb('print("Hello, world!")')                   # 'c' 后端
+mb = compile_python_to_mb('print("Hello, world!")')                   # 默认自动 O3
 mb = compile_python_to_mb('print("Hello, world!")', backend="direct") # 直连后端
 print(eval20(mb))                                                     # Hello, world!
 

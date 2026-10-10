@@ -8,9 +8,11 @@
 > and direct semantic-to-LAL lowering remain future work. Performance evidence
 > is tracked separately from this architecture contract.
 
-> Documentation-only checkpoint: the target-interface API described below is
-> a locally tested, uncommitted prototype. This commit records its design and
-> validation, not compiler integration or performance parity with direct.
+> Current-branch update, 2026-10-10: the previously documented target-interface
+> implementation is integrated and locally accepted with [O3 defaults](compiler-optimization.md).
+> Its former prototype receipt remains historical evidence; final combined
+> acceptance is tracked [separately](../notes/compiler-optimization-validation.json).
+> Integration does not assert performance parity with direct.
 
 ## 1. Two explicit frontend paths
 
@@ -18,24 +20,23 @@ The semantic path constructs IR before generating MG or MC:
 
 ```text
 Python AST → shared normalization and source checks → pysem semantic IR
-  → verified semantic passes → explicit target adapter → MG → MC
-  → LAL IR → verified LAL passes → MC → existing assembler → MB
+  → verified semantic passes → target AST adapter → MG → native LAL records
+  → optional verified xDSL LAL passes → MemoryImage → existing bootstrap → MB
 ```
 
-The committed adapter reconstructs ordered Python AST from semantic IR,
-serializes generated Python and uses the direct backend to generate MG. The
-local target-interface prototype instead passes Python-shaped target AST
-directly, removing the text round trip. Neither path reuses original source
-or stores an AST inside an opaque IR operation. Editing semantic IR
+The earlier adapter reconstructed and serialized Python AST before direct
+MG generation. The integrated target interface instead passes Python-shaped
+target AST directly, removing that text round trip. Neither representation
+reuses original source or stores AST inside an opaque IR operation. Editing semantic IR
 changes downstream code and execution. A future target lowering can replace
 the adapter without replacing this frontend.
 
-The existing `--backend=ir` default retains `--ir-frontend=compat`, the original
-direct→MG→MC→LAL bridge. Select the new frontend with
-`--ir-frontend=semantic`. Requesting `--emit-semantic-ir` selects it implicitly
-unless an incompatible frontend was explicitly selected. There is no silent
-fallback when semantic source validation fails. Base C/direct paths retain
-their optional-dependency independence.
+Explicit `--backend=ir` now defaults to `--ir-frontend=semantic`, including
+O0; `--ir-frontend=compat` retains the original direct→MG→MC→LAL bridge.
+Requesting `--emit-semantic-ir` selects semantic unless an incompatible choice
+is explicit. Explicit IR never falls back. O3 auto may skip an unavailable or
+inapplicable semantic candidate with a reported reason; verification, lowering
+and layout errors remain visible. Base C/direct paths remain dependency-free.
 
 ```sh
 uv sync --extra dev --extra ir
@@ -113,12 +114,11 @@ Lazy APIs in `malbolge.compiler.ir` include:
 | `print_semantic(module)` / `parse_semantic(text)` | Deterministic inspectable IR, including source locations |
 | `run_semantic(module, input_data=b'', ...)` | Independent dispatch of semantic operations, with operation/call/depth/output budgets |
 | `lower_semantic_to_python_ast(module)` / `lower_semantic_to_mg(module)` | Authoritative compatibility representation / target MG |
-| `lower_semantic_to_target_ast(module)` (local prototype) | Explicit backend contract preserving generated-local roles and loop condition preludes |
+| `lower_semantic_to_target_ast(module)` | Explicit backend contract preserving generated-local roles and loop condition preludes |
 | `compile_semantic_to_mc(module, ...)` | Adapter plus verified LAL target pipeline |
 
-The prototype backend contract lives in the uncommitted local
-`compiler/target_ast.py` and has no xDSL
-dependency. `TargetAST` carries generated local names explicitly per function;
+The integrated-branch backend contract lives in `compiler/target_ast.py`
+and has no xDSL dependency. `TargetAST` carries generated local names explicitly per function;
 `TargetWhile` carries ordered `condition_prelude` statements evaluated before
 every test. Names are never classified by a prefix. Generated locals remain
 ordinary stored variables protected by recursive frames, not allocator
@@ -139,9 +139,10 @@ other condition producers keep their word representation. Comparisons used
 as numbers still produce 0/1; no boolean hint is trusted without inspecting
 the current verified graph.
 
-The local prototype enables all three interface controls. Passing all three as false
-retains the legacy target representation for explicit comparisons; this does
-not disable semantic optimization passes. Decimal algorithm selection remains
+Whole-program semantic compilation enables all three controls at O1–O3 and
+disables them at O0. The low-level adapter still exposes each independent
+control; passing all three as false selects the legacy representation without
+changing the separately chosen semantic pass list. Decimal algorithm selection remains
 independent: the experimental decimal pass is not part of the default profile.
 
 The structured target AST is not an ordinary executable Python AST: CPython
@@ -169,8 +170,8 @@ their origin without pretending passes were executed again.
 
 ## 4. Compatibility limits and validation
 
-The semantic frontend implements the documented scalar/control/I/O forms, but
-it is deliberately opt-in while acceptance boundaries are being migrated:
+The semantic frontend implements the documented scalar/control/I/O forms.
+These boundaries govern explicit use and O3 candidate applicability:
 
 - Unsupported syntax is rejected even inside statically dead branches. The
   legacy frontend sometimes skips such syntax while emitting a constant branch.
@@ -198,5 +199,5 @@ Machine-readable scope is in
 [`semantic-ir-validation.json`](../notes/semantic-ir-validation.json).
 
 This supplies a place for future analyses and backend-specific lowering.
-Optimization candidates remain deferred until their separate semantic and
-compile-size-runtime acceptance work is authorized.
+New optimization candidates need separate semantic and compile-size-runtime
+acceptance before joining the current accepted default profile.

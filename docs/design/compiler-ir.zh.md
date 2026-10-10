@@ -6,6 +6,11 @@
 > SSA、新布局及 LLVM/MLIR 适配器仍属计划。本文件独立于私有研究笔记描述新增的公开架构，
 > 不声称带来性能提升。
 
+> 当前分支更新，2026-10-10：[O3 策略](compiler-optimization.zh.md)将整程序
+> 编译默认改为 auto 选择和 structured 传递。显式 IR 默认 semantic，compat
+> 仍可显式选择；目标接口集成等待[最终组合验收](../notes/compiler-optimization-validation.json)。
+> 2026-10-09 架构记录与测量继续对应其原日期。
+
 ## 1. 首个里程碑与兼容性
 
 首个里程碑为现有低级汇编（LAL，`.mc`）边界增加结构化、可验证的表示，
@@ -16,21 +21,23 @@ Python 子集 → 现有 direct 前端 → .mg → 现有 MG 翻译器 → .mc
   → 结构化 LAL IR → 显式项目 pass 管线 → .mc → 现有 mc2mb → .mb
 ```
 
-该默认 `ir` 前端仍是 `compat` 兼容桥。可选 `semantic` 前端已将 Python
-AST 直接转为语义 IR，提供表达式 SSA 与显式可变槽位，目标 lowering 通过
+原兼容桥仍可通过 `--ir-frontend=compat` 选择。显式 `--backend=ir`
+现在默认 semantic，将 Python AST 直接转为语义 IR，提供表达式 SSA 与显式
+可变槽位，目标 lowering 通过
 权威兼容适配器完成，见[semantic-ir.zh.md](semantic-ir.zh.md)。完整源变量
-SSA/活跃性分析仍待实现。现有默认 `c` 后端和显式 `direct`
-后端保留其路径。接受的 Python 子集及语义差异仍以
+SSA/活跃性分析仍待实现。C 与 direct 后端仍可显式选择；整程序 O3 auto
+比较 direct 与适用的 semantic 候选，见上方策略。接受的 Python 子集及语义差异仍以
 [子集规格](../specs/python-subset-spec.zh.md)为准。
 
 基础包继续支持 Python 3.8+，没有必需依赖。IR 是可选能力：`ir` extra
-固定 `xdsl==0.69.0`，需要 Python 3.10+。导入解释器、普通编译器和普通 CLI
-不能导入 xDSL；选择 IR 时检查运行时与依赖，并给出明确安装错误。
+固定 `xdsl==0.69.0`，需要 Python 3.10+。导入解释器/编译器/CLI 模块
+不加载 xDSL；执行 O3 auto 时可按可用性惰性加载。显式选择 IR 时检查
+运行时与依赖，并给出明确安装错误。
 未来升级依赖必须重新验证。
 
 ```sh
 uv sync --extra ir --extra dev
-uv run python -m malbolge compile examples/hello.py --backend=ir \
+uv run python -m malbolge compile examples/hello.py --backend=ir --ir-frontend=compat \
   --emit-ir /private/tmp/hello.ir --emit-mc /private/tmp/hello.mc \
   --passes verify-lal -o /private/tmp/hello.mb
 ```
@@ -147,7 +154,7 @@ pass 正确。语义优化可以产生不同 MC/MB，此时行为、效果/错�
 |---|---|---|
 | 可选 LAL IR 基础层与 Python 兼容桥接 | 已实现 | 结构化 operation、解析/emitter、verifier、具名 pass runner、确定性检查与 CLI 集成 |
 | 高级语义 dialect | 已实现 | 字环类型、有序 I/O/调用、惰性/控制 regions、返回契约及独立执行器；源变量仍用可变槽位 |
-| Python 前端发射语义 IR | 已实现，显式选择 | 直接 AST 发射、源码诊断、明确兼容边界及权威目标适配器，见 semantic-ir.zh.md |
+| Python 前端发射语义 IR | 已实现；显式 IR 默认与可选 O3 候选 | 直接 AST 发射、源码诊断、明确兼容边界及权威目标适配器，见 semantic-ir.zh.md |
 | 数据流与优化 pass | 有界 profile 已验收 | 具名算术/控制/数据流/发射 pass；完整变量 SSA、活性仍待实现，见 semantic-optimization-passes.zh.md |
 | 布局/自举重构 | 计划 | 构造式不变量、反例回归与逐产物验证 |
 | MLIR/LLVM 互操作 | 计划 | 显式类型/效果/lowering 适配器及经测量的引入理由 |

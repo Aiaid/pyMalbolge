@@ -12,7 +12,7 @@ runs explicit verified passes and emits MC for the same assembler. See
 ``docs/design/compiler-ir.md`` for this first migration boundary. Reference
 C/C++/Perl tools under ref/ are used by the conformance test suite.
 
-The opt-in semantic frontend emits structured source IR directly, with a
+The semantic frontend emits structured source IR directly, with a
 separate verified pipeline and an authoritative adapter to the existing target
 backend; see ``docs/design/semantic-ir.md``.
 
@@ -28,73 +28,43 @@ from .c2mg import compile_c_to_mg, C2MgError
 from .mg2mc import translate_mg_to_mc, translate_mg_to_lal, Mg2McError
 from .mc2mb import (
     assemble_mc_to_mb, iter_mc_to_mb, assemble_lal_to_mb, iter_lal_to_mb,
-    layout_lal_to_image, image_to_mb, iter_image_to_mb, Mc2MbError,
+    layout_lal_to_image, image_to_mb, iter_image_to_mb, predict_image_mb_size, Mc2MbError,
 )
 
 
-def compile_python_to_mb(py_source: str, backend: str = "c", *,
+from .optimization import (
+    POLICY_VERSION, OptimizationPolicy, CompilationPlan,
+    resolve_optimization_policy, build_compilation_plan,
+)
+
+
+def compile_python_to_mb(py_source: str, backend: str = "auto", *,
                          op_style: str = "cluster",
                          jmp_style: str = "main", passes=None,
-                         ir_frontend="compat", semantic_passes=None,
-                         target_pipeline="text") -> str:
-    """Compile a Python-subset program all the way to Malbolge20 source.
+                         ir_frontend=None, semantic_passes=None,
+                         target_pipeline=None, opt_level=3) -> str:
+    """Compile Python to Malbolge20 using the shared validated optimization policy.
 
-    ``backend`` selects the front half of the pipeline:
+    The default O3 ``auto`` backend compares direct and optional semantic
+    candidates by final image bytes, choosing direct on ties. A missing optional
+    IR environment or inapplicable semantic frontend leaves the direct candidate
+    available; compiler and verification defects are never hidden by fallback.
+    Candidate selection does not assemble either bootstrap until a winner exists.
 
-    * ``"c"`` (default) -- the two-step ``py2c`` + ``c2mg`` path (unchanged
-      behaviour).
-    * ``"direct"`` -- the ``py2mg`` direct Python -> ``.mg`` backend, which
-      skips the C layer (smaller, non-recursive functions carry no frame
-      protection; see ``docs/design/py2mg-backend.md``).
-    * ``"ir"`` -- optional verified LAL IR pipeline, currently entered through
-      the direct backend's MG/MC compatibility bridge. Requires the ``ir``
-      extra and Python 3.10+. ``ir_frontend='semantic'`` uses the new semantic
-      frontend and explicit target adapter; the default retains the old bridge.
-
-    Both paths share the ``mg2mc`` and ``mc2mb`` back half.  ``op_style`` and
-    ``jmp_style`` are the ``mg2mc`` code-generation styles (see
-    :func:`~malbolge.compiler.mg2mc.translate_mg_to_mc`); the defaults keep the
-    output byte-identical to the reference toolchain.
-
-    ``target_pipeline='structured'`` selects the experimental native LAL/image
-    handoff, avoiding mandatory MC/data serialization. It retains the existing
-    protocol, layout and padding. The default ``'text'`` remains the reference
-    path; neither selection changes the Python frontend or optimization profile.
+    Explicit ``c``, ``direct`` and ``ir`` backends preserve frontend control.
+    O0 disables direct arithmetic shortcuts and semantic target representation
+    shortcuts; O1 enables validated arithmetic, O2 adds structured LAL/image
+    transfer, and O3 adds frontend competition. An explicit ``target_pipeline``
+    overrides the level's handoff. Explicit IR uses the semantic frontend at
+    every level unless compatibility is requested explicitly. C retains its
+    reference frontend intrinsics at every level. Explicit semantic passes are an exact profile override. Individual
+    stage APIs retain their existing structural contracts.
     """
-    if target_pipeline not in ("text", "structured"):
-        raise ValueError("target_pipeline must be 'text' or 'structured'")
-    if backend == "ir":
-        if target_pipeline == "structured":
-            from .ir.bridge import compile_python_ir_result
-            from .ir.lal import lal_to_model
-            result = compile_python_ir_result(
-                py_source, op_style=op_style, jmp_style=jmp_style, passes=passes,
-                frontend=ir_frontend, semantic_passes=semantic_passes,
-                target_pipeline=target_pipeline)
-            return assemble_lal_to_mb(lal_to_model(result.module))
-        from .ir import compile_python_via_ir_to_mc
-        mc_source = compile_python_via_ir_to_mc(
-            py_source, op_style=op_style, jmp_style=jmp_style, passes=passes,
-            frontend=ir_frontend, semantic_passes=semantic_passes)
-        return assemble_mc_to_mb(mc_source)
-    if passes is not None:
-        raise ValueError("passes are only available with backend='ir'")
-    if ir_frontend != "compat" or semantic_passes is not None:
-        raise ValueError("IR frontend selection requires backend='ir'")
-    if backend == "direct":
-        mg_source = compile_python_to_mg(py_source)
-    elif backend == "c":
-        mg_source = compile_c_to_mg(compile_python_to_c(py_source))
-    else:
-        raise ValueError("unknown backend {!r} (use 'c', 'direct' or 'ir')".format(
-            backend))
-    if target_pipeline == "structured":
-        model = translate_mg_to_lal(mg_source, op_style=op_style,
-                                    jmp_style=jmp_style)
-        return assemble_lal_to_mb(model)
-    mc_source = translate_mg_to_mc(mg_source, op_style=op_style,
-                                   jmp_style=jmp_style)
-    return assemble_mc_to_mb(mc_source)
+    policy = resolve_optimization_policy(
+        backend, opt_level=opt_level, ir_frontend=ir_frontend,
+        semantic_passes=semantic_passes, target_pipeline=target_pipeline,
+        passes=passes)
+    return build_compilation_plan(py_source, policy, op_style, jmp_style).to_mb()
 
 
 def compile_python_to_ir(py_source: str, *, op_style="cluster",
@@ -124,6 +94,8 @@ __all__ = [
     "translate_mg_to_mc", "translate_mg_to_lal", "Mg2McError",
     "assemble_mc_to_mb", "iter_mc_to_mb", "Mc2MbError",
     "assemble_lal_to_mb", "iter_lal_to_mb", "layout_lal_to_image",
-    "image_to_mb", "iter_image_to_mb",
+    "image_to_mb", "iter_image_to_mb", "predict_image_mb_size",
     "compile_python_to_mb", "compile_python_to_ir", "compile_python_to_semantic_ir",
+    "POLICY_VERSION", "OptimizationPolicy", "CompilationPlan",
+    "resolve_optimization_policy", "build_compilation_plan",
 ]

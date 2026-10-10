@@ -6,8 +6,10 @@
 > 目标适配器与已验收优化 pass 已实现。完整源变量 SSA 和直接语义→LAL
 > lowering 仍待完成；性能证据与本架构契约分开记录。
 
-> 本次只提交文档：下文目标接口 API 属于已在本地验证、尚未提交的原型。
-> 记录设计与验证结果，不代表编译器实现已集成或性能已与 direct 持平。
+> 当前分支更新，2026-10-10：此前已记录的目标接口实现已与
+> [O3 默认策略](compiler-optimization.zh.md)一同集成并通过本地验收。原原型验收保留为历史
+> 证据；最终组合验收[单独记录](../notes/compiler-optimization-validation.json)。
+> 集成不代表性能已与 direct 持平。
 
 ## 1. 两条明确的前端路径
 
@@ -15,20 +17,20 @@
 
 ```text
 Python AST → 共享规范化与源码检查 → pysem 语义 IR
-  → 可校验语义 passes → 显式目标适配器 → MG → MC
-  → LAL IR → 可校验 LAL passes → MC → 现有汇编器 → MB
+  → 可校验语义 passes → 目标 AST 适配器 → MG → 原生 LAL 记录
+  → 可选、可校验 xDSL LAL passes → MemoryImage → 现有启动代码 → MB
 ```
 
-已提交的适配器从语义 IR 重建有序 Python AST，序列化生成的 Python 后
-交给 direct 后端生成 MG。本地目标接口原型则直接交接采用 Python 结构
-的目标 AST，避免文本往返。两条路径均不回放原始源码，也不在不透明 IR
-操作里保存 AST。修改语义 IR 会
+此前适配器从语义 IR 重建并序列化 Python AST，再交给 direct 生成 MG。
+当前分支的目标接口直接交接采用 Python 结构的目标 AST，避免文本往返。
+两种表示均不回放原始源码，也不在不透明 IR 操作里保存 AST。修改语义 IR 会
 改变后续代码与执行结果。未来可替换目标 lowering，而无需替换该前端。
 
-现有 `--backend=ir` 默认仍为 `--ir-frontend=compat`，即原有
-direct→MG→MC→LAL 桥。用 `--ir-frontend=semantic` 选择新前端；请求
-`--emit-semantic-ir` 会隐式选择新前端，除非显式指定了不兼容的前端。
-语义源码检查失败时不会静默回退。基础 C/direct 路径仍独立于可选依赖。
+显式 `--backend=ir` 现在默认 `--ir-frontend=semantic`，包括 O0；
+`--ir-frontend=compat` 保留原 direct→MG→MC→LAL 桥。请求
+`--emit-semantic-ir` 会选择 semantic，除非与显式选择冲突。显式 IR
+不回退；O3 auto 可报告原因后跳过不可用或不适用的 semantic 候选，但
+校验、lowering、布局错误仍报告。基础 C/direct 仍无必需依赖。
 
 ```sh
 uv sync --extra dev --extra ir
@@ -98,10 +100,10 @@ argument，存入相应源码槽位。
 | print_semantic(module) / parse_semantic(text) | 包含源码位置、确定性且可检查的 IR |
 | run_semantic(module, input_data=b'', ...) | 独立分发语义操作，带操作/调用/深度/输出预算 |
 | lower_semantic_to_python_ast(module) / lower_semantic_to_mg(module) | 从 IR 重建的兼容表示 / 目标 MG |
-| lower_semantic_to_target_ast(module)（本地原型） | 显式保留生成局部角色和循环条件计算区的后端契约 |
+| lower_semantic_to_target_ast(module)（当前分支集成） | 显式保留生成局部角色和循环条件计算区的后端契约 |
 | compile_semantic_to_mc(module, ...) | 适配器及可校验 LAL 目标管线 |
 
-原型后端契约位于尚未提交的本地 `compiler/target_ast.py`，不依赖 xDSL。
+当前集成分支的后端契约位于 `compiler/target_ast.py`，不依赖 xDSL。
 `TargetAST` 按函数显式
 携带生成局部名字；`TargetWhile` 携带每次判断前依序执行的
 `condition_prelude`。不按名字前缀分类。生成局部仍是有普通存储、受递归
@@ -118,8 +120,9 @@ argument，存入相应源码槽位。
 使用已捕获的 SSA 值。链式比较、额外消费者及其他条件 producer 保留字值
 表示。作为数字使用的比较仍输出 0/1；资格从当前已校验图重新检查。
 
-本地原型启用三个接口开关。全部传 false 可对照旧目标表示，但不会关闭语义
-优化 passes。十进制算法选择独立：实验十进制 pass 仍不属于默认 profile。
+整程序 semantic 编译在 O1–O3 开启三个接口开关，在 O0 关闭。低层适配器
+仍提供各自独立开关；全部传 false 可对照旧目标表示，但不改变独立选择的
+语义 pass 列表。十进制算法选择独立：实验十进制 pass 仍不属于默认 profile。
 
 结构化目标 AST 不能直接当普通 Python AST 执行：CPython 不会执行其额外
 prelude 字段。显示或普通域 Python oracle 应用 `to_legacy_ast` 显式展开，
@@ -142,7 +145,8 @@ pass，--passes 继续选择 LAL pass。缓存标识包含前端与两层有序�
 
 ## 4. 兼容边界与验收
 
-语义前端实现已文档化的标量/控制/I/O 形式；验收边界迁移期间保持显式选择：
+语义前端实现已文档化的标量/控制/I/O 形式；以下边界适用于显式使用与
+O3 候选的适用性判断：
 
 - 不支持的语法即使位于静态不可达分支也会拒绝。旧前端在发射常量分支时
   有时跳过这些语法。
@@ -164,5 +168,5 @@ pass，--passes 继续选择 LAL pass。缓存标识包含前端与两层有序�
 执行。机器可读范围见
 [`semantic-ir-validation.json`](../notes/semantic-ir-validation.json)。
 
-本阶段为后续分析和目标专用 lowering 提供位置。优化候选继续暂缓，
-需要分别完成语义与编译时间/体积/运行时间验收。
+本阶段为后续分析和目标专用 lowering 提供位置。新优化候选需要分别完成
+语义与编译时间/体积/运行时间验收，才能加入当前已验收默认 profile。

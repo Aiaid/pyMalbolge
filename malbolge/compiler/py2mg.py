@@ -64,12 +64,14 @@ Known v0 limitations (documented in ``docs/design/py2mg-backend.md``):
 """
 
 import ast
+from copy import deepcopy
 
 from . import c2mg
 from .decimal_io import ERROR_NAME, INPUT_ERROR_MESSAGE, PYTHON_HELPERS
 from .python_normalize import (
     normalize_tree, bind_call_arguments, io_reachable_functions,
 )
+from .target_ast import TargetASTError, TargetWhile, to_legacy_ast, validate_target_ast
 from .c2mg import (
     Variable, Block, Func, Generator,
     INT, BOOL, ARG,
@@ -77,7 +79,7 @@ from .c2mg import (
     VAR_STACK_TOP, VAR_STACK_TOP_VAL,
 )
 
-__all__ = ["compile_python_to_mg", "Py2MgError"]
+__all__ = ["compile_python_to_mg", "compile_target_ast_to_mg", "Py2MgError"]
 
 MOD = 3 ** 20  # Malbolge20 value ring, 3486784401
 
@@ -200,6 +202,9 @@ class _DirectCompiler(c2mg.Compiler):
         if type(arithmetic_optimizations) is not bool:
             raise ValueError("arithmetic_optimizations must be a bool")
         self.arithmetic_optimizations = arithmetic_optimizations
+        self._generated_locals = {}
+        self._skip_generated_initialization = False
+        self._target_ast = False
 
         # Per-function compile state.
         self._func = None            # current Func (also set during generate)
@@ -1316,6 +1321,53 @@ class _DirectCompiler(c2mg.Compiler):
             self._loops.pop()
             self._active_loop = prev
 
+    def _stmt_TargetWhile(self, node):
+        """Compile an ordered condition prelude without a synthetic break body."""
+        if node.orelse:
+            raise self.err("while/else is unsupported", node)
+        folded = self._static_bool(node.test)
+        if not node.condition_prelude:
+            self._stmt_While(node)
+            return
+        if folded is False:
+            # A false first test still evaluates all condition effects once.
+            self._compile_body(node.condition_prelude)
+            return
+        control = self._loop_has_control(node.body)
+        previous_loop = self._active_loop
+        loop = None
+        if control:
+            brk, skip = self._new_loop_flags()
+            self._set_flag(self.current_block, brk, 0)
+            loop = {"brk": brk, "skip": skip}
+            self._loops.append(loop)
+        self._active_loop = loop
+        saved = self.current_block
+        try:
+            inner = Block(self)
+            self.current_block = inner
+            if loop is not None:
+                self._set_flag(inner, loop["skip"], 0)
+            # These statements are outside the source body and its skip flag.
+            # Callee/input error guards still emit the usual immediate return.
+            self._compile_body(node.condition_prelude)
+            if folded is True:
+                self._compile_seq_inline(node.body)
+            else:
+                condition = self._lower_cond(node.test)
+                body = self._compile_stmt_block(node.body)
+                inner.switch_(condition, Block(self).break_(), body, Block(self))
+                self._release_if_temp(condition)
+            if loop is not None:
+                self._emit_break_check(inner, loop["brk"])
+            self.current_block = saved
+            saved.repeat_inf(inner)
+        finally:
+            self.current_block = saved
+            if loop is not None:
+                self._loops.pop()
+            self._active_loop = previous_loop
+
     def _stmt_For(self, node):
         if node.orelse:
             raise self.err("for/else is unsupported", node)
@@ -1572,6 +1624,20 @@ class _DirectCompiler(c2mg.Compiler):
         return bound
 
     def _da_stmt(self, s, bound, external, all_assigned):
+        if isinstance(s, TargetWhile):
+            condition_bound = self._da_stmts(s.condition_prelude, bound, external, all_assigned)
+            self._da_reads(s.test, condition_bound, external, all_assigned)
+            known = self._static_bool(s.test)
+            if known is False:
+                return condition_bound
+            exits = []
+            self._da_exit_stack.append(exits)
+            self._da_stmts(s.body, condition_bound, external, all_assigned)
+            self._da_exit_stack.pop()
+            breaks = [state for kind, state in exits if kind == "break"]
+            if known is True and breaks:
+                return set.intersection(*breaks)
+            return condition_bound
         if isinstance(s, ast.Assign):
             for target in s.targets:
                 if not isinstance(target, ast.Name):
@@ -1782,6 +1848,11 @@ class _DirectCompiler(c2mg.Compiler):
 
         # Reject use-before-assignment before emitting anything.
         external = self._params | self._globals_decl | self._module_globals
+        generated = self._generated_locals.get(fdef.name, frozenset())
+        if self._target_ast:
+            # Generated locals are proven writes-before-reads, even when a
+            # same-spelled module name exists. Metadata never supplies a value.
+            external -= generated
         self._check_definite_assignment(fdef.body, external, self._locals)
 
         for p in params:
@@ -1794,9 +1865,11 @@ class _DirectCompiler(c2mg.Compiler):
 
         # Zero-init non-static locals at entry (each activation starts fresh;
         # required for recursion correctness).
+        uninitialized = ({"u_" + name for name in generated}
+                         if self._skip_generated_initialization else set())
         for key in sorted(f.variables):
             v = f.variables[key]
-            if not v.is_static and not v.is_temporary:
+            if not v.is_static and not v.is_temporary and key not in uninitialized:
                 self.copy(self.current_block, self.get_const_variable(INT, 0), v)
         # ARGi -> parameter local.
         for i, p in enumerate(params):
@@ -1908,6 +1981,9 @@ class _DirectCompiler(c2mg.Compiler):
             raise Py2MgError(
                 "Python syntax error: {}".format(e.msg), node, self.source)
 
+        return self._compile_tree(tree)
+
+    def _compile_tree(self, tree):
         tree = normalize_tree(tree, error=self.err)
         self._may_fail_functions = io_reachable_functions(tree)
 
@@ -2010,6 +2086,40 @@ def compile_python_to_mg(source, *, arithmetic_optimizations=True):
     a source line and snippet) for unsupported or invalid input.
     """
     return _DirectCompiler(source, arithmetic_optimizations=arithmetic_optimizations).compile()
+
+
+def compile_target_ast_to_mg(target, *, arithmetic_optimizations=False,
+                             skip_generated_initialization=True, structured_while=True):
+    """Compile explicit target AST metadata without reparsing generated source.
+
+    The two representation options are independent ablation controls. All
+    generated locals remain ordinary variables with recursive frame protection;
+    definite-assignment checks still precede their first use.
+    """
+    for name, option in (("skip_generated_initialization", skip_generated_initialization),
+                         ("structured_while", structured_while)):
+        if type(option) is not bool:
+            raise ValueError("{} must be a bool".format(name))
+    try:
+        validate_target_ast(target)
+        standard = to_legacy_ast(target)
+        compile(standard, "<target-ast>", "exec")
+    except TargetASTError as error:
+        raise Py2MgError(str(error), error.node) from None
+    except (SyntaxError, TypeError, ValueError) as error:
+        node = ast.Constant(value=None)
+        node.lineno = getattr(error, "lineno", None) or 1
+        node.col_offset = (getattr(error, "offset", None) or 1) - 1
+        raise Py2MgError("target AST syntax error: {}".format(error), node) from None
+    compiler = _DirectCompiler("", arithmetic_optimizations=arithmetic_optimizations)
+    compiler._target_ast = True
+    compiler._generated_locals = {
+        name: frozenset(locals_) for name, locals_ in target.generated_locals.items()
+    }
+    compiler._skip_generated_initialization = skip_generated_initialization
+    tree = deepcopy(target) if structured_while else standard
+    ast.fix_missing_locations(tree)
+    return compiler._compile_tree(tree)
 
 
 _CMP = {ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq}

@@ -60,6 +60,7 @@ _LAZY_EXPORTS = {
     "SemanticIRError": "semantic",
     "run_semantic": "interpreter",
     "lower_semantic_to_python_ast": "lowering",
+    "lower_semantic_to_target_ast": "lowering",
     "lower_semantic_to_mg": "lowering",
     "compile_semantic_to_mc": "bridge",
     "compile_python_to_ir": "bridge",

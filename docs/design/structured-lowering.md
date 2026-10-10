@@ -2,9 +2,12 @@
 
 > **English** | [中文](structured-lowering.zh.md)
 >
-> Status: implemented as an explicit experiment. The default target pipeline
-> remains `text`; the existing generation styles, protocol, layout and padding
-> are retained in this interface migration.
+> Current-branch update, 2026-10-10: structured handoff is now the O2/O3
+> default under the [compiler policy](compiler-optimization.md); text remains
+> explicit and is the O0/O1 default. This interface originally shipped as an
+> experiment preserving generation styles, protocol, layout and padding. Its
+> original acceptance remains historical evidence; combined integration is
+> tracked in [the new receipt](../notes/compiler-optimization-validation.json).
 
 ## Data flow
 
@@ -57,8 +60,8 @@ uv run python -m malbolge compile examples/hello.py \
   --emit-mc hello.mc -o hello.mb
 ```
 
-The library selector is `compile_python_to_mb(...,
-target_pipeline="structured")`. The compiler also exports native MG→LAL,
+Whole-program compilation now defaults to O3/structured. The explicit library
+selector remains `compile_python_to_mb(..., target_pipeline="structured")`. The compiler also exports native MG→LAL,
 LAL→image and LAL/image→MB functions, including streamed byte output. Existing
 MC APIs and `target_pipeline="text"` remain available for comparison.
 

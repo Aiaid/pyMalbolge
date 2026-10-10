@@ -8,6 +8,12 @@
 > This document describes the new public architecture, independently of the
 > private research notes. It makes no performance-improvement claim.
 
+> Current-branch update, 2026-10-10: [O3 policy](compiler-optimization.md) now
+> defaults whole-program compilation to auto selection and structured handoff.
+> Explicit IR defaults to semantic; compat remains explicit. Target-interface
+> integration is pending final [combined acceptance](../notes/compiler-optimization-validation.json).
+> The 2026-10-09 architecture and measurements remain their dated evidence.
+
 ## 1. First milestone and compatibility
 
 The first milestone adds a structured, verified representation of the existing
@@ -19,24 +25,25 @@ Python subset → existing direct frontend → .mg → existing MG translator �
   → structured LAL IR → explicit project pass pipeline → .mc → existing mc2mb → .mb
 ```
 
-This original default `ir` frontend remains the `compat` bridge. The opt-in
-`semantic` frontend now lowers Python AST directly into semantic IR, with
+The original bridge remains available as `--ir-frontend=compat`. Explicit
+`--backend=ir` now defaults to `semantic`, which lowers Python AST directly into semantic IR, with
 expression SSA and explicit mutable slots. Its target lowering uses an
 authoritative compatibility adapter. See [semantic-ir.md](semantic-ir.md);
 full source-variable SSA/liveness remains future work.
-The existing default `c` backend and explicit `direct` backend keep their paths.
+The C and direct backends remain explicit choices. Whole-program O3 auto
+compares direct with an applicable semantic candidate; see the policy above.
 The accepted Python subset and its divergences remain governed by
 [the subset specification](../specs/python-subset-spec.md).
 
 The base package remains Python 3.8+ with no mandatory dependencies. IR support
 is optional: `xdsl==0.69.0` belongs to the `ir` extra and requires Python 3.10+.
-Imports of the interpreter, ordinary compiler and ordinary CLI must not import
-xDSL. Selecting IR support checks the runtime and dependency and reports a
-clear installation error. A future dependency upgrade requires revalidation.
+Importing interpreter/compiler/CLI modules must not load xDSL. Executing O3 auto
+may load it lazily when available; explicit IR selection checks the runtime and
+dependency and reports a clear installation error. A future dependency upgrade requires revalidation.
 
 ```sh
 uv sync --extra ir --extra dev
-uv run python -m malbolge compile examples/hello.py --backend=ir \
+uv run python -m malbolge compile examples/hello.py --backend=ir --ir-frontend=compat \
   --emit-ir /private/tmp/hello.ir --emit-mc /private/tmp/hello.mc \
   --passes verify-lal -o /private/tmp/hello.mb
 ```
@@ -178,7 +185,7 @@ and classify whole-process timeouts separately from measured VM time.
 |---|---|---|
 | Optional LAL IR foundation and Python compatibility bridge | Implemented | Structured operations, parser/emitter, verifier, named pass runner, deterministic inspection and CLI integration |
 | High-level semantic dialect | Implemented | Typed word ring, ordered I/O/calls, lazy/control regions, return contracts and independent oracle; mutable slots remain |
-| Python frontend emission into semantic IR | Implemented, opt-in | Direct AST emission, source diagnostics, declared compatibility limits and authoritative target adapter; see semantic-ir.md |
+| Python frontend emission into semantic IR | Implemented; explicit IR default and optional O3 candidate | Direct AST emission, source diagnostics, declared compatibility limits and authoritative target adapter; see semantic-ir.md |
 | Dataflow and optimization passes | Bounded profile accepted | Named arithmetic/control/dataflow/emission passes; full variable SSA and liveness remain planned; see semantic-optimization-passes.md |
 | Layout/bootstrap redesign | Planned | Constructive invariants, counterexample regression and per-artifact validation |
 | MLIR/LLVM interoperability | Planned | Explicit type/effect/lowering adapter and a measured reason to add the boundary |

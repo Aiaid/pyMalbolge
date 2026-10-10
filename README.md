@@ -71,7 +71,7 @@ Requires Python 3.8+.
 ### Command line
 
 ```bash
-# Compile and run
+# Compile with automatic O3 selection and run
 uv run python -m malbolge compile examples/hello.py -o hello.mb
 uv run python -m malbolge --variant=malbolge20 hello.mb
 
@@ -79,16 +79,26 @@ uv run python -m malbolge --variant=malbolge20 hello.mb
 # programs with control flow or functions, native double recursion
 uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb
 
-# Opt-in stage cache and JSON metrics on stderr
-uv run python -m malbolge compile examples/fib.py --backend=direct -o fib.mb \
-  --cache-dir .cache/malbolge --stats
+# Inspect the automatic selection; disable optimization or caching explicitly
+uv run python -m malbolge compile examples/fib.py -o fib.mb --stats
+uv run python -m malbolge compile examples/fib.py -O0 --no-cache -o fib.mb
 
 # Dump the intermediate stages
 uv run python -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
 ```
 
-The cache is opt-in and keyed by content, toolchain, code-generation style
-and Python version; corrupt entries are rebuilt. Output paths are checked
+Compilation defaults to `-O3 --backend=auto`: compare Direct with the accepted
+semantic candidate when the optional IR environment is available, then generate
+the smaller final MB through the structured target handoff. Explicit backend,
+IR frontend and target-pipeline choices remain authoritative. `-O0` disables
+optional transforms; `--backend=c` retains the reference C frontend, including
+its existing intrinsics. See [compiler optimization policy](docs/design/compiler-optimization.md).
+
+O3 CLI compilation automatically caches stages under the source directory's
+`.cache/malbolge`, with a 64 MiB limit per cached artifact. `--no-cache` disables
+this; `--cache-dir` explicitly enables unrestricted artifact caching. Keys include
+content, toolchain, resolved optimization policy, styles and Python version;
+corrupt entries are rebuilt. Output paths are checked
 before compilation, including source/symlink/hardlink and multi-output
 collisions. Writes use atomic replacement, and the CLI streams the final `.mb`
 rather than retaining it as a full intermediate string. File/encoding failures
@@ -100,7 +110,7 @@ produce concise diagnostics.
 from malbolge.compiler import compile_python_to_mb
 from malbolge import eval20
 
-mb = compile_python_to_mb('print("Hello, world!")')                   # 'c' backend
+mb = compile_python_to_mb('print("Hello, world!")')                   # automatic O3
 mb = compile_python_to_mb('print("Hello, world!")', backend="direct") # direct backend
 print(eval20(mb))                                                     # Hello, world!
 

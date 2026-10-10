@@ -6,6 +6,12 @@
 > 接入:`compile_python_to_mb(py, backend="direct")`、CLI `--backend=direct`。
 > 整理日期:2026-07-21。本文档描述 **v0**(严格对齐 py2c v1 的语言子集,不新增语言特性)。
 
+> 当前分支更新，2026-10-10：本 v0 设计为历史快照，其默认后端和语言限制
+> 不作为现行契约。整程序编译默认采用 [O3 auto](compiler-optimization.zh.md)，
+> direct 为必备候选，`--backend=direct` 可锁定该路径；当前语义见
+> [子集规格](../specs/python-subset-spec.zh.md)。目标接口集成等待
+> [组合验收](../notes/compiler-optimization-validation.json)。
+
 ## 1. 动机
 
 现有管线是两步:Python --`py2c`--> 名古屋 C 子集 --`c2mg`--> `.mg`。C 层是为了复用名古屋
@@ -174,8 +180,9 @@ py2mg 是**全新前端**(未复用 py2c 的 AST 处理代码),因此可以直�
   Python 无外部依赖。
 - 双后端对拍 e2e:`test/test_py2mg_e2e.py`,每用例两路径编译到 `.mb` 运行,输出逐字节一致
   (含双递归 fib、互递归)。有 ref 工具链时走快速构建。
-- 现有行为零破坏:`--backend` 默认 `c`,`compile_python_to_mb` 默认 `backend="c"`;
-  py2c/c2mg/mg2mc/mc2mb 未改。
+- 历史 v0 集成保留 `--backend=c` 与库 `backend="c"` 默认值，
+  未改 py2c/c2mg/mg2mc/mc2mb。2026-10-10 O3 集成将默认值改为 auto
+  选择，见顶部日期说明。
 
 ## 8. 遗留问题 / 后续
 

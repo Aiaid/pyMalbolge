@@ -7,6 +7,13 @@
 > Compiled: 2026-07-21. This document describes **v0** (strictly aligned with the py2c v1 language
 > subset; no new language features are added).
 
+> Current-branch update, 2026-10-10: this v0 design is a historical snapshot;
+> its default-backend and language-limit statements are not current contracts.
+> Whole-program compilation now defaults to [O3 auto](compiler-optimization.md);
+> direct is the required candidate and `--backend=direct` locks it. Current
+> subset semantics are in the [specification](../specs/python-subset-spec.md).
+> Target-interface integration awaits [combined acceptance](../notes/compiler-optimization-validation.json).
+
 ## 1. Motivation
 
 The existing pipeline is two stages: Python --`py2c`--> Nagoya C subset --`c2mg`--> `.mg`. The C
@@ -223,8 +230,9 @@ required to match.
 - Dual-backend differential e2e: `test/test_py2mg_e2e.py`, each case compiled to `.mb` via both
   paths and run, output byte-exact (including double-recursion fib and mutual recursion). Uses a
   fast build path when the ref toolchain is available.
-- Zero breakage to existing behavior: `--backend` defaults to `c`, `compile_python_to_mb` defaults
-  to `backend="c"`; py2c/c2mg/mg2mc/mc2mb are unchanged.
+- Historical v0 integration kept `--backend=c` and library `backend="c"` as
+  defaults without changing py2c/c2mg/mg2mc/mc2mb. The 2026-10-10 O3 integration
+  replaces those defaults with auto selection; see the dated note above.
 
 ## 8. Open Issues / Future Work
 

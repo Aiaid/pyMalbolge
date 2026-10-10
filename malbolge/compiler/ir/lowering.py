@@ -73,8 +73,13 @@ def _word_boolean(condition: ast.expr) -> ast.IfExp:
 
 
 class _Lowerer:
-    def __init__(self, program: ProgramOp):
+    def __init__(self, program: ProgramOp, *, target_ast: bool = False,
+                 native_conditions: bool = False):
         self.program = program
+        self.target_ast = target_ast
+        self.native_conditions = native_conditions
+        self.generated_locals: dict[str, set[str]] = {}
+        self.current_generated_locals: set[str] | None = None
         from .expression_passes import verified_inline_arithmetic_hints
         self.inline_arithmetic = verified_inline_arithmetic_hints(program)
         self.functions = list(program.body.block.ops)
@@ -101,6 +106,8 @@ class _Lowerer:
     def fresh(self) -> str:
         name = f"{self.prefix}t{self.counter}"
         self.counter += 1
+        if self.current_generated_locals is not None:
+            self.current_generated_locals.add(name)
         return name
 
     def value(self, value: SSAValue) -> ast.expr:
@@ -135,6 +142,39 @@ class _Lowerer:
             raise SemanticLoweringError("expression region lacks its final yield")
         statements = self.operations(operations)
         return statements, self.value(terminator.value)
+
+    def condition_region(self, block: Block) -> tuple[list[ast.stmt], ast.expr]:
+        """Keep a terminal, truth-only comparison as a target predicate.
+
+        Only the exact Compare->Yield single-use shape qualifies. Prefix and
+        operand-region effects still execute in order, and existing SSA load
+        snapshots remain captures. Chained comparisons and other word-valued
+        condition producers retain the general value representation.
+        """
+        operations = list(block.ops)
+        terminator = operations[-1]
+        producer = operations[-2] if len(operations) > 1 else None
+        if (self.target_ast and self.native_conditions
+                and isinstance(terminator, YieldOp)
+                and isinstance(producer, CompareOp)
+                and len(strings(producer.kinds)) == 1
+                and len(producer.values) == 2
+                and terminator.value is producer.result):
+            uses = iter(producer.result.uses)
+            use = next(uses, None)
+            if use is not None and next(uses, None) is None and use.operation is terminator:
+                statements = self.operations(operations[:-2])
+                left_statements, left = self.expression_region(producer.values[0].block)
+                right_statements, right = self.expression_region(producer.values[1].block)
+                statements.extend(left_statements)
+                statements.extend(right_statements)
+                predicate = ast.Compare(
+                    left=left, ops=[_COMPARE[strings(producer.kinds)[0]]()],
+                    comparators=[right])
+                return statements, predicate
+        statements, _ = self.expression_region(block)
+        assert isinstance(terminator, YieldOp)
+        return statements, self.condition(terminator.value)
 
     def boolean(self, op: BoolOp) -> list[ast.stmt]:
         name = self.fresh()
@@ -235,9 +275,15 @@ class _Lowerer:
                     body=_body(self.operations(op.then_region.block.ops)),
                     orelse=self.operations(op.else_region.block.ops)))
             elif isinstance(op, WhileOp):
-                prelude, condition = self.expression_region(op.condition.block)
-                condition = self.condition(op.condition.block.last_op.value)
+                prelude, condition = self.condition_region(op.condition.block)
                 body = self.operations(op.body.block.ops)
+                if self.target_ast:
+                    from ..target_ast import TargetWhile
+
+                    statements.append(TargetWhile(
+                        test=condition, body=_body(body),
+                        condition_prelude=prelude, orelse=[]))
+                    continue
                 if prelude:
                     body = prelude + [ast.If(
                         test=ast.UnaryOp(op=ast.Not(), operand=condition),
@@ -279,6 +325,8 @@ class _Lowerer:
         return statements
 
     def function(self, func: FuncOp, index: int) -> ast.FunctionDef:
+        generated: set[str] = set()
+        self.current_generated_locals = generated
         locals_ = list(strings(func.locals))
         for parameter in strings(func.parameters):
             if parameter not in locals_:
@@ -299,7 +347,10 @@ class _Lowerer:
             # verify_semantic established this tail is unreachable. Retaining
             # an explicit scalar tail satisfies legacy AST contract analysis.
             body.append(ast.Return(value=ast.Constant(value=0)))
-        return ast.FunctionDef(name=self.function_names[func.sym_name.data],
+        function_name = self.function_names[func.sym_name.data]
+        self.generated_locals[function_name] = generated
+        self.current_generated_locals = None
+        return ast.FunctionDef(name=function_name,
             args=ast.arguments(posonlyargs=[], args=parameters, vararg=None,
                                kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]),
             body=_body(body), decorator_list=[])
@@ -310,7 +361,14 @@ class _Lowerer:
         ]
         body.extend(self.function(func, index) for index, func in enumerate(self.functions))
         body.append(ast.Expr(value=_call(self.function_names[self.program.entry.data], [])))
-        return ast.fix_missing_locations(ast.Module(body=body, type_ignores=[]))
+        if self.target_ast:
+            from ..target_ast import TargetAST
+
+            module = TargetAST(body=body, generated_locals=self.generated_locals,
+                               type_ignores=[])
+        else:
+            module = ast.Module(body=body, type_ignores=[])
+        return ast.fix_missing_locations(module)
 
 
 def lower_semantic_to_python_ast(module: ModuleOp | ProgramOp) -> ast.Module:
@@ -324,16 +382,42 @@ def lower_semantic_to_python(module: ModuleOp | ProgramOp) -> str:
     return ast.unparse(lower_semantic_to_python_ast(module)) + "\n"
 
 
-def lower_semantic_to_mg(module: ModuleOp | ProgramOp, *, arithmetic_optimizations=False) -> str:
-    """Use the existing direct compiler on the newly reconstructed AST text."""
-    from ..py2mg import Py2MgError, compile_python_to_mg
+def lower_semantic_to_target_ast(module: ModuleOp | ProgramOp, *, native_conditions=True):
+    """Preserve generated-local roles and loop condition regions for codegen.
 
-    source = lower_semantic_to_python(module)
+    This is an explicit backend contract, not an ordinary executable Python
+    AST. Use ``target_ast.to_legacy_ast`` for a conventional Python view. Local
+    names come from this traversal's actual captures, never from a prefix.
+    Source slots and function parameters are excluded from the inventory.
+    """
+    if type(native_conditions) is not bool:
+        raise ValueError("native_conditions must be a bool")
+    verify_semantic(module)
+    return _Lowerer(get_program(module), target_ast=True,
+                    native_conditions=native_conditions).lower()
+
+
+def lower_semantic_to_mg(module: ModuleOp | ProgramOp, *, arithmetic_optimizations=False,
+                         skip_generated_initialization=True, structured_while=True,
+                         native_conditions=True) -> str:
+    """Use a structured target AST without reparsing generated Python text.
+
+    The accepted interface options are enabled by default. Independent
+    controls support comparisons with the legacy materialization. Source
+    compilation retains its original entry.
+    """
+    from ..py2mg import Py2MgError, compile_target_ast_to_mg
+
+    target = lower_semantic_to_target_ast(module, native_conditions=native_conditions)
     try:
-        return compile_python_to_mg(source, arithmetic_optimizations=arithmetic_optimizations)
+        return compile_target_ast_to_mg(
+            target, arithmetic_optimizations=arithmetic_optimizations,
+            skip_generated_initialization=skip_generated_initialization,
+            structured_while=structured_while)
     except Py2MgError as exc:
         raise SemanticLoweringError(f"semantic IR compatibility lowering failed: {exc}") from exc
 
 
 __all__ = ["SemanticLoweringError", "lower_semantic_to_python_ast",
-           "lower_semantic_to_python", "lower_semantic_to_mg"]
+           "lower_semantic_to_python", "lower_semantic_to_target_ast",
+           "lower_semantic_to_mg"]

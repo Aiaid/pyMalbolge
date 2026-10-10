@@ -41,7 +41,7 @@ from __future__ import annotations
 __all__ = ["assemble_mc_to_mb", "parse_mc_to_data", "data_to_mb", "Mc2MbError",
            "parse_mc_to_image", "layout_lal_to_image", "image_to_mb",
            "iter_image_to_mb", "assemble_lal_to_mb", "iter_lal_to_mb",
-           "iter_mc_to_mb"]
+           "iter_mc_to_mb", "predict_image_mb_size"]
 
 from malbolge.compiler.memory_image import MemoryImage, MemorySegment
 
@@ -104,6 +104,9 @@ _INST_CHAR = {
     "DUP": "o", "OPR": "p", "ROT": "*", "JMP": "i",
     "MOV_D": "j", "HALT": "v", "OUTPUT": "<", "INPUT": "/",
 }
+
+_LAYOUT_INSTRUCTION_BUDGET = 850
+_LAYOUT_SETUP_BUDGET = 865
 
 
 def _perl_num(v):
@@ -233,8 +236,8 @@ def _layout_image(mc_source=None, lal_program=None, as_image=True):
     stdUT_label_sec = {"END": 1, "OUTPUT": 25, "SKIP": 40,
                        "INPUT": 47, "ROT": 59, "JMP": 64, "OPR": 86}
 
-    InsGeneNum = 850
-    DataModGeneNum = 865
+    InsGeneNum = _LAYOUT_INSTRUCTION_BUDGET
+    DataModGeneNum = _LAYOUT_SETUP_BUDGET
     data_dup = -1
 
     # ---- parser state --------------------------------------------------
@@ -1183,6 +1186,78 @@ class _PagedCode(MutableMapping):
                 yield base + match.start(), view[match.start():match.end()]
 
 
+def _finish_tail_start(code_size):
+    """First legal odd position for the assembler's final two source bytes."""
+    while (chr(_xlat1(82, code_size)) not in _LEGAL) or not (code_size & 1):
+        code_size += 1
+    return code_size
+
+
+def predict_image_mb_size(image: MemoryImage) -> int:
+    """Predict exact source bytes for a standard layout that assembles successfully.
+
+    This checks the ordered layout and direct-code reservation, without running
+    the bootstrap generator. Successful assembly additionally proves that its
+    bootstrap ends at or before the final direct segment's offset. The highest
+    direct source cell therefore determines the file size, including the same
+    two-byte tail as actual emission. The result does not certify successful
+    assembly, program correctness, compilation time, or execution speed.
+
+    Raw/custom images outside this layout contract raise ``Mc2MbError`` rather
+    than receiving a misleading estimate.
+    """
+    if not isinstance(image, MemoryImage):
+        raise Mc2MbError("size prediction requires a MemoryImage")
+
+    def unsupported(reason):
+        raise Mc2MbError("size prediction requires a standard layout: " + reason)
+
+    order = {"direct": 0, "routine": 1, "indirect": 2}
+    counts = dict.fromkeys(order, 0)
+    previous_kind = 0
+    direct = []
+    routine_words = 0
+    for segment in image.segments:
+        kind = order[segment.kind]
+        if kind < previous_kind or segment.index != counts[segment.kind]:
+            unsupported("segments must be ordered with consecutive indices")
+        previous_kind = kind
+        counts[segment.kind] += 1
+        if segment.kind == "direct":
+            direct.append(segment)
+        elif segment.kind == "routine":
+            routine_words += len(segment.words)
+    if not direct or not counts["routine"]:
+        unsupported("direct and routine segments are required")
+    last_offset = direct[-1].offset
+    if last_offset < 100:
+        unsupported("direct code must follow the fixed setup cells")
+    if any(segment.offset != direct[0].offset + index * 94
+           for index, segment in enumerate(direct)) or direct[0].offset % 94:
+        unsupported("direct offsets must follow the 94-cell layout")
+
+    reserved = (_LAYOUT_SETUP_BUDGET + _LAYOUT_INSTRUCTION_BUDGET *
+                (3 + routine_words + counts["indirect"] * 94))
+    if direct[0].offset != reserved - reserved % 94 + 94:
+        unsupported("direct offset does not match the bootstrap reservation")
+
+    high_water = 0
+    for segment in direct:
+        populated = False
+        for position, word in enumerate(segment.words, segment.offset):
+            if word == -1:
+                continue
+            if not 32 < word < 127 or chr(_xlat1(word, position)) not in _LEGAL:
+                unsupported("direct cells must encode legal source instructions")
+            populated = True
+            high_water = max(high_water, position + 1)
+        if not populated:
+            unsupported("direct segments must contain source instructions")
+    if high_water <= last_offset:
+        unsupported("direct source must dominate the bootstrap boundary")
+    return _finish_tail_start(high_water) + 2
+
+
 class _Assembler:
     """Port of the C++ ``init`` code generator (init/dmod/comm.cpp)."""
 
@@ -1881,9 +1956,7 @@ class _Assembler:
     def _prepare_finish(self):
         if getattr(self, "_finished", False):
             return
-        # advance to an odd position whose Xlat1(82,pos) is a legal opcode
-        while (chr(_xlat1(82, self.code_size)) not in _LEGAL) or not (self.code_size & 1):
-            self.code_size += 1
+        self.code_size = _finish_tail_start(self.code_size)
         self.code[self.code_size] = 82
         self.code_size += 1
         self.code[self.code_size] = 81

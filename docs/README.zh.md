@@ -23,11 +23,12 @@
 | [native-vm.zh.md](design/native-vm.zh.md) | ✅ 本地显式原型 | Python 接口接原生 Malbolge20 执行/内存核心；正确性、快照、本地构建、同映像测量和带守卫 JIT 边界 |
 | [highlevel-to-malbolge.zh.md](design/highlevel-to-malbolge.zh.md) | ✅ | 路线决策:高级语言→Malbolge 可行性、推荐管线、里程碑、Python 前端 v1 与直连后端 |
 | [optimization-status.zh.md](design/optimization-status.zh.md) | ✅ 带日期快照 | 全部优化层、已验收/默认/opt-in/本地原型状态、证据索引及未解决边界 |
+| [compiler-optimization.zh.md](design/compiler-optimization.zh.md) | ✅ 现行 O3 策略 | 自动选择适用候选、精确最终体积预测、O0–O3 控制、显式锁定与缓存/错误边界 |
 | [py2mg-backend.zh.md](design/py2mg-backend.zh.md) | ✅ | `py → .mg` 直连后端(`--backend=direct`)设计:栈帧策略、递归环检测、与 C 路径的体积对比 |
 | [compiler-ir.zh.md](design/compiler-ir.zh.md) | ✅ | 可选 LAL/语义边界、可校验 pass 基础与迁移里程碑；变量 SSA、优化、布局和 LLVM/MLIR 仍待实现 |
 | [semantic-ir.zh.md](design/semantic-ir.zh.md) | ✅ | 直接 Python AST 前端、类型化语义 IR、独立执行器、显式目标适配器、CLI 选择与诊断边界 |
 | [semantic-optimization-passes.zh.md](design/semantic-optimization-passes.zh.md) | ✅ profile 已验收，十进制实验 | 具名语义算术/数据流/控制/发射 pass、目标算术开关、等级 0/1 与完整比较契约 |
-| [structured-lowering.zh.md](design/structured-lowering.zh.md) | ✅ 显式试验 | 无额外依赖的 MG→LAL→内存映像→MB 传递、可选 xDSL 适配、CLI/缓存选择及行为优化验收 |
+| [structured-lowering.zh.md](design/structured-lowering.zh.md) | ✅ O2/O3 默认 | 无额外依赖的 MG→LAL→内存映像→MB 传递、可选 xDSL 适配、显式 text 选择及行为优化验收 |
 | [hell-assembler-design.zh.md](design/hell-assembler-design.zh.md) | 🧊 | Python 版 HeLL 汇编器设计(已搁置的备选路线;§6 讨论 GPL 问题) |
 | [tui-web-architecture.zh.md](design/tui-web-architecture.zh.md) | ✅ | 调试器 UI 架构:三层切分,`malbolge/view/` ViewModel 仅输出 JSON,由 Textual 渲染层与(待定的)Pyodide web 版共用;所需的三个后端 API;分阶段与并行边界 |
 | [tui-redesign/README.zh.md](design/tui-redesign/README.zh.md) | ✅ | 导入的 TUI 重设计画布(四块画板:现状复刻、信息密度最大化、教学向、80×24),附可离线打开的 `preview.html` |
@@ -47,8 +48,9 @@
 | [native-vm-validation.json](notes/native-vm-validation.json) | ✅ 本地显式验收 | 原生 VM 正确性、审查、ABI/打包检查和五轮同映像 Python/原生/C 执行测量 |
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | 首次 LAL/pass 基础验收及源码指纹；后续前端/集成变更由 semantic-ir-validation.json 覆盖 |
 | [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | pass 启用前的语义架构验收；后续变更由 semantic-pass-validation.json 覆盖 |
-| [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | 已提交的 pass/默认策略验收；本地目标接口实验另行记录 |
-| [target-interface-validation.json](notes/target-interface-validation.json) | 📌 | 尚未提交的本地原型：目标 AST 角色、默认策略、回归与实现指纹 |
+| [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ 已验收 pass profile | pass 验收；现行统一编译策略见 compiler-optimization-validation.json |
+| [target-interface-validation.json](notes/target-interface-validation.json) | 📌 原型快照 | 集成前目标 AST 角色、回归与实现指纹；现行验收见 compiler-optimization-validation.json |
+| [compiler-optimization-validation.json](notes/compiler-optimization-validation.json) | ✅ 默认策略验收 | O3 选择/显式控制、缓存失败回归、完整所选映像一致性及独立执行契约来源 |
 | [structured-lowering-validation.json](notes/structured-lowering-validation.json) | ✅ 本地验收 | 原生低层接口回归、库/CLI/IR 接入和测量范围 |
 | [latest-corpus-validation.json](notes/latest-corpus-validation.json) | ✅ 带日期工作 cohort 验收 | 独立正确性 123/123；36 次冷编译 / 96 次运行尝试，73 正常完成 / 23 整子进程超时；明确本地原型及单轮边界 |
 | [common-vm-validation.json](notes/common-vm-validation.json) | ✅ 带日期统一 VM 验收 | 同一未改写原版 C-O3 二进制跑 96 个冻结程序库及真实原版 GCD 三输入；97 正常 / 2 截尾超时，精确体积及最终来源/清理复核 |

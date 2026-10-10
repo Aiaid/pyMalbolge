@@ -48,3 +48,6 @@ docs/design/*/support.js
 # Deploying runs `node web/build.mjs` first -- see web/README.md.
 web/node_modules/
 web/vendor/
+
+# Automatic project-local compiler cache (regenerable).
+**/.cache/malbolge/

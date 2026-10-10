@@ -175,7 +175,7 @@ class EndToEnd(unittest.TestCase):
                 ".mg -> .mb pipeline failed:\n" + proc.stderr)
         else:
             with open(mb, "w") as f:
-                f.write(compile_python_to_mb(source))
+                f.write(compile_python_to_mb(source, backend="c"))
         return mb
 
     def _run_c(self, mb, stdin):

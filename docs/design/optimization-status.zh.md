@@ -20,35 +20,41 @@
 
 ## 已实现的各层
 
-### 开启方式核对（2026-10-10）
+### 开启方式核对（2026-10-10，当前分支）
 
-编译器默认是 `backend=c`、`ir_frontend=compat`、`target_pipeline=text`，
-风格为 `cluster/main`。体积/运行表显式比较不同路径；其中 direct 或 semantic
-的成绩，不是普通 compile 命令的默认结果。
+当前集成默认采用 `backend=auto`、O3、`target_pipeline=structured` 和
+`cluster/main`。direct 与适用的已验收 semantic 候选按预测最终 MB 精确
+字节数竞争，生成启动代码之前即完成选择，相等时选 direct。完整规则见
+[编译策略](compiler-optimization.zh.md)，最终组合验收见
+[集成记录](../notes/compiler-optimization-validation.json)。
+
+本次集成之前的开启方式核对记录了 C/compat/text 默认值和显式编译缓存。
+上方带日期的性能表仍对应显式选择的冻结路径，并非新的 auto 选择性能测量。
 
 | 工作 | 开启方式 |
 |---|---|
-| C/direct 算术捷径、临时量/帧处理、MC 布局/编码缓存、启动代码存储/发射及共享 Python VM 原语 | 在适用实现中自动生效，无需额外优化开关。 |
-| direct Python→MG 前端 | 选择 `--backend=direct`，内部已验收优化自动生效。 |
-| semantic IR 和已验收具名优化 profile | 选择 `--backend=ir --ir-frontend=semantic` 并安装 `ir` extra。进入 semantic 后，已验收 profile 本身就是默认；`--opt-level=1` 显式声明该选择，`0` 则仅校验。单独 `--backend=ir` 仍是 compat 前端。 |
-| 原生结构化 LAL/image 传递 | 选择 `--target-pipeline=structured`，默认仍为 `text`。属于接口实验，direct 前端产物缩小来自其自身 lowering。 |
-| 编译缓存 | 传入 `--cache-dir`；默认关闭，冷编译测量不使用缓存。 |
+| direct Python→MG 前端与算术捷径 | direct 是 auto 必备候选；O1–O3 启用算术捷径，O0 关闭。`--backend=direct` 锁定前端。 |
+| semantic IR 与已验收具名 profile | 受支持 IR 环境可用时作为 O3 候选；显式 IR 默认 semantic。O0 仅校验，优化等级使用已验收 profile；`--ir-frontend=compat` 选择原兼容桥。 |
+| 原生结构化 LAL/image 传递 | O2/O3 默认，`--target-pipeline=text` 显式退出。单纯传递方式不能解释 direct 产物缩小。 |
+| 编译缓存 | O3 CLI 自动使用源码旁缓存，单产物门槛 64 MiB；`--no-cache` 关闭，`--cache-dir` 显式选择缓存。库编译没有持久缓存。 |
+| C 参考算术、帧处理、MC 布局/编码缓存、启动代码存储/发射及共享 Python VM 原语 | 保留在各自适用实现内。C0 仍保留参考算术固有行为，不是完全无算术优化的基线。 |
+| 目标 AST 初始化/循环/谓词接口 | 已集成并通过本地验收；semantic O1–O3 开启三个开关，O0 关闭。最终组合验收独立于旧原型记录。 |
 | 十进制输出候选及被拒绝的批量 NOP 实验 | 排除已验收默认策略；十进制候选需手动选择 pass。 |
-| 目标 AST 初始化/循环/谓词原型 | 当前未提交 semantic adapter 内，三个接口选项在选中该路径后默认开启。冻结工作 benchmark 包含它，但其源码状态及具名 semantic profile 分别标明。 |
-| 原生 VM / JIT | 已提交代码基线 `1a7b88b` 的 `run20` 默认 Python，native/JIT 通过库的 engine 显式选择。当前工作目录另有另一会话未提交的 `auto` 批处理原生优先策略，JIT 仍显式选择；原生安装/构建变化也属独立工作。 |
+| 原生 VM / JIT | 运行引擎与打包工作独立管理和验收。编译器 O3 不开启 JIT，JIT 仍显式选择。 |
 
-已提交 direct 路径的选择：
+默认选择与显式 direct 选择：
 
 ```bash
-uv run python -m malbolge compile program.py --backend=direct -o program.mb
+uv run python -m malbolge compile program.py -o program.mb --stats
+uv run python -m malbolge compile program.py --backend=direct -o direct.mb
 ```
 
-显式 semantic 和 structured 选择：
+显式 semantic 选择：
 
 ```bash
 uv sync --extra dev --extra ir
 uv run --no-sync python -m malbolge compile program.py --backend=ir \
-  --ir-frontend=semantic --opt-level=1 --target-pipeline=structured -o program.mb
+  --ir-frontend=semantic --opt-level=1 --target-pipeline=structured -o semantic.mb
 ```
 
 统一产物对照直接调用固定原版 C 二进制，产品的默认引擎变化不影响该测量 cohort。
@@ -57,14 +63,15 @@ uv run --no-sync python -m malbolge compile program.py --backend=ir \
 |---|---|---|
 | Python→MG 前端 | direct lowering、函数内临时量复用、递归调用图、递归帧及跨调用活跃临时量保护 | 已集成；省去 C 表示和不必要的非递归自身帧保护。调用递归 callee 仍可能保存返回地址/scratch。 |
 | C/direct 算术 | 常量折叠、除一/模一消除、小字面量乘法加链、按需算术/十进制 helper | 默认已集成；适用时减少目标操作，保持求值、副作用、错误及 20-trit 环语义。 |
-| 语义 IR | 七类具名算术/数据流/控制/表达式变换、可校验 pass 边界、源码位置与独立语义执行器 | 显式选择 semantic 前端后的默认验收 profile；原始前端 API 与等级 0 仍只生成/校验。 |
-| MG→LAL | 四种既有确定性风格、无额外依赖的原生结构化生成器 | 风格显式选择；原生目标管线为 opt-in 接口试验，尚无按调用点自动成本选择。 |
-| LAL→MB | 按版本失效的移动搜索缓存、指令编码表、first-fit 占用/键缓存、紧凑页面源码、流式输出及类型化映像传递 | 宿主/存储优化已集成；部分保持产物字节，改善编译开销。原生传递仍 opt-in。 |
+| 语义 IR | 七类具名算术/数据流/控制/表达式变换、可校验 pass 边界、源码位置与独立语义执行器 | 适用的 O3 semantic 候选或显式 semantic 前端使用已验收 profile；原始前端 API 与 semantic O0 仍只生成/校验。 |
+| MG→LAL | 四种既有确定性风格、无额外依赖的原生结构化生成器 | 风格仍显式选择，原生目标传递为 O2/O3 默认；auto 比较前端，不进行按调用点风格选择。 |
+| LAL→MB | 按版本失效的移动搜索缓存、指令编码表、first-fit 占用/键缓存、紧凑页面源码、流式输出及类型化映像传递 | 宿主/存储优化已集成；部分保持产物字节，改善编译开销。原生传递为 O2/O3 默认。 |
 | VM/调试器 | 紧凑不可变源码、周期默认值、类型化 COW 内存、分组 trit crazy 查表、有预算字节 I/O/执行和有界历史 | 运行时/存储工作已集成；解释器吞吐与目标指令数量分别衡量。 |
 | CLI/工具 | 原子输出、路径别名检查、完整性校验内容缓存、阶段指标、固定负载基准与源码审计 | 已集成；热缓存行为与冷编译性能分开。 |
 
-编译器仍默认 C 前端，IR 默认 compat，目标管线默认 text。语义 pass 和
-原生低层传递是独立选择。xDSL 继续惰性导入，基础 C/direct 保持 Python 3.8。
+新默认策略组合了候选选择与结构化传递，同时保留各自显式开关。xDSL
+继续惰性导入，无额外依赖的 direct 候选和显式 C/direct 保持 Python 3.8。
+尺寸选择不证明编译时间或运行时间在所有场景都最优。
 
 ## 证据与边界
 
@@ -74,8 +81,10 @@ uv run --no-sync python -m malbolge compile program.py --backend=ir \
   重复的编译/体积/运行对照。
 - [结构化传递验收](../notes/structured-lowering-validation.json)：原生接口、
   库/CLI/IR 接入及排除其他本地原型的 HEAD 加本轮代码回归。
-- [目标接口原型验收](../notes/target-interface-validation.json)：已记录本地
-  实验，本轮没有集成其实现。
+- [目标接口原型验收](../notes/target-interface-validation.json)：较早的本地
+  实验记录，后续实现已集成并通过本地验收。
+- [编译策略集成验收](../notes/compiler-optimization-validation.json)：新默认
+  策略与目标接口的最终组合验收记录。
 
 性能结论按负载与测量 cohort 限定。算术恒等式、表达式折叠和传播可以
 同时改善三种成本；编码/装箱缓存主要改善宿主编译；VM 查表主要改善执行
@@ -86,7 +95,7 @@ uv run --no-sync python -m malbolge compile program.py --backend=ir \
 
 紧凑十进制输出因目标成本回退，仍排除默认语义 profile；批量 NOP 发射
 因宿主耗时回退被拒绝。省略生成局部入口初始化、结构化目标循环和原生
-while 谓词仍是另一会话的未提交原型；其消融收益不能证明已追上旧 direct。
+while 谓词已集成并通过本地验收；原消融收益不能证明性能已追上 direct。
 完整变量 SSA/活性、动态乘法重设计、按调用点成本选择、分派/flag 最小化
 及新布局/启动策略仍待实现。
 
