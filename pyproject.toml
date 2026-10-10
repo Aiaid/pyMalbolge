@@ -67,7 +67,15 @@ include = [
 ]
 exclude = [
     "/docs/research",
+    "/malbolge/_native_vm*.so",
+    "/malbolge/_native_vm*.pyd",
+    "/malbolge/.native-build-*",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["malbolge"]
+exclude = [
+    "/malbolge/_native_vm*.so",
+    "/malbolge/_native_vm*.pyd",
+    "/malbolge/.native-build-*",
+]

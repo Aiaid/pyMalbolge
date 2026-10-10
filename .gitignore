@@ -4,6 +4,9 @@
 __pycache__/
 dist/*
 build/
+malbolge/_native_vm*.so
+malbolge/_native_vm*.pyd
+malbolge/.native-build-*/
 *.egg-info/
 testpip.md
 temp.md

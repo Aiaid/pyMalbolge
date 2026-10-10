@@ -19,6 +19,8 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
+| [native-jit.zh.md](design/native-jit.zh.md) | ✅ 本地显式试验 | 真实带守卫 ARM64 NOP 代码生成、精确退出/COW/预算、冷暖证据及短夹具性能回退 |
+| [native-vm.zh.md](design/native-vm.zh.md) | ✅ 本地显式原型 | Python 接口接原生 Malbolge20 执行/内存核心；正确性、快照、本地构建、同映像测量和带守卫 JIT 边界 |
 | [highlevel-to-malbolge.zh.md](design/highlevel-to-malbolge.zh.md) | ✅ | 路线决策:高级语言→Malbolge 可行性、推荐管线、里程碑、Python 前端 v1 与直连后端 |
 | [optimization-status.zh.md](design/optimization-status.zh.md) | ✅ 带日期快照 | 全部优化层、已验收/默认/opt-in/本地原型状态、证据索引及未解决边界 |
 | [py2mg-backend.zh.md](design/py2mg-backend.zh.md) | ✅ | `py → .mg` 直连后端(`--backend=direct`)设计:栈帧策略、递归环检测、与 C 路径的体积对比 |
@@ -41,6 +43,8 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
+| [native-jit-validation.json](notes/native-jit-validation.json) | ✅ 本地显式验收 | JIT 语义/审查/ABI/打包、同映像五模式三轮计时、发射/覆盖率/预热成本及首次预热被拒记录 |
+| [native-vm-validation.json](notes/native-vm-validation.json) | ✅ 本地显式验收 | 原生 VM 正确性、审查、ABI/打包检查和五轮同映像 Python/原生/C 执行测量 |
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | 首次 LAL/pass 基础验收及源码指纹；后续前端/集成变更由 semantic-ir-validation.json 覆盖 |
 | [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | pass 启用前的语义架构验收；后续变更由 semantic-pass-validation.json 覆盖 |
 | [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ | 已提交的 pass/默认策略验收；本地目标接口实验另行记录 |

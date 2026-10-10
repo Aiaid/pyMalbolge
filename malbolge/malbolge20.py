@@ -180,8 +180,14 @@ def eval(code: str, input_data: str = "", eof: str = 'stop') -> str:
 
 
 def run(code, input_data=b"", *, max_steps=None, max_output=None,
-        eof="sentinel") -> RunResult:
-    """Run with byte I/O, explicit EOF policy, and optional resource limits."""
+        eof="sentinel", engine="python") -> RunResult:
+    """Run with byte I/O and optional limits; native execution is opt-in."""
+    if engine in ("native", "jit"):
+        from .native import run20 as native_run20
+        return native_run20(code, input_data, max_steps=max_steps,
+                            max_output=max_output, eof=eof, jit=engine == "jit")
+    if engine != "python":
+        raise ValueError("engine must be 'python', 'native', or 'jit'")
     config = CONFIG
     memory = create_memory(config)
     memory.initialize_source(parse_source(code, config))

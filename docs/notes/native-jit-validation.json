@@ -1,0 +1,308 @@
+{
+  "date": "2026-10-10",
+  "status": "local_opt_in_guarded_nop_jit_accepted",
+  "default_engine": "python",
+  "jit_scope": "actual ARM64 machine code for guarded canonical opcode68 NOP blocks, lengths2/4/8/16/32/64; native fallback for other operations",
+  "platform": "macOS arm64 validated; Linux little-endian ARM64 implemented but not runtime validated; ARM64e/big-endian/non-ARM64 unavailable",
+  "source_hashes": {
+    "malbolge/_native_vm.c": "df687c273058a4b4429e6c98dd680bf4236f4712effd285c645cdf1e50c67f75",
+    "malbolge/_native_jit.h": "d83f49bd3c1c0ccac433d4817535f855250ac74a5c377a6d6792fa7e656b6b1d",
+    "malbolge/native.py": "b8530282b40358893bfe3ccc2635865a00925e7ba20b948598eb8ff99b420dad",
+    "malbolge/malbolge20.py": "31c80f9753567ddb651688a1f457dd5aeb9b26e7dbe40e1dfddd21cc87017ec0",
+    "scripts/build_native_vm.py": "22447f38ad09c9e207a7e3726aa155a377f6c6200ae31dff0e6d54f44cdd29b9",
+    "scripts/benchmark_native_vm.py": "c21a8a256bdc0e26b6aaa011d154f14d4ec06ae3a3dfa625144211d4ffcea769",
+    "scripts/benchmark_native_jit.py": "3633a9fa0a384b41f1edbf23fac1f4ff1185b4e804cb3387143dc48a1aa64a9f",
+    "test/test_native_jit.py": "93f6c2848d6e077aac5c5ce41a9e392d8da26d49ebf744b58f35c2f241bf7032"
+  },
+  "validation": {
+    "focused_tests": {
+      "passed": 160,
+      "skipped": 1,
+      "subtests_passed": 6,
+      "files": [
+        "test/test_native_jit.py",
+        "test/test_native_vm.py",
+        "test/test_runtime_qos.py",
+        "test/test_cli_qos.py"
+      ]
+    },
+    "independent_review": "ARM64 encoding/ABI, prefix/guard state, COW/budgets/signal quantum reviewed; Linux permission-restoration dispatch error closed; independent16391-step partial-guard/COW probe passed",
+    "clang_static_analyzer": "passed",
+    "python38": "3.8.19 build, real JIT/page/signal-quantum budget/public API and Hi parity passed",
+    "package": "wheel/sdist built; JIT header present; local ABI binaries and private research excluded"
+  },
+  "benchmark": {
+    "repeats": 3,
+    "timed_runs": 75,
+    "modes": [
+      "python",
+      "native",
+      "jit_cold",
+      "jit_warm",
+      "nagoya_c"
+    ],
+    "status": "accepted",
+    "clock_scope": "same-image execution CPU/wall; cold includes emission; warm records every fresh-memory training round to zero emission, then measures fresh memory; no cost subtracted",
+    "sampling_window": "completed before resumption of other untimed initializer",
+    "first_warmup_experiment": "rejected: one full warmup still emitted code on timed four-fixture runs; record retained",
+    "cases": [
+      {
+        "name": "mg_b_hi",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 293563,
+        "mb_sha256": "9e9a97f084f43e37c64051d85e8ebe866e92c94aa1b8abc703f6523e7e483be4",
+        "steps": 70091,
+        "cpu_median_seconds": {
+          "python": 0.061315,
+          "native": 0.0008140000000000022,
+          "jit_cold": 0.001465000000000001,
+          "jit_warm": 0.0011420000000000041,
+          "nagoya_c": 0.00245
+        },
+        "wall_median_seconds": {
+          "python": 0.06132637499831617,
+          "native": 0.000814750004792586,
+          "jit_cold": 0.001465957990149036,
+          "jit_warm": 0.0011436249915277585,
+          "nagoya_c": 0.002454000001
+        },
+        "jit": {
+          "jit_cold": {
+            "coverage": 0.41862721319427604,
+            "native_over_total_cpu_ratio": 0.5556313993174072,
+            "c_over_total_cpu_ratio": 1.6723549488054594,
+            "emission_cpu_seconds": 0.000134000000000023,
+            "cache_code_bytes": 17192,
+            "cache_mapped_bytes": 1048576
+          },
+          "jit_warm": {
+            "coverage": 0.4199683268893296,
+            "native_over_total_cpu_ratio": 0.7127845884413304,
+            "c_over_total_cpu_ratio": 2.1453590192644407,
+            "emission_cpu_seconds": 0.0,
+            "cache_code_bytes": 19048,
+            "cache_mapped_bytes": 1048576
+          }
+        },
+        "warmup_total_medians": {
+          "compile_cpu_seconds": 0.00014199999999998242,
+          "compile_wall_seconds": 0.00015500004519708455,
+          "compiled_blocks": 183,
+          "compiled_bytes": 19048,
+          "execute_cpu_seconds": 0.0038709999999999994,
+          "execute_wall_seconds": 0.003880332995322533,
+          "phase_cpu_seconds": 0.009821000000000003,
+          "phase_wall_seconds": 0.009825333996559493,
+          "rounds": 3
+        }
+      },
+      {
+        "name": "mg_c_echo",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 185651,
+        "mb_sha256": "4e09f2f73b9fab934da7a290227e669a28ef157399943e56a84fbf5a650832f3",
+        "steps": 31406,
+        "cpu_median_seconds": {
+          "python": 0.028289999999999996,
+          "native": 0.00037600000000000133,
+          "jit_cold": 0.0008039999999999992,
+          "jit_warm": 0.0005229999999999957,
+          "nagoya_c": 0.001575
+        },
+        "wall_median_seconds": {
+          "python": 0.028382290998706594,
+          "native": 0.0003794999938691035,
+          "jit_cold": 0.0008084579894784838,
+          "jit_warm": 0.0005244999920250848,
+          "nagoya_c": 0.001575999995
+        },
+        "jit": {
+          "jit_cold": {
+            "coverage": 0.4145067821435395,
+            "native_over_total_cpu_ratio": 0.4676616915422907,
+            "c_over_total_cpu_ratio": 1.9589552238805992,
+            "emission_cpu_seconds": 0.00013800000000002005,
+            "cache_code_bytes": 17192,
+            "cache_mapped_bytes": 1048576
+          },
+          "jit_warm": {
+            "coverage": 0.4174361586957906,
+            "native_over_total_cpu_ratio": 0.7189292543021117,
+            "c_over_total_cpu_ratio": 3.011472275334633,
+            "emission_cpu_seconds": 0.0,
+            "cache_code_bytes": 19048,
+            "cache_mapped_bytes": 1048576
+          }
+        },
+        "warmup_total_medians": {
+          "compile_cpu_seconds": 0.00014400000000000523,
+          "compile_wall_seconds": 0.0001429999538231641,
+          "compiled_blocks": 183,
+          "compiled_bytes": 19048,
+          "execute_cpu_seconds": 0.0018570000000000045,
+          "execute_wall_seconds": 0.0018642089853528887,
+          "phase_cpu_seconds": 0.004819000000000004,
+          "phase_wall_seconds": 0.00481933300034143,
+          "rounds": 3
+        }
+      },
+      {
+        "name": "mg_d_repeat",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 467087,
+        "mb_sha256": "690e21610c41b435c7cb7e0ef80423096e868936d087f8ce6bd0f7264692f3dd",
+        "steps": 90498,
+        "cpu_median_seconds": {
+          "python": 0.079377,
+          "native": 0.0010650000000000034,
+          "jit_cold": 0.0018370000000000053,
+          "jit_warm": 0.0014800000000000021,
+          "nagoya_c": 0.002882
+        },
+        "wall_median_seconds": {
+          "python": 0.07954766700277105,
+          "native": 0.0010694160009734333,
+          "jit_cold": 0.0018405419978080317,
+          "jit_warm": 0.001493959003710188,
+          "nagoya_c": 0.002884000001
+        },
+        "jit": {
+          "jit_cold": {
+            "coverage": 0.4206059802426573,
+            "native_over_total_cpu_ratio": 0.5797495917256398,
+            "c_over_total_cpu_ratio": 1.5688622754490973,
+            "emission_cpu_seconds": 0.00013900000000000023,
+            "cache_code_bytes": 17192,
+            "cache_mapped_bytes": 1048576
+          },
+          "jit_warm": {
+            "coverage": 0.42179937678180734,
+            "native_over_total_cpu_ratio": 0.7195945945945958,
+            "c_over_total_cpu_ratio": 1.9472972972972944,
+            "emission_cpu_seconds": 0.0,
+            "cache_code_bytes": 19048,
+            "cache_mapped_bytes": 1048576
+          }
+        },
+        "warmup_total_medians": {
+          "compile_cpu_seconds": 0.00013600000000001805,
+          "compile_wall_seconds": 0.0001340000017080456,
+          "compiled_blocks": 183,
+          "compiled_bytes": 19048,
+          "execute_cpu_seconds": 0.004831000000000002,
+          "execute_wall_seconds": 0.004834917999687605,
+          "phase_cpu_seconds": 0.012580000000000001,
+          "phase_wall_seconds": 0.012597707987879403,
+          "rounds": 3
+        }
+      },
+      {
+        "name": "mg_e_call",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 799471,
+        "mb_sha256": "858f5c7ae38d4c6ce47001eb46fa6b1ce33c8dd6fa6d10ec35a4d269d6530213",
+        "steps": 194561,
+        "cpu_median_seconds": {
+          "python": 0.169904,
+          "native": 0.0022000000000000006,
+          "jit_cold": 0.0035550000000000026,
+          "jit_warm": 0.003240999999999994,
+          "nagoya_c": 0.005325
+        },
+        "wall_median_seconds": {
+          "python": 0.1699587920011254,
+          "native": 0.0022008340019965544,
+          "jit_cold": 0.003555249990313314,
+          "jit_warm": 0.0032408330007456243,
+          "nagoya_c": 0.005325999999
+        },
+        "jit": {
+          "jit_cold": {
+            "coverage": 0.411793730500974,
+            "native_over_total_cpu_ratio": 0.6188466947960616,
+            "c_over_total_cpu_ratio": 1.4978902953586486,
+            "emission_cpu_seconds": 0.00014499999999997848,
+            "cache_code_bytes": 17448,
+            "cache_mapped_bytes": 1048576
+          },
+          "jit_warm": {
+            "coverage": 0.41244134230395607,
+            "native_over_total_cpu_ratio": 0.6788028386300539,
+            "c_over_total_cpu_ratio": 1.643011416229562,
+            "emission_cpu_seconds": 0.0,
+            "cache_code_bytes": 19304,
+            "cache_mapped_bytes": 1048576
+          }
+        },
+        "warmup_total_medians": {
+          "compile_cpu_seconds": 0.00017100000000003224,
+          "compile_wall_seconds": 0.0001770000089891255,
+          "compiled_blocks": 187,
+          "compiled_bytes": 19304,
+          "execute_cpu_seconds": 0.010359999999999994,
+          "execute_wall_seconds": 0.010407125009805895,
+          "phase_cpu_seconds": 0.025796999999999994,
+          "phase_wall_seconds": 0.025836665998212993,
+          "rounds": 3
+        }
+      },
+      {
+        "name": "linear_nop_1m",
+        "kind": "synthetic_nop_self_modification_control",
+        "mb_bytes": 1000001,
+        "mb_sha256": "d69a456a1040f46189c01091ad89a1904d4afec8e9ae6bc45c53c043c233fca8",
+        "steps": 1000001,
+        "cpu_median_seconds": {
+          "python": 0.682015,
+          "native": 0.007232000000000002,
+          "jit_cold": 0.0017109999999999972,
+          "jit_warm": 0.0011369999999999991,
+          "nagoya_c": 0.004266
+        },
+        "wall_median_seconds": {
+          "python": 0.6875198339985218,
+          "native": 0.0072360409976681694,
+          "jit_cold": 0.0017117499955929816,
+          "jit_warm": 0.0011372919980203733,
+          "nagoya_c": 0.004331999997
+        },
+        "jit": {
+          "jit_cold": {
+            "coverage": 0.999999000001,
+            "native_over_total_cpu_ratio": 4.226767971946239,
+            "c_over_total_cpu_ratio": 2.493278784336649,
+            "emission_cpu_seconds": 8.69999999999968e-05,
+            "cache_code_bytes": 84600,
+            "cache_mapped_bytes": 1048576
+          },
+          "jit_warm": {
+            "coverage": 0.999999000001,
+            "native_over_total_cpu_ratio": 6.36059806508356,
+            "c_over_total_cpu_ratio": 3.7519788918205834,
+            "emission_cpu_seconds": 0.0,
+            "cache_code_bytes": 84600,
+            "cache_mapped_bytes": 1048576
+          }
+        },
+        "warmup_total_medians": {
+          "compile_cpu_seconds": 9.600000000001274e-05,
+          "compile_wall_seconds": 9.80000477284193e-05,
+          "compiled_blocks": 47,
+          "compiled_bytes": 84600,
+          "execute_cpu_seconds": 0.0029519999999999963,
+          "execute_wall_seconds": 0.002955415999167599,
+          "phase_cpu_seconds": 0.053736,
+          "phase_wall_seconds": 0.05377795800450258,
+          "rounds": 2
+        }
+      }
+    ]
+  },
+  "limits": [
+    "canonical NOP only, all other operations use native fallback",
+    "GIL retained; counters/budgets checked",
+    "macOS ARM64 prototype; distributable native wheels/debugger support deferred",
+    "shared-machine three repeats are exploratory",
+    "short real fixtures regress versus native; not enabled by default"
+  ]
+}

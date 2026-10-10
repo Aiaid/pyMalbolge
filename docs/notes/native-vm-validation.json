@@ -1,0 +1,148 @@
+{
+  "date": "2026-10-10",
+  "status": "local_opt_in_prototype_accepted",
+  "default_engine": "python",
+  "jit_implemented": false,
+  "variant": "malbolge20",
+  "source_hashes": {
+    "malbolge/_native_vm.c": "6eddc072eb724d7f1d4b3406e4bb02a6d0bd81e6ba691afedc9f844a4c73d873",
+    "malbolge/native.py": "af0c45ce8066bd7fe20fff530a11415f0fa37977f88d2a1090b15db690e149e4",
+    "malbolge/malbolge20.py": "b6c8d0e9e592f1e9dcb291dbec3f18d1fafa26bce2c67a3b2f2d85d09cd64b4c",
+    "scripts/build_native_vm.py": "d28e67c57c84322f2c0de4788bb8a842745bcf13b6864c1c3e3c59898bdcfd74",
+    "scripts/benchmark_native_vm.py": "5c8c25454e341e75f137ad6d9f2a1df5d6ed5d9f49ff021afebdaa9fc3a46d5a",
+    "test/test_native_vm.py": "8229d9c7fed347261f09539041dd3eb676e37a4a5857d0643cb830584d08d22c"
+  },
+  "native_source_matches_build": true,
+  "validation": {
+    "focused_tests": {
+      "passed": 105,
+      "subtests_passed": 6,
+      "files": [
+        "test/test_native_vm.py",
+        "test/test_runtime_qos.py",
+        "test/test_cli_qos.py"
+      ]
+    },
+    "clang_static_analyzer": "passed",
+    "independent_review": "running-wrapper reinitialization defect fixed and bounded signal reproducer passed; no remaining actionable findings",
+    "python38": "3.8.19 extension build and three fixture result/page/public-API checks passed",
+    "package": "wheel and sdist build passed; native source included; local ABI binaries and private research excluded"
+  },
+  "benchmark": {
+    "python": "3.12.9 (main, Mar 17 2025, 21:36:21) [Clang 20.1.0 ]",
+    "native_compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)",
+    "repeats": 5,
+    "timed_runs": 75,
+    "same_image_per_case": true,
+    "same_input_per_case": true,
+    "cpu_scope": "execution phase, including natural lazy allocation; excludes read/validation/eager init; native result conversion included; reference final stdout flush outside clock",
+    "shared_machine": true,
+    "all_acceptance_gates_passed": true,
+    "all_stability_checks_passed": true,
+    "cases": [
+      {
+        "name": "mg_b_hi",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 293563,
+        "mb_sha256": "9e9a97f084f43e37c64051d85e8ebe866e92c94aa1b8abc703f6523e7e483be4",
+        "steps": 70091,
+        "cpu_median_seconds": {
+          "python": 0.061213,
+          "native": 0.0006940000000000002,
+          "nagoya_c": 0.002466
+        },
+        "wall_median_seconds": {
+          "python": 0.06130837500677444,
+          "native": 0.0006937080033821985,
+          "nagoya_c": 0.002466999998
+        },
+        "python_over_native_cpu_ratio": 88.20317002881842,
+        "native_over_nagoya_cpu_ratio": 0.2814274128142742
+      },
+      {
+        "name": "mg_c_echo",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 185651,
+        "mb_sha256": "4e09f2f73b9fab934da7a290227e669a28ef157399943e56a84fbf5a650832f3",
+        "steps": 31406,
+        "cpu_median_seconds": {
+          "python": 0.027853999999999997,
+          "native": 0.0003080000000000027,
+          "nagoya_c": 0.001576
+        },
+        "wall_median_seconds": {
+          "python": 0.027855249994900078,
+          "native": 0.0003085000062128529,
+          "nagoya_c": 0.00157600001
+        },
+        "python_over_native_cpu_ratio": 90.43506493506413,
+        "native_over_nagoya_cpu_ratio": 0.19543147208122
+      },
+      {
+        "name": "mg_d_repeat",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 467087,
+        "mb_sha256": "690e21610c41b435c7cb7e0ef80423096e868936d087f8ce6bd0f7264692f3dd",
+        "steps": 90498,
+        "cpu_median_seconds": {
+          "python": 0.082946,
+          "native": 0.000898999999999997,
+          "nagoya_c": 0.003087
+        },
+        "wall_median_seconds": {
+          "python": 0.08301258301071357,
+          "native": 0.0008985000022221357,
+          "nagoya_c": 0.003088000012
+        },
+        "python_over_native_cpu_ratio": 92.26473859844303,
+        "native_over_nagoya_cpu_ratio": 0.2912212504049229
+      },
+      {
+        "name": "mg_e_call",
+        "kind": "existing_generated_fixture",
+        "mb_bytes": 799471,
+        "mb_sha256": "858f5c7ae38d4c6ce47001eb46fa6b1ce33c8dd6fa6d10ec35a4d269d6530213",
+        "steps": 194561,
+        "cpu_median_seconds": {
+          "python": 0.168335,
+          "native": 0.0018369999999999984,
+          "nagoya_c": 0.005322
+        },
+        "wall_median_seconds": {
+          "python": 0.16852345899678767,
+          "native": 0.0018370420002611354,
+          "nagoya_c": 0.005330999993
+        },
+        "python_over_native_cpu_ratio": 91.6358192705499,
+        "native_over_nagoya_cpu_ratio": 0.34517098835024396
+      },
+      {
+        "name": "linear_nop_1m",
+        "kind": "synthetic_nop_self_modification_control",
+        "mb_bytes": 1000001,
+        "mb_sha256": "d69a456a1040f46189c01091ad89a1904d4afec8e9ae6bc45c53c043c233fca8",
+        "steps": 1000001,
+        "cpu_median_seconds": {
+          "python": 0.6524890000000001,
+          "native": 0.006641000000000001,
+          "nagoya_c": 0.004298
+        },
+        "wall_median_seconds": {
+          "python": 0.6529669169976842,
+          "native": 0.006692750001093373,
+          "nagoya_c": 0.004299000007
+        },
+        "python_over_native_cpu_ratio": 98.25161873211866,
+        "native_over_nagoya_cpu_ratio": 1.5451372731503028
+      }
+    ]
+  },
+  "limits": [
+    "Malbolge20 only",
+    "explicit native engine; Python remains default",
+    "retains GIL; signals checked every 16384 instructions",
+    "uint32 external memory cells and checked uint64 counters",
+    "source-checkout builder for macOS/Linux; only macOS arm64 validated",
+    "native wheel distribution and debugger stepping deferred"
+  ]
+}
