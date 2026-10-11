@@ -22,6 +22,7 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 | Document | Status | Contents |
 |---|---|---|
 | [native-jit.md](design/native-jit.md) | ✅ local opt-in experiment | Actual guarded ARM64 NOP code generation, exact exits/COW/budgets, cold versus warm evidence and short-fixture regressions |
+| [native-packaging.md](design/native-packaging.md) | ✅ implemented; hosted matrix pending | Native source-build hook, build modes, staged binary/ABI tags, GitHub wheel artifacts and installed-package acceptance |
 | [native-vm.md](design/native-vm.md) | ✅ local opt-in prototype | Python API over a native Malbolge20 execution/memory core; correctness, snapshots, local build, same-image measurements and guarded-JIT scope |
 | [highlevel-to-malbolge.md](design/highlevel-to-malbolge.md) | ✅ | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
 | [optimization-status.md](design/optimization-status.md) | ✅ dated snapshot | All optimization layers, accepted/default versus opt-in/local prototype status, evidence links and remaining limits |
@@ -47,6 +48,9 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 | Document | Status | Contents |
 |---|---|---|
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ local opt-in acceptance | JIT semantics/review/ABI/package checks, five-mode three-repeat same-image timings, emission/coverage/warmup costs and rejected first warmup |
+| [native-engine-selection-validation.json](notes/native-engine-selection-validation.json) | ✅ current | Native-first batch defaults, explicit engine selection, Python fallback and CLI compatibility checks |
+| [native-packaging-validation.json](notes/native-packaging-validation.json) | ✅ local acceptance; hosted matrix pending | Native/pure/source installation, Python ABI wheels, packaging policy, CI syntax and wheel-identifier checks |
+| [testpypi-ci-validation.json](notes/testpypi-ci-validation.json) | ✅ hosted test release accepted | CPython 3.12 manylinux native build, TestPyPI upload and exact-version remote installation/native smoke |
 | [native-vm-validation.json](notes/native-vm-validation.json) | ✅ local opt-in acceptance | Native VM correctness, review, ABI/package checks and five-repeat same-image Python/native/C execution measurements |
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | First LAL/pass foundation acceptance and source fingerprints; later frontend/integration changes are covered by semantic-ir-validation.json |
 | [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | Semantic architecture acceptance before pass promotion; later changes are covered by semantic-pass-validation.json |

@@ -1,0 +1,163 @@
+{
+  "date": "2026-10-10",
+  "status": "hosted_testpypi_build_publish_install_passed",
+  "branch": "codex/testpypi-native-ci",
+  "test_commit": "f06e218f4ebe2bcba9eff697857cd70db38933d6",
+  "base_commit": "042ab6c7adde49a183047a5c71c89db25e29eaa8",
+  "build_run_url": "https://github.com/Aiaid/pyMalbolge/actions/runs/38032432050",
+  "published": true,
+  "github_secret_name": "TEST_PYPI_API_TOKEN",
+  "credential_transfer": "completed",
+  "build_provenance": {
+    "cibuildwheel": "4.3.0",
+    "commit": "f06e218f4ebe2bcba9eff697857cd70db38933d6",
+    "run_attempt": "2",
+    "run_id": "38032432050",
+    "uv": "0.11.25",
+    "verification_helper": {
+      "file": "verify_native_install.py",
+      "sha256": "7e94339ecfc718a7de2626f7645c6c714fa1291aa19dcd64333e18c6e7680520"
+    },
+    "version": "1.0.1.dev38032432050002",
+    "wheel": {
+      "bytes": 283027,
+      "file": "malbolge-1.0.1.dev38032432050002-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-manylinux_2_17_x86_64\nTag: cp312-cp312-manylinux2014_x86_64\nTag: cp312-cp312-manylinux_2_28_x86_64\n\n",
+      "sha256": "bc89b0648653bec176ada43b2252cbf87ac506a10b5d7b98382ac293c0e4e229"
+    }
+  },
+  "installed_smoke": {
+    "build_identifier": "cp312-manylinux_x86_64",
+    "checks": [
+      "installed import and default auto selection",
+      "Original Malbolge Python byte I/O and EOF contract",
+      "byte input, EOF, exact budgets and invalid instruction parity",
+      "COW pages, detached exports and self-modifying future code"
+    ],
+    "executable": "/tmp/tmp.o3AglQQQct/venv/bin/python",
+    "jit": {
+      "available": false,
+      "status": "unsupported; explicit engine rejected"
+    },
+    "machine": "x86_64",
+    "modules": {
+      "malbolge": {
+        "path": "/tmp/tmp.o3AglQQQct/venv/lib/python3.12/site-packages/malbolge/__init__.py",
+        "sha256": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3"
+      },
+      "malbolge._native_vm": {
+        "path": "/tmp/tmp.o3AglQQQct/venv/lib/python3.12/site-packages/malbolge/_native_vm.cpython-312-x86_64-linux-gnu.so",
+        "sha256": "6a643ba6f3fe15b332737b16274b8c75e82c744002f76c33fbfc98ba0a98d39b"
+      },
+      "malbolge.core": {
+        "path": "/tmp/tmp.o3AglQQQct/venv/lib/python3.12/site-packages/malbolge/core.py",
+        "sha256": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605"
+      },
+      "malbolge.native": {
+        "path": "/tmp/tmp.o3AglQQQct/venv/lib/python3.12/site-packages/malbolge/native.py",
+        "sha256": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    },
+    "native_available": true,
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.28",
+    "prefix": "/tmp/tmp.o3AglQQQct/venv",
+    "python": "3.12.15 (main, Oct  3 2026, 07:17:49) [GCC 14.2.1 20250110 (Red Hat 14.2.1-11)]",
+    "soabi": "cpython-312-x86_64-linux-gnu",
+    "source_commit": "f06e218f4ebe2bcba9eff697857cd70db38933d6",
+    "status": "passed",
+    "version": "1.0.1.dev38032432050002",
+    "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-manylinux_2_17_x86_64\nTag: cp312-cp312-manylinux2014_x86_64\nTag: cp312-cp312-manylinux_2_28_x86_64\n\n",
+    "workflow_attempt": "2",
+    "workflow_run": "38032432050"
+  },
+  "local_tests": {
+    "passed": 117,
+    "skipped": 1,
+    "subtests_passed": 24
+  },
+  "production_publish_configured": false,
+  "notes": [
+    "First CI build invocation mixed mutually exclusive --platform/--only flags; fixed before successful build",
+    "CI now explicitly rejects missing TestPyPI secret before invoking the publishing action",
+    "TestPyPI credential transferred directly from macOS Keychain to the GitHub Actions encrypted secret after local user authorization; no token values logged or written to files"
+  ],
+  "github_secret_configured": true,
+  "active_run_url": "https://github.com/Aiaid/pyMalbolge/actions/runs/38032432050",
+  "active_run_attempt": 2,
+  "published_version": "1.0.1.dev38032432050002",
+  "testpypi_installed_smoke": {
+    "build_identifier": null,
+    "checks": [
+      "installed import and default auto selection",
+      "Original Malbolge Python byte I/O and EOF contract",
+      "byte input, EOF, exact budgets and invalid instruction parity",
+      "COW pages, detached exports and self-modifying future code"
+    ],
+    "executable": "/home/runner/work/_temp/testpypi-install/bin/python",
+    "jit": {
+      "available": false,
+      "status": "unsupported; explicit engine rejected"
+    },
+    "machine": "x86_64",
+    "modules": {
+      "malbolge": {
+        "path": "/home/runner/work/_temp/testpypi-install/lib/python3.12/site-packages/malbolge/__init__.py",
+        "sha256": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3"
+      },
+      "malbolge._native_vm": {
+        "path": "/home/runner/work/_temp/testpypi-install/lib/python3.12/site-packages/malbolge/_native_vm.cpython-312-x86_64-linux-gnu.so",
+        "sha256": "6a643ba6f3fe15b332737b16274b8c75e82c744002f76c33fbfc98ba0a98d39b"
+      },
+      "malbolge.core": {
+        "path": "/home/runner/work/_temp/testpypi-install/lib/python3.12/site-packages/malbolge/core.py",
+        "sha256": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605"
+      },
+      "malbolge.native": {
+        "path": "/home/runner/work/_temp/testpypi-install/lib/python3.12/site-packages/malbolge/native.py",
+        "sha256": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    },
+    "native_available": true,
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "prefix": "/home/runner/work/_temp/testpypi-install",
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "soabi": "cpython-312-x86_64-linux-gnu",
+    "source_commit": "f06e218f4ebe2bcba9eff697857cd70db38933d6",
+    "status": "passed",
+    "version": "1.0.1.dev38032432050002",
+    "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-manylinux_2_17_x86_64\nTag: cp312-cp312-manylinux2014_x86_64\nTag: cp312-cp312-manylinux_2_28_x86_64\n\n",
+    "workflow_attempt": "2",
+    "workflow_run": "38032432050"
+  },
+  "public_testpypi": {
+    "name": "malbolge",
+    "version": "1.0.1.dev38032432050002",
+    "files": [
+      {
+        "filename": "malbolge-1.0.1.dev38032432050002-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "bc89b0648653bec176ada43b2252cbf87ac506a10b5d7b98382ac293c0e4e229",
+        "size": 283027,
+        "url": "https://test-files.pythonhosted.org/packages/7d/73/92df6c482a128e376084f98854ebc6fc530a43ab9ace32c2090aa2fbe37f/malbolge-1.0.1.dev38032432050002-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+      }
+    ]
+  },
+  "public_wheel_matches_build": true,
+  "jobs": [
+    {
+      "name": "Build and verify CPython 3.12 native wheel",
+      "conclusion": "success",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/38032432050/job/114187223039"
+    },
+    {
+      "name": "Publish wheel to TestPyPI",
+      "conclusion": "success",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/38032432050/job/114187367193"
+    },
+    {
+      "name": "Verify exact version installed from TestPyPI",
+      "conclusion": "success",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/38032432050/job/114187421072"
+    }
+  ],
+  "shared_checkout_branch_and_index_unchanged": true
+}

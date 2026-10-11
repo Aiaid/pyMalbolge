@@ -384,14 +384,34 @@ uv run python -m malbolge --variant=malbolge20 program.mb --input '7' \
 uv run python -m malbolge --variant=malbolge20 program.mb --input-file input.bin --stats
 ```
 
-`--input` encodes UTF-8; `--input-file` supplies raw bytes. With limits or
-`--stats`, execution is batch-oriented: input comes from these options or a
-pipe; an unattended TTY without an input option supplies empty EOF. Use
-`--input` for an interactive shell's batch command. `--eof sentinel|stop`
-sets the EOF policy. Metrics are one JSON object on stderr, while program
-bytes stay on stdout. Exit status is 3 for a resource budget, 2 for an invalid
-instruction, and 0 for termination or input exhaustion. Ordinary unlimited
-CLI invocation retains its streaming behavior.
+`--input` encodes UTF-8; `--input-file` supplies raw bytes. Explicit input,
+limits or `--stats` select batch execution. For Malbolge20, a pipe or redirected
+stdin also selects batch execution, including unlimited runs. A TTY with batch
+limits or metrics but no input option supplies empty EOF. Use `--input` for an interactive
+shell's batch command. `--eof sentinel|stop` sets the EOF policy.
+
+Malbolge20 batches default to `--engine auto`: use the native VM when its local
+extension is available, otherwise use Python. `--engine python|native|jit`
+selects an engine explicitly; unavailable native/JIT selections report an
+error. JIT is never selected automatically. Source installation now attempts
+a native build through the package's wheel hook; an installed native wheel
+already contains the extension. `MALBOLGE_NATIVE_BUILD=auto|required|disabled`
+controls automatic fallback, mandatory compilation or a pure Python build.
+Editable installs do not compile native code. To build in a developer checkout:
+
+```bash
+uv run --with setuptools --with wheel python scripts/build_native_vm.py
+uv run python -m malbolge --variant=malbolge20 program.mb --engine native --input '7' --stats
+```
+
+Metrics are one JSON object on stderr, including the actual `engine` and
+`requested_engine`, while program bytes stay on stdout. Exit status is 3 for a
+resource budget, 2 for an invalid instruction, and 0 for termination or input
+exhaustion. With stdin attached to a TTY and no batch options, execution retains
+Python's streaming interaction. Explicit native/JIT selection from a TTY
+requires `--input` or `--input-file`. The original variant and debugger retain
+Python execution. See [native VM](docs/design/native-vm.md) and
+[explicit JIT](docs/design/native-jit.md) for build and platform details.
 
 ### Bounded byte-oriented execution
 
@@ -412,6 +432,12 @@ counted in bytes. Legacy `eval()` retains its text/codepoint input behavior
 and default EOF-stop policy; the new API defaults to the variant's EOF
 sentinel. The original interpreter exposes the same API in
 `malbolge.run` (also exported with `run20` and `RunResult`).
+
+`run20` defaults to `engine="auto"`, preferring the native VM and falling back
+to Python when the extension is unavailable. Pass `engine="python"`,
+`engine="native"` or `engine="jit"` for an explicit choice; unavailable native
+or JIT engines raise an error. Importing or running the package never invokes
+a compiler or enables JIT. Legacy `eval20()` retains its Python character-oriented API.
 
 > **Malbolge20 is not backward compatible.** Its `crazy()` operates on 20 trits
 > and produces different results than the 10-trit original, so programs written

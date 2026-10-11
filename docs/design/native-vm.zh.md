@@ -2,10 +2,12 @@
 
 > [English](native-vm.md) | **中文**
 >
-> 状态：显式启用的开发原型，默认仍使用 Python 执行。
+> 状态：本地扩展原型，Malbolge20 批处理默认优先使用可用的原生 VM，
+> 不可用时回退 Python。JIT 仍需显式启用。
 > 本文描述执行层；编译器 lowering 与目标映像生成独立。
 
-下方首次验收是带日期的纯原生快照。后续可选[带守卫 JIT](native-jit.zh.md)
+下方首次验收是带日期的纯原生快照，记录时 Python 仍为默认引擎。
+后续可选[带守卫 JIT](native-jit.zh.md)
 增加独立引擎；原有源码指纹与测量作为历史证据保留，不代表当前二进制。
 
 Python 包可以保留常规 API，同时把一整批指令放入 C 扩展执行。原生边界
@@ -17,12 +19,14 @@ Python 包可以保留常规 API，同时把一整批指令放入 C 扩展执行
 在有 C 编译器和当前解释器 Python 头文件的源码工作副本中运行：
 
 ```sh
-uv run python scripts/build_native_vm.py
+uv run --with setuptools --with wheel python scripts/build_native_vm.py
 ```
 
 二进制针对 `uv` 选中的 Python 构建；切换解释器 ABI 后需要重新构建。
-原型构建工具支持 macOS 和 Linux。本地扩展二进制由 Git 忽略，既有纯 Python
-wheel 和 sdist 排除这些产物；可发布的原生 wheel 留作后续。
+构建适配器使用 macOS、Linux、Windows 标准编译器发现；当前本地验收为
+macOS ARM64。源码安装可以自动构建新原生 wheel。工作副本二进制仍由 Git
+忽略且不进入源码包；原生 wheel 只纳入全新暂存构建的扩展。构建模式、
+安装产物检查及待运行的托管 CI 矩阵见[原生打包](native-packaging.zh.md)。
 
 ```python
 from malbolge import run20
@@ -33,8 +37,29 @@ print(result.output)
 print(result.stop_reason, result.steps)
 ```
 
-`engine="python"` 是默认值。显式选择原生执行但扩展不可用时，会给出构建
-提示，不会悄悄换用其他引擎。`eval20`、交互执行和调试器目前继续使用 Python。
+`run20` 默认 `engine="auto"`：优先使用原生 VM，扩展不可用时回退 Python。
+`engine="python"`、`engine="native"` 和 `engine="jit"` 显式选择引擎。
+显式选择不可用的原生/JIT 引擎会抛出错误并给出构建/平台提示。
+导入或执行时不会构建扩展，`auto` 也不会启用 JIT。安装时的构建行为由
+独立的 `MALBOLGE_NATIVE_BUILD` 控制。
+
+Malbolge20 CLI 批处理采用相同默认值，包括无限制的管道和重定向 stdin。
+使用 `--engine auto|python|native|jit` 选择：
+
+```sh
+uv run python -m malbolge --variant=malbolge20 program.mb --input '7' --stats
+uv run python -m malbolge --variant=malbolge20 program.mb --engine python --input '7'
+```
+
+`--stats` 报告实际 `engine` 与 `requested_engine`。stdin 连接 TTY 且无
+批处理选项时保留 Python 流式交互；从 TTY 显式选择原生/JIT 时，必须提供
+`--input` 或 `--input-file`。`eval20` 的旧字符 API、原版变体及调试器继续
+使用 Python。
+
+默认选择的验收单独记录于
+[原生引擎选择](../notes/native-engine-selection-validation.json)：220 项定向
+测试、一个条件跳过及六个 subtest 通过，并包含真实默认 CLI 运行。
+下方历史吞吐测量未重新运行。
 
 ## 执行与内存契约
 
@@ -85,6 +110,9 @@ C 计时副本只在原样执行函数调用前后读时钟；独立插桩正确
 属于探索性证据，不代表编译器或映像体积优化。
 
 ### 本地验收，2026-10-10
+
+此历史快照早于 `auto` 默认值；当时默认 Python，原生执行需显式选择。
+以下测量保持原样。
 
 [验证清单](../notes/native-vm-validation.json)：105 项定向测试及 6 项 subtest
 通过，独立 C 审查和 Clang 静态分析通过；Python 3.8.19 构建并通过三个夹具的

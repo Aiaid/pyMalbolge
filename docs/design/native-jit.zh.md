@@ -3,12 +3,13 @@
 > [English](native-jit.md) | **中文**
 >
 > 状态：叠加在[原生 VM](native-vm.zh.md)上的显式 ARM64 试验。
-> 默认仍为 Python。这是为 Malbolge 指令生成机器码，与 CPython 自身 JIT 独立。
+> Malbolge20 批处理默认优先使用可用的原生解释器，否则回退 Python；
+> JIT 不会自动选择。这是为 Malbolge 指令生成机器码，与 CPython 自身 JIT 独立。
 
 ## 构建与选择
 
 ```sh
-uv run python scripts/build_native_vm.py
+uv run --with setuptools --with wheel python scripts/build_native_vm.py
 ```
 
 ```python
@@ -17,6 +18,18 @@ from malbolge import run20
 result = run20(code, input_data=b"7\n", max_steps=10_000_000,
                max_output=4096, engine="jit")
 ```
+
+CLI 用 `--engine jit` 选择此试验；从 TTY 执行时需提供 `--input` 或
+`--input-file`：
+
+```sh
+uv run python -m malbolge --variant=malbolge20 program.mb --engine jit --input '7' --stats
+```
+
+`run20` 和 CLI 批处理默认 `auto`，选择原生或 Python，不启用 JIT。
+`python` 与 `native` 也可显式选择。导入和执行时不构建扩展，源码安装可以
+通过 [wheel hook](native-packaging.zh.md) 编译。
+CLI `--stats` 包含实际 `engine` 与 `requested_engine`。
 
 首个发射器支持小端 ARM64 macOS/Linux，本地实测目标为 macOS arm64。
 ARM64e、大端 ARM64 和其他架构报告不可用。显式选择不可用的 JIT 会抛出错误；
@@ -77,6 +90,9 @@ Python/原生/JIT 页面状态。记录实际机器码覆盖率，零覆盖耗�
 合成 NOP 控制项与既有编译程序夹具分开报告。
 
 ## 本地验收，2026-10-10
+
+此历史快照记录时默认引擎为 Python。当前优先原生的 `auto` 默认值
+不改变 JIT 需显式启用的状态，以下测量保持原样。
 
 [验证清单](../notes/native-jit-validation.json)：160 项定向测试、一个平台条件
 跳过、六项 subtest 通过。独立审查、Clang 分析、Python 3.8.19 的真实 JIT/

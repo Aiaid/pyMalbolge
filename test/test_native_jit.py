@@ -327,7 +327,8 @@ def test_disabling_jit_for_next_run_resets_per_run_accounting():
 @requires_jit
 def test_run20_jit_engine_is_explicit():
     source = nops(128) + bytes([instruction(81, 128)])
-    assert run20(source, engine="jit", max_steps=200) == run20(source, max_steps=200)
+    assert run20(source, engine="jit", max_steps=200) == run20(
+        source, engine="python", max_steps=200)
 
 
 @requires_jit

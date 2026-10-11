@@ -180,14 +180,19 @@ def eval(code: str, input_data: str = "", eof: str = 'stop') -> str:
 
 
 def run(code, input_data=b"", *, max_steps=None, max_output=None,
-        eof="sentinel", engine="python") -> RunResult:
-    """Run with byte I/O and optional limits; native execution is opt-in."""
+        eof="sentinel", engine="auto") -> RunResult:
+    """Run with byte I/O and optional limits, preferring the native VM.
+
+    Automatic selection falls back to Python if the optional extension cannot
+    be loaded. Explicit native/JIT selections report availability errors;
+    execution errors never cause a second run on another engine.
+    """
+    from .native import resolve_engine
+    engine = resolve_engine(engine)
     if engine in ("native", "jit"):
         from .native import run20 as native_run20
         return native_run20(code, input_data, max_steps=max_steps,
                             max_output=max_output, eof=eof, jit=engine == "jit")
-    if engine != "python":
-        raise ValueError("engine must be 'python', 'native', or 'jit'")
     config = CONFIG
     memory = create_memory(config)
     memory.initialize_source(parse_source(code, config))
@@ -196,12 +201,13 @@ def run(code, input_data=b"", *, max_steps=None, max_output=None,
 
 
 def main():
-    """Command-line entry point for Malbolge20 interpreter."""
-    if len(sys.argv) < 2:
-        print('Usage: python -m malbolge.malbolge20 <file.mal>')
-        sys.exit(1)
+    """Use the shared CLI policy, including automatic batch engine selection."""
+    from .__main__ import main as cli_main
+    cli_main(["run", "--variant=malbolge20"] + sys.argv[1:])
 
-    filename = sys.argv[1]
+
+def _interactive_main(filename):
+    """Keep streaming terminal input/output on the Python interpreter."""
 
     try:
         with open(filename, 'r') as f:

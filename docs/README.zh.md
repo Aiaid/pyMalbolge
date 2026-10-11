@@ -20,6 +20,7 @@
 | 文档 | 状态 | 内容 |
 |---|---|---|
 | [native-jit.zh.md](design/native-jit.zh.md) | ✅ 本地显式试验 | 真实带守卫 ARM64 NOP 代码生成、精确退出/COW/预算、冷暖证据及短夹具性能回退 |
+| [native-packaging.zh.md](design/native-packaging.zh.md) | ✅ 已实现；托管矩阵待跑 | 原生源码构建 hook、构建模式、暂存二进制/ABI 标签、GitHub wheel 产物及安装包验收 |
 | [native-vm.zh.md](design/native-vm.zh.md) | ✅ 本地显式原型 | Python 接口接原生 Malbolge20 执行/内存核心；正确性、快照、本地构建、同映像测量和带守卫 JIT 边界 |
 | [highlevel-to-malbolge.zh.md](design/highlevel-to-malbolge.zh.md) | ✅ | 路线决策:高级语言→Malbolge 可行性、推荐管线、里程碑、Python 前端 v1 与直连后端 |
 | [optimization-status.zh.md](design/optimization-status.zh.md) | ✅ 带日期快照 | 全部优化层、已验收/默认/opt-in/本地原型状态、证据索引及未解决边界 |
@@ -45,6 +46,9 @@
 | 文档 | 状态 | 内容 |
 |---|---|---|
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ 本地显式验收 | JIT 语义/审查/ABI/打包、同映像五模式三轮计时、发射/覆盖率/预热成本及首次预热被拒记录 |
+| [native-engine-selection-validation.json](notes/native-engine-selection-validation.json) | ✅ 现行 | 批处理默认优先原生 VM、显式引擎选择、Python 回退及 CLI 兼容检查 |
+| [native-packaging-validation.json](notes/native-packaging-validation.json) | ✅ 本地验收；托管矩阵待跑 | 原生/纯包/源码安装、Python ABI wheel、打包策略、CI 语法及 wheel 身份检查 |
+| [testpypi-ci-validation.json](notes/testpypi-ci-validation.json) | ✅ 托管试发布通过 | CPython 3.12 manylinux 原生构建、TestPyPI 上传及精确版本远程安装/原生 smoke |
 | [native-vm-validation.json](notes/native-vm-validation.json) | ✅ 本地显式验收 | 原生 VM 正确性、审查、ABI/打包检查和五轮同映像 Python/原生/C 执行测量 |
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | 首次 LAL/pass 基础验收及源码指纹；后续前端/集成变更由 semantic-ir-validation.json 覆盖 |
 | [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | pass 启用前的语义架构验收；后续变更由 semantic-pass-validation.json 覆盖 |

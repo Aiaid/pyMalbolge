@@ -334,12 +334,29 @@ uv run python -m malbolge --variant=malbolge20 program.mb --input '7' \
 uv run python -m malbolge --variant=malbolge20 program.mb --input-file input.bin --stats
 ```
 
-`--input` 使用 UTF-8，`--input-file` 提供原始字节。带限制或 `--stats` 时按
-批处理执行：从上述选项或管道读取输入；TTY 无显式输入选项时提供空 EOF，
-在交互 shell 中执行批处理请用 `--input`。`--eof sentinel|stop` 设置 EOF
-策略。指标为 stderr 上的一个 JSON 对象，程序字节保留在 stdout。达到资源
-预算退出码为 3，非法指令为 2，正常终止或输入耗尽为 0。普通无限制 CLI
-调用保留流式行为。
+`--input` 使用 UTF-8，`--input-file` 提供原始字节。显式输入、限制或
+`--stats` 会选择批处理执行。Malbolge20 的管道或重定向 stdin 也按批处理执行，包括
+无限制运行。TTY 带批处理限制或指标但无输入选项时提供空 EOF；在交互 shell
+中执行批处理请用 `--input`。`--eof sentinel|stop` 设置 EOF 策略。
+
+Malbolge20 批处理默认使用 `--engine auto`：本地扩展可用时使用原生 VM，
+否则使用 Python。`--engine python|native|jit` 显式选择引擎；显式选择
+不可用的原生/JIT 引擎会报错。JIT 不会自动选择。源码安装现在通过包的
+wheel hook 尝试构建原生扩展，已安装的原生 wheel 则直接包含二进制。
+`MALBOLGE_NATIVE_BUILD=auto|required|disabled` 分别控制自动回退、强制
+编译和纯 Python 构建。Editable 安装不编译原生代码。开发副本可手动构建：
+
+```bash
+uv run --with setuptools --with wheel python scripts/build_native_vm.py
+uv run python -m malbolge --variant=malbolge20 program.mb --engine native --input '7' --stats
+```
+
+指标为 stderr 上的一个 JSON 对象，包含实际 `engine` 与 `requested_engine`，
+程序字节保留在 stdout。达到资源预算退出码为 3，非法指令为 2，正常终止或
+输入耗尽为 0。stdin 连接 TTY 且无批处理选项时，保留 Python 流式交互。
+从 TTY 显式选择原生/JIT 时，必须提供 `--input` 或 `--input-file`。
+原版变体和调试器继续使用 Python。构建与平台详情见
+[原生 VM](docs/design/native-vm.zh.md) 与[显式 JIT](docs/design/native-jit.zh.md)。
 
 ### 有限资源的字节执行 API
 
@@ -357,6 +374,11 @@ print(result.to_dict())    # 计数、寄存器与停止原因
 显式编码为 UTF-8，输入消耗按字节计数。旧 `eval()` 保留文本/codepoint
 输入与默认 EOF-stop 行为；新 API 默认使用对应变体的 EOF 哨兵。原版解释器
 通过 `malbolge.run` 提供相同接口（与 `run20`、`RunResult` 一同导出）。
+
+`run20` 默认 `engine="auto"`，优先使用原生 VM，扩展不可用时回退 Python。
+传入 `engine="python"`、`engine="native"` 或 `engine="jit"` 可显式选择；
+显式选择不可用的原生或 JIT 引擎会抛出错误。导入和运行不会调用编译器或启用 JIT。
+旧 `eval20()` 保留 Python 的字符 API。
 
 > **Malbolge20 不向后兼容。** 它的 `crazy()` 作用在 20 个 trit 上,产生的结果与
 > 10-trit 的原版不同,所以为其中一个变体写的程序,在另一个上不会正确运行。

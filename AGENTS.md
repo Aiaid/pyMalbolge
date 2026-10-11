@@ -82,6 +82,19 @@ Execution budgets return exit 3; invalid instructions return exit 2. Metrics
 are JSON on stderr; program output remains bytes on stdout. Use explicit
 `--input`/`--input-file` for batch execution from a TTY.
 
+Malbolge20 `run20` and batch CLI execution default to `engine="auto"`, using
+the optional native VM when available and falling back to Python when the
+extension cannot be loaded. JIT remains explicit (`engine="jit"` or
+`--engine=jit`); imports and execution never invoke a compiler. Source package
+installs may compile through the wheel build hook; use
+`MALBOLGE_NATIVE_BUILD=auto|required|disabled` for automatic, mandatory or pure
+wheel builds. Editable installs do not compile native code. Build locally
+with `uv run --with setuptools --with wheel python scripts/build_native_vm.py`. CLI `--stats` includes the
+actual `engine` and `requested_engine`. Legacy `eval20`, terminal streaming
+without batch options, original Malbolge and debugger execution remain Python.
+Pin interpreter choices explicitly in benchmarks rather than relying on the
+product default; `core.run_memory` and diagnostic loops remain Python.
+
 Subset spec: `docs/specs/python-subset-spec.md`. Direct-backend design: `docs/design/py2mg-backend.md`.
 
 ### Run tests

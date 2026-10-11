@@ -1,0 +1,279 @@
+{
+  "date": "2026-10-10",
+  "status": "implemented_local_acceptance_hosted_matrix_pending",
+  "default_native_build": "auto",
+  "runtime_jit": "explicit",
+  "installed_acceptance": {
+    "native38": {
+      "status": "passed",
+      "python": "3.8.19 (default, Mar 19 2024, 16:05:24) \n[Clang 15.0.0 (clang-1500.3.9.4)]",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "machine": "arm64",
+      "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp38-cp38-macosx_14_0_arm64\n",
+      "native_available": true,
+      "checks": [
+        "installed import and default auto selection",
+        "byte input, EOF, exact budgets and invalid instruction parity",
+        "COW pages, detached exports and self-modifying future code",
+        "JIT machine-code execution and self-modification parity"
+      ],
+      "jit_available": true,
+      "jit_steps": 4096,
+      "module_hashes": {
+        "malbolge": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3",
+        "malbolge._native_vm": "3f24e2771e5658f92923b4301c863f8592b2c42f27e43f8cd88f45249148dd27",
+        "malbolge.core": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+        "malbolge.native": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    },
+    "native312": {
+      "status": "passed",
+      "python": "3.12.9 (main, Mar 17 2025, 21:36:21) [Clang 20.1.0 ]",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "machine": "arm64",
+      "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-macosx_11_0_arm64\n",
+      "native_available": true,
+      "checks": [
+        "installed import and default auto selection",
+        "byte input, EOF, exact budgets and invalid instruction parity",
+        "COW pages, detached exports and self-modifying future code",
+        "JIT machine-code execution and self-modification parity"
+      ],
+      "jit_available": true,
+      "jit_steps": 4096,
+      "module_hashes": {
+        "malbolge": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3",
+        "malbolge._native_vm": "3224f759700695ffd9698ddf3311a986ecb2b2c023c7a018941723a9533aebf8",
+        "malbolge.core": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+        "malbolge.native": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    },
+    "native313": {
+      "status": "passed",
+      "python": "3.13.14 (main, Jun 10 2026, 12:24:04) [Clang 21.0.0 (clang-2100.0.123.102)]",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "machine": "arm64",
+      "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-macosx_26_0_arm64\n",
+      "native_available": true,
+      "checks": [
+        "installed import and default auto selection",
+        "byte input, EOF, exact budgets and invalid instruction parity",
+        "COW pages, detached exports and self-modifying future code",
+        "JIT machine-code execution and self-modification parity"
+      ],
+      "jit_available": true,
+      "jit_steps": 4096,
+      "module_hashes": {
+        "malbolge": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3",
+        "malbolge._native_vm": "31134f2cba02bd6fbe59cfaaefddc683e5e6a94487df7bf6eff82d77e10ce02d",
+        "malbolge.core": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+        "malbolge.native": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    },
+    "source_auto": {
+      "status": "passed",
+      "python": "3.12.9 (main, Mar 17 2025, 21:36:21) [Clang 20.1.0 ]",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "machine": "arm64",
+      "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-macosx_11_0_arm64\n",
+      "native_available": true,
+      "checks": [
+        "installed import and default auto selection",
+        "Original Malbolge Python byte I/O and EOF contract",
+        "byte input, EOF, exact budgets and invalid instruction parity",
+        "COW pages, detached exports and self-modifying future code",
+        "JIT machine-code execution and self-modification parity"
+      ],
+      "jit_available": true,
+      "jit_steps": 4096,
+      "module_hashes": {
+        "malbolge": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3",
+        "malbolge._native_vm": "ef800ddd9fdcffae9138a67ccfc05b50be9192070930cadcd50095aa04601434",
+        "malbolge.core": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+        "malbolge.native": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    },
+    "pure": {
+      "status": "passed",
+      "python": "3.12.9 (main, Mar 17 2025, 21:36:21) [Clang 20.1.0 ]",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "machine": "arm64",
+      "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
+      "native_available": false,
+      "checks": [
+        "installed import and default auto selection"
+      ],
+      "jit_available": false,
+      "jit_steps": 0,
+      "module_hashes": {
+        "malbolge": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3",
+        "malbolge.core": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+        "malbolge.native": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    },
+    "final312": {
+      "status": "passed",
+      "python": "3.12.9 (main, Mar 17 2025, 21:36:21) [Clang 20.1.0 ]",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "machine": "arm64",
+      "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-macosx_11_0_arm64\n",
+      "native_available": true,
+      "checks": [
+        "installed import and default auto selection",
+        "Original Malbolge Python byte I/O and EOF contract",
+        "byte input, EOF, exact budgets and invalid instruction parity",
+        "COW pages, detached exports and self-modifying future code",
+        "JIT machine-code execution and self-modification parity"
+      ],
+      "jit_available": true,
+      "jit_steps": 4096,
+      "module_hashes": {
+        "malbolge": "4af323e4f5603acfc25aa63d374ad0813cd2263340cbabc05bd952f61db423e3",
+        "malbolge._native_vm": "e884e213520465b6f736abea95e1ea959697dd73765594a22a569a0ea3b89dfc",
+        "malbolge.core": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+        "malbolge.native": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba"
+      }
+    }
+  },
+  "local_artifacts": [
+    {
+      "name": "malbolge-1.0.0-cp38-cp38-macosx_14_0_arm64.whl",
+      "bytes": 250005,
+      "sha256": "0111255915a7f54a5089b94036351a15521142fffa3f1e5bd0aac0c2293097c3",
+      "local_cohort": "native38"
+    },
+    {
+      "name": "malbolge-1.0.0-cp312-cp312-macosx_11_0_arm64.whl",
+      "bytes": 250112,
+      "sha256": "bdd16e2265274be22b10290441d8ea22994171f8b3ae5d4a33adee0b942827f7",
+      "local_cohort": "native312"
+    },
+    {
+      "name": "malbolge-1.0.0-cp313-cp313-macosx_26_0_arm64.whl",
+      "bytes": 250105,
+      "sha256": "f3bf4408ae8e86ac6a320df2dd4a727105122df0395d1addbb0b58657e67e69a",
+      "local_cohort": "native313"
+    },
+    {
+      "name": "malbolge-1.0.0-py3-none-any.whl",
+      "bytes": 237588,
+      "sha256": "a7c09df8411d1bb4818947ed48c8b1e0dd83cd5541a07fcd11ac5bb270f383eb",
+      "local_cohort": "pure312"
+    },
+    {
+      "name": "malbolge-1.0.0.tar.gz",
+      "bytes": 1105642,
+      "sha256": "30a63f023274a834a6c065bbf08e2f7be4fb32d228d685e8bcc3bd779439d004",
+      "local_cohort": "sdist"
+    },
+    {
+      "name": "malbolge-1.0.0-cp312-cp312-macosx_11_0_arm64.whl",
+      "bytes": 250113,
+      "sha256": "58b9fc584433fe27bcba8ab402a2f0a050a2e06057dbb95b69e5a572ef62d8bd",
+      "local_cohort": "final312"
+    }
+  ],
+  "source_hashes": {
+    "pyproject.toml": "96827f5c1f1bf0d9c393099a306791d1b7a9ea04e23fa44af35951c257f72ce9",
+    "scripts/native_build.py": "b9d66e3360c5c9521d1dc3b8c42b147c32ea5efddd8d361c7848908fabe2764c",
+    "scripts/hatch_native.py": "b863e9b6de18e06c6d46de311a4dc587de71b60116b6f00abda6019e8a4753da",
+    "scripts/build_native_vm.py": "f911f78446a7d2ff9b5dac55ca6e2756fb7593845ab4f29964e9d37045d752df",
+    "scripts/verify_native_install.py": "7e94339ecfc718a7de2626f7645c6c714fa1291aa19dcd64333e18c6e7680520",
+    ".github/workflows/native-wheels.yml": "09d25b27e0ea366a94f725146c7f07b16d77856a8a646344ec6f3a2da14ffc81",
+    "test/test_native_packaging.py": "87b506d0b1afe936be8edf713dc906993f783f29dc9418e8cd60f5df65036a1f"
+  },
+  "validation": {
+    "focused": {
+      "passed": 266,
+      "skipped": 2,
+      "subtests_passed": 6
+    },
+    "packaging_real_sdist_wheel_install": {
+      "passed": 47,
+      "skipped": 0,
+      "overlaps_focused_unit_tests": true
+    },
+    "actionlint": "1.7.12 passed",
+    "matrix_identifiers": {
+      "pr": {
+        "linux-x86_64": [
+          "cp312-manylinux_x86_64",
+          "cp312-musllinux_x86_64"
+        ],
+        "linux-aarch64": [
+          "cp312-manylinux_aarch64",
+          "cp312-musllinux_aarch64"
+        ],
+        "macos-arm64": [
+          "cp312-macosx_arm64"
+        ],
+        "macos-x86_64": [
+          "cp312-macosx_x86_64"
+        ],
+        "windows-AMD64": [
+          "cp312-win_amd64"
+        ]
+      },
+      "full": {
+        "linux-x86_64": [
+          "cp39-manylinux_x86_64",
+          "cp310-manylinux_x86_64",
+          "cp311-manylinux_x86_64",
+          "cp312-manylinux_x86_64",
+          "cp313-manylinux_x86_64",
+          "cp39-musllinux_x86_64",
+          "cp310-musllinux_x86_64",
+          "cp311-musllinux_x86_64",
+          "cp312-musllinux_x86_64",
+          "cp313-musllinux_x86_64"
+        ],
+        "linux-aarch64": [
+          "cp39-manylinux_aarch64",
+          "cp310-manylinux_aarch64",
+          "cp311-manylinux_aarch64",
+          "cp312-manylinux_aarch64",
+          "cp313-manylinux_aarch64",
+          "cp39-musllinux_aarch64",
+          "cp310-musllinux_aarch64",
+          "cp311-musllinux_aarch64",
+          "cp312-musllinux_aarch64",
+          "cp313-musllinux_aarch64"
+        ],
+        "macos-arm64": [
+          "cp39-macosx_arm64",
+          "cp310-macosx_arm64",
+          "cp311-macosx_arm64",
+          "cp312-macosx_arm64",
+          "cp313-macosx_arm64"
+        ],
+        "macos-x86_64": [
+          "cp39-macosx_x86_64",
+          "cp310-macosx_x86_64",
+          "cp311-macosx_x86_64",
+          "cp312-macosx_x86_64",
+          "cp313-macosx_x86_64"
+        ],
+        "windows-AMD64": [
+          "cp39-win_amd64",
+          "cp310-win_amd64",
+          "cp311-win_amd64",
+          "cp312-win_amd64",
+          "cp313-win_amd64"
+        ]
+      }
+    },
+    "cibuildwheel_activated_venv_probe": "passed; installed native wheel, jit_steps=4096",
+    "review": "Independent review found the universal2 default-slice source-build gap; it was fixed and reviewed without remaining actionable findings. No claim of hosted matrix execution.",
+    "full_suite_rerun": false,
+    "performance_resampled": false,
+    "macos_universal2_source_configuration": "Actual host compiler verified simulated universal2 sysconfig/default dual-arch flags without external ARCHFLAGS; worker default produced a host-thin binary, preserved caller environment and returned the correct deployment tag."
+  },
+  "limits": [
+    "Local hardware was macOS ARM64 only",
+    "Hosted Linux, Windows and macOS Intel matrix not run",
+    "Native and JIT remain Malbolge20-only; Original Python path checked",
+    "No abi3, cross-architecture or fat-extension support",
+    "No PyPI publication",
+    "CI JSON records artifact and installed-module fingerprints; full compiler receipts are developer-build output"
+  ]
+}

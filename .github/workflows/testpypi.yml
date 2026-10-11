@@ -1,0 +1,234 @@
+name: TestPyPI native wheel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/testpypi-native-ci']
+
+# A deliberately separate test-site path; production releases use no part of it.
+permissions:
+  contents: read
+
+concurrency:
+  group: testpypi-native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and verify CPython 3.12 native wheel
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+          enable-cache: false
+      - name: Prepare unique temporary TestPyPI version
+        id: version
+        run: uv run --no-project --python 3.12 python scripts/prepare_testpypi_version.py
+      - name: Prepare persistent smoke reports
+        run: mkdir -p wheel-provenance verification-helper
+      - name: Build, repair and test installed native wheel
+        env:
+          CIBW_BUILD_FRONTEND: uv
+          CIBW_ENVIRONMENT: MALBOLGE_NATIVE_BUILD=required
+          CIBW_ENVIRONMENT_PASS_LINUX: GITHUB_SHA GITHUB_RUN_ID GITHUB_RUN_ATTEMPT
+          CIBW_CONTAINER_ENGINE: >-
+            docker; disable_host_mount: true;
+            create_args: --volume=${{ github.workspace }}/wheel-provenance:/native-provenance
+          CIBW_TEST_REQUIRES: uv==0.11.25
+          CIBW_TEST_COMMAND: >-
+            uv run --no-project --no-python-downloads --python python python
+            "{project}/scripts/verify_native_install.py" --require-native
+            --expect-no-jit --forbid-source-root "{project}"
+            --report-dir "/native-provenance"
+        run: >-
+          uvx --python 3.12 cibuildwheel==4.3.0
+          --only cp312-manylinux_x86_64 --output-dir wheelhouse
+      - name: Record wheel and verification-helper provenance
+        env:
+          TEST_PYPI_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          uv run --no-project --python 3.12 python - <<'PY'
+          import hashlib, json, os, shutil, zipfile
+          from email.parser import BytesParser
+          from pathlib import Path
+
+          version = os.environ['TEST_PYPI_VERSION']
+          wheels = sorted(Path('wheelhouse').glob('*.whl'))
+          if len(wheels) != 1:
+              raise SystemExit('Expected exactly one CPython 3.12 manylinux native wheel')
+          path = wheels[0]
+          with zipfile.ZipFile(path) as archive:
+              metadata_path = next(n for n in archive.namelist() if n.endswith('.dist-info/METADATA'))
+              wheel_path = next(n for n in archive.namelist() if n.endswith('.dist-info/WHEEL'))
+              metadata = BytesParser().parsebytes(archive.read(metadata_path))
+              wheel_metadata = archive.read(wheel_path).decode('utf8')
+          if metadata['Name'] != 'malbolge' or metadata['Version'] != version:
+              raise SystemExit('Wheel package/version differs from this workflow run')
+          if 'Root-Is-Purelib: false' not in wheel_metadata:
+              raise SystemExit('Required native build produced a pure wheel')
+          helper = Path('verification-helper/verify_native_install.py')
+          shutil.copyfile('scripts/verify_native_install.py', helper)
+          provenance = {
+              'commit': os.environ['GITHUB_SHA'], 'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'], 'version': version,
+              'cibuildwheel': '4.3.0', 'uv': '0.11.25',
+              'wheel': {'file': path.name, 'bytes': path.stat().st_size,
+                        'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                        'metadata': wheel_metadata},
+              'verification_helper': {'file': helper.name,
+                  'sha256': hashlib.sha256(helper.read_bytes()).hexdigest()},
+          }
+          text = json.dumps(provenance, indent=2, sort_keys=True) + '\n'
+          Path('wheel-provenance/artifacts.json').write_text(text, encoding='utf8')
+          Path('verification-helper/provenance.json').write_text(text, encoding='utf8')
+          print(text)
+          PY
+      - name: Retain publishable wheel
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: testpypi-wheel-${{ steps.version.outputs.version }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain verification helper from this build
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: testpypi-verification-helper-${{ steps.version.outputs.version }}
+          path: verification-helper/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain build provenance (including failures)
+        if: always()
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: testpypi-build-provenance-${{ github.run_attempt }}
+          path: wheel-provenance/*.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    name: Publish wheel to TestPyPI
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # This job has no checkout or project code execution. Only this action
+      # receives the test-site token; the build and verification jobs do not.
+      - uses: actions/download-artifact@v6.0.0
+        with:
+          name: testpypi-wheel-${{ needs.build.outputs.version }}
+          path: dist
+      - name: Require the configured TestPyPI credential
+        env:
+          TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          if [ -z "$TEST_PYPI_API_TOKEN" ]; then
+            echo '::error::TEST_PYPI_API_TOKEN is not configured; no upload was attempted'
+            exit 1
+          fi
+      - name: Publish unique development version to the test site
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+          attestations: false
+          verbose: false
+
+  verify-testpypi:
+    name: Verify exact version installed from TestPyPI
+    needs: [build, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TEST_PYPI_VERSION: ${{ needs.build.outputs.version }}
+      UV_NO_CACHE: 'true'
+      UV_HTTP_TIMEOUT: '10'
+      UV_HTTP_RETRIES: '0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@v6.0.0
+        with:
+          name: testpypi-verification-helper-${{ needs.build.outputs.version }}
+          path: verification-helper
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+          enable-cache: false
+      - name: Check verification-helper identity
+        working-directory: ${{ runner.temp }}
+        run: |
+          uv run --no-project --python 3.12 python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['GITHUB_WORKSPACE']) / 'verification-helper'
+          provenance = json.loads((root / 'provenance.json').read_text())
+          helper = root / 'verify_native_install.py'
+          assert provenance['commit'] == os.environ['GITHUB_SHA'], 'Wrong source commit'
+          assert provenance['run_id'] == os.environ['GITHUB_RUN_ID'], 'Wrong workflow run'
+          # Failed-job-only reruns reuse the successful build and its version.
+          assert provenance['version'] == os.environ['TEST_PYPI_VERSION'], 'Wrong package version'
+          assert provenance['verification_helper']['sha256'] == hashlib.sha256(helper.read_bytes()).hexdigest(), 'Helper checksum mismatch'
+          print('Verified helper for malbolge==' + provenance['version'])
+          PY
+      - name: Install exact wheel from TestPyPI (up to 60 seconds propagation)
+        working-directory: ${{ runner.temp }}
+        run: |
+          uv venv --python 3.12 "$RUNNER_TEMP/testpypi-install"
+          printf 'Installing malbolge==%s from https://test.pypi.org/simple/\n' "$TEST_PYPI_VERSION"
+          timeout 60s bash <<'SH'
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            if timeout 12s uv pip install \
+              --python "$RUNNER_TEMP/testpypi-install/bin/python" \
+              --index-url https://test.pypi.org/simple/ \
+              --no-deps --only-binary :all: "malbolge==$TEST_PYPI_VERSION"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 4 ]; then
+              sleep "$((attempt * 2))"
+            fi
+          done
+          echo 'Exact TestPyPI version did not become installable within the retry budget' >&2
+          exit 1
+          SH
+      - name: Verify installed version and native execution outside the checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          uv run --no-project --no-python-downloads \
+            --python "$RUNNER_TEMP/testpypi-install/bin/python" python - <<'PY'
+          from importlib.metadata import version
+          import os
+          actual = version('malbolge')
+          expected = os.environ['TEST_PYPI_VERSION']
+          assert actual == expected, 'Installed version differs: ' + actual
+          print('Installed exact TestPyPI version: malbolge==' + actual)
+          PY
+          uv run --no-project --no-python-downloads \
+            --python "$RUNNER_TEMP/testpypi-install/bin/python" python \
+            "$GITHUB_WORKSPACE/verification-helper/verify_native_install.py" \
+            --require-native --expect-no-jit --forbid-source-root "$GITHUB_WORKSPACE" \
+            --report "$GITHUB_WORKSPACE/testpypi-install-provenance/smoke.json"
+      - name: Retain TestPyPI installation provenance
+        if: always()
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: testpypi-install-provenance-${{ github.run_attempt }}
+          path: testpypi-install-provenance/*.json
+          if-no-files-found: warn
+          retention-days: 14

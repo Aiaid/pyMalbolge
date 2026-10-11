@@ -3,13 +3,14 @@
 > **English** | [中文](native-jit.zh.md)
 >
 > Status: opt-in ARM64 experiment over the [native VM](native-vm.md).
-> The default engine remains Python. This is guest Malbolge machine-code
-> generation, independent of CPython's own JIT.
+> Default Malbolge20 batches prefer the native interpreter when available,
+> with Python fallback; JIT is never selected automatically. This is guest
+> Malbolge machine-code generation, independent of CPython's own JIT.
 
 ## Build and select
 
 ```sh
-uv run python scripts/build_native_vm.py
+uv run --with setuptools --with wheel python scripts/build_native_vm.py
 ```
 
 ```python
@@ -18,6 +19,19 @@ from malbolge import run20
 result = run20(code, input_data=b"7\n", max_steps=10_000_000,
                max_output=4096, engine="jit")
 ```
+
+The CLI selects this experiment with `--engine jit`; from a TTY, provide
+`--input` or `--input-file`:
+
+```sh
+uv run python -m malbolge --variant=malbolge20 program.mb --engine jit --input '7' --stats
+```
+
+`run20` and CLI batches default to `auto`, which selects native or Python without
+JIT. `python` and `native` are also explicit choices. Import and execution never
+build the extension; source installation can compile it through the
+[wheel hook](native-packaging.md). CLI `--stats` includes the actual `engine`
+and `requested_engine`.
 
 The first emitter supports little-endian ARM64 macOS and Linux; macOS arm64 is
 the locally exercised target. ARM64e, big-endian ARM64 and other architectures
@@ -88,6 +102,10 @@ totals, and warmup cost stays separate and visible. Synthetic NOP controls are
 reported separately from existing compiled-program fixtures.
 
 ## Local acceptance, 2026-10-10
+
+This historical snapshot was recorded while Python was the default engine.
+The current native-first `auto` default does not change JIT's explicit opt-in
+status or the measurements below.
 
 [Validation receipt](../notes/native-jit-validation.json): 160 focused tests,
 one platform-conditional skip and six subtests passed. Independent review,

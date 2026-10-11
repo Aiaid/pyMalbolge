@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-10",
+  "recorded_at_utc": "2026-10-10T05:02:53.621669+00:00",
+  "status": "native_first_default_focused_checks_passed",
+  "default_engine": "auto",
+  "selection": "native when the optional extension can be imported; Python otherwise; JIT explicit",
+  "scope": [
+    "Malbolge20 run20 byte API",
+    "Malbolge20 batch CLI, including redirected stdin",
+    "direct malbolge.malbolge20 module CLI"
+  ],
+  "compatibility": {
+    "run_result": "unchanged",
+    "cli_stats": "engine and requested_engine added",
+    "runtime_errors": "propagate without replay on another engine",
+    "terminal_streaming": "Python when no batch options are selected",
+    "legacy_eval20_original_debugger": "remain Python",
+    "native_build": "explicit; no automatic compilation",
+    "benchmark_pipeline": "unchanged; runtime uses core.run_memory and traces use diagnostic loop",
+    "plain_cli_source": "legacy UTF-8 text loader preserved; automatic batch reports invalid instructions with exit 2"
+  },
+  "source_hashes": {
+    "malbolge/native.py": "f7d617a57ebb827b387f5bade44d54cf4cb4e8642b23a6b520fb13a5ff1ce756",
+    "malbolge/malbolge20.py": "6f76331944d66671b26144d77d43e8b83366f1efbff6d86c62d2ae580e663af3",
+    "malbolge/__main__.py": "86a5049a45993687fa7d1193b415eea30456680c53a1927d22a34dd8de6484af",
+    "test/test_engine_selection.py": "317a381ac0547e70a4b24cd2f96281ed3380d008cd3ee762f9ed0e2bc4ec1295",
+    "test/test_native_vm.py": "86583b0c40bb043f2006e943e6d5cc4b2923276db8a71ade4bf4f63df1ed5d81",
+    "test/test_native_jit.py": "59bd87cb164652b3124ad4222e574fb07f82d67d860fbf75d39e38d2e78fe618"
+  },
+  "validation": {
+    "command": "uv run --offline --no-sync pytest test/test_engine_selection.py test/test_native_vm.py test/test_native_jit.py test/test_runtime_qos.py test/test_cli_qos.py -q",
+    "passed": 220,
+    "skipped": 1,
+    "subtests_passed": 6,
+    "skip_reason": "unsupported-JIT-host branch skipped on a supported ARM64 JIT host",
+    "cli_smoke": {
+      "case": "test/fixtures/nagoya/mg_b_hi.mb",
+      "output": "Hi",
+      "engine": "native",
+      "requested_engine": "auto",
+      "stop_reason": "terminated",
+      "steps": 70091
+    },
+    "full_suite_rerun": false,
+    "performance_resampled": false,
+    "independent_review": "No actionable findings; native/default/CLI/TTY/input/budget/error boundaries reviewed. Reviewer checks are subsets of the central focused run and are not added to its total."
+  },
+  "performance_reference": "native-jit-validation.json; historical same-image measurements unchanged"
+}

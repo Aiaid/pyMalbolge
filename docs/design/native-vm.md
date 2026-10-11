@@ -2,11 +2,13 @@
 
 > **English** | [中文](native-vm.zh.md)
 >
-> Status: opt-in developer prototype. Python execution remains the default.
+> Status: local extension prototype, preferred by default for Malbolge20 batch
+> execution when available; Python is the fallback. JIT remains explicit opt-in.
 > This document describes the execution layer; compiler lowering and target
 > image generation are independent.
 
-The first acceptance below is a dated native-only snapshot. Later optional
+The first acceptance below is a dated native-only snapshot, recorded while
+Python was still the default engine. Later optional
 [guarded JIT work](native-jit.md) adds a separate engine; the original source
 hashes and measurements remain historical evidence rather than current-binary
 claims.
@@ -21,13 +23,16 @@ budgets. No Python memory callback runs for each instruction.
 From a source checkout with a C compiler and this interpreter's Python headers:
 
 ```sh
-uv run python scripts/build_native_vm.py
+uv run --with setuptools --with wheel python scripts/build_native_vm.py
 ```
 
 The binary is built for the Python selected by `uv`; build it again when changing
-the interpreter ABI. The prototype builder supports macOS and Linux. Local
-extension binaries are ignored by Git and excluded from the existing pure
-Python wheel and sdist. Distributable native wheels remain future work.
+the interpreter ABI. The build adapter uses standard compiler discovery for
+macOS, Linux and Windows; local acceptance is currently macOS ARM64. Source
+installation can build a fresh native wheel automatically. Checkout binaries
+remain ignored by Git and excluded from source archives; only freshly built
+staged extensions enter native wheels. See [native packaging](native-packaging.md)
+for modes, installed-artifact checks and the pending hosted CI matrix.
 
 ```python
 from malbolge import run20
@@ -38,10 +43,30 @@ print(result.output)
 print(result.stop_reason, result.steps)
 ```
 
-`engine="python"` is the default. Explicit native selection raises a build
-instruction if the extension is unavailable; it does not silently choose a
-different execution engine. `eval20`, interactive execution and the debugger
-currently retain their Python implementations.
+`run20` defaults to `engine="auto"`: it prefers the native VM and falls back to
+Python if the extension is unavailable. `engine="python"`, `engine="native"`
+and `engine="jit"` select an engine explicitly. Unavailable native/JIT selections
+raise an error with build/platform guidance. Extensions are never built
+at import or execution time, and `auto` never enables JIT. Installation-time
+build behavior is controlled separately by `MALBOLGE_NATIVE_BUILD`.
+
+The Malbolge20 CLI uses the same default for batch execution, including pipes
+and redirected stdin without limits. Select `--engine auto|python|native|jit`:
+
+```sh
+uv run python -m malbolge --variant=malbolge20 program.mb --input '7' --stats
+uv run python -m malbolge --variant=malbolge20 program.mb --engine python --input '7'
+```
+
+`--stats` reports the actual `engine` and `requested_engine`. Stdin attached to
+a TTY with no batch options retains Python streaming interaction; explicit
+native/JIT selection from a TTY requires `--input` or `--input-file`. `eval20`'s
+legacy character API, the original variant and the debugger retain Python.
+
+Default-selection validation is recorded separately in
+[native engine selection](../notes/native-engine-selection-validation.json):
+220 focused tests, one conditional skip and six subtests passed, including a
+real default CLI run. Historical throughput measurements below were not rerun.
 
 ## Execution and memory contract
 
@@ -101,6 +126,9 @@ fixture comparisons. CPU and wall distributions are exploratory on a shared
 machine, and are not compiler or image-size optimization claims.
 
 ### Local acceptance, 2026-10-10
+
+This historical snapshot predates the `auto` default; Python was the default
+and native execution was explicit. The measurements below are unchanged.
 
 [Validation receipt](../notes/native-vm-validation.json): 105 focused tests and
 6 subtests passed, independent C review and Clang static analysis passed, and
