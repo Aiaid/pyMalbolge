@@ -10,10 +10,14 @@
 | `countdown.py` | `for` / `range`、`break`、`continue`、`%`、`putchar()` | 无 | `ACE`（无换行） |
 | `fib.py` | 双递归、十进制 `int(input())` 与整数 `print()` | `6\n` | `8\n` |
 
-默认的 `c` 和 `direct` 后端均可将三个示例编译为 Malbolge20。
+编译现默认 O3/auto，比较 Direct 与适用的 semantic 候选；显式 `c` 和
+`direct` 后端均可将三个示例编译为 Malbolge20。
 比较后端时使用不同的输出文件名：
 
 ```bash
+uv run python -m malbolge compile examples/hello.py -o hello-auto.mb --stats
+uv run python -m malbolge --variant=malbolge20 hello-auto.mb --input '' --stats
+
 uv run python -m malbolge compile examples/hello.py --backend=c -o hello-c.mb
 uv run python -m malbolge compile examples/hello.py --backend=direct -o hello-direct.mb
 uv run python -m malbolge --variant=malbolge20 hello-direct.mb --input '' --max-steps 400000000 --max-output 4096 --stats
@@ -27,11 +31,16 @@ uv run python -m malbolge --variant=malbolge20 fib.mb --input '6' --max-steps 40
 ```
 
 达到预算时命令返回退出码 3。`--stats` 将指标写入 stderr，程序输出保留在 stdout。
+Malbolge20 批量执行默认可用时使用原生，否则 Python；`--stats` 标明实际
+引擎。与下方旧 Python 测量比较时指定 `--engine=python`；JIT 需显式选择。
 显式 `--input '6'` 在 EOF 处结束，十进制转换也接受 `6\n`。
 旧源码注释可能仍展示历史命令或早期仅支持常量 `print()` 的限制；
 当前子集也支持无符号整数十进制输出，见 [Python 子集规格](../docs/specs/python-subset-spec.zh.md)。
 
-## 2026-10-08 性能工作后的比较
+## 2026-10-08 性能工作后的历史比较
+
+此快照采用显式后端和 Python VM，早于 O3/auto 与批处理优先原生的默认值。
+这些体积与耗时不描述当前自动选择。
 
 | 源码 | 后端 | MB 字节数 | 编译阶段总和，基线 → 当前（秒） | 当前 VM 总耗时（秒） | 执行步数 |
 |---|---|---:|---:|---:|---:|

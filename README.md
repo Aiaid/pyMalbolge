@@ -1,14 +1,15 @@
 # pyMalbolge
 
-> **English** | [中文](https://github.com/Aiaid/pyMalbolge/blob/master/README.zh.md)
+> **English** | [中文](README.zh.md)
 
 **Write Python. Get a running [Malbolge](https://en.wikipedia.org/wiki/Malbolge) program.**
 
 pyMalbolge is a pure-Python compiler from a subset of Python to
 [Malbolge20](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/), bundled
 with interpreters for both Malbolge variants and a full-featured debugger.
-No C++, flex, bison or Perl build dependencies — `pip install malbolge` and the
-whole toolchain is there.
+The compiler and Python interpreter need no C++, flex, bison or Perl tools.
+An optional C extension accelerates Malbolge20 batch execution; semantic IR
+optimization is available through the optional `ir` extra.
 
 The [Fibonacci example](examples/fib.py) uses ordinary Python input and
 output alongside inline double recursion. The compiler supplies the decimal
@@ -51,20 +52,57 @@ operation on ternary digits. The first Malbolge program was not written but
 *found*, by beam search, two years after the language appeared. This project is
 about the other end of that history — compiling ordinary code into it.
 
-- **Compiler** — Python subset → Malbolge20, two independent backends, fully deterministic output
-- **Interpreters** — original Malbolge (10 trits) and Malbolge20 (20 trits, sparse memory)
+- **Compiler** — Python subset → Malbolge20, automatic O3 selection across Direct and applicable semantic IR; explicit C/direct paths and deterministic output
+- **Interpreters** — original Malbolge (10 trits) and Malbolge20 (20 trits, sparse memory); native-first Malbolge20 batches with Python fallback
 - **Debugger** — breakpoints, watchpoints, step-back, memory inspection, disassembly; CLI and TUI
-- **Verified** — the toolchain ports are byte-exact against the reference C++/Perl tools; conformance and end-to-end tests
-- **Zero runtime dependencies** — `textual` only if you want the TUI debugger
+- **Verified** — reference-port conformance fixtures, independent real-image execution checks and end-to-end tests; optimized paths preserve observable behavior
+- **No mandatory Python dependencies** — optional `textual` for the TUI and `xdsl` for IR
 
 ## Installation
 
 ```bash
-pip install malbolge          # compiler + interpreters + CLI debugger
-pip install malbolge[tui]     # adds the TUI debugger (textual)
+uv venv
+uv pip install malbolge          # compiler + interpreters + CLI debugger
+uv pip install 'malbolge[tui]'    # adds the TUI debugger (textual)
 ```
 
 Requires Python 3.8+.
+
+This README describes the current source checkout; an index release can lag
+behind it. For the current checkout and its optional IR support:
+
+```bash
+uv sync --extra dev              # editable install for development
+uv sync --extra dev --extra ir   # optional xDSL tools, Python 3.10+
+```
+
+Editable installs keep Python execution until a local native extension is
+built. A matching native wheel already contains it; an ordinary source install
+(`uv pip install .`) attempts a build with a C compiler and Python headers.
+`MALBOLGE_NATIVE_BUILD=auto|required|disabled` controls source-wheel builds:
+try native with Python fallback, require native, or build pure Python.
+Imports and execution never build the extension. See
+[native packaging](docs/design/native-packaging.md).
+
+The 2026-10-10 [packaging receipt](docs/notes/native-packaging-validation.json)
+records local macOS ARM64 checks; the [TestPyPI receipt](docs/notes/testpypi-ci-validation.json)
+records a hosted CPython 3.12 Linux x86-64 build, upload and installed-wheel
+check. These do not establish acceptance of the full platform matrix or a
+production PyPI native release.
+
+### Current defaults
+
+| Operation | Default | Explicit control |
+|---|---|---|
+| Whole-program compilation | O3/auto; compare Direct and applicable semantic IR by predicted final MB bytes | `--backend` (`c`, `direct`, `ir`), `-O0`–`-O3` |
+| Target handoff | Structured LAL records and memory image at O2/O3, without xDSL on C/direct | `--target-pipeline=text` |
+| Compilation cache | O3 CLI source-local cache, 64 MiB per artifact; no persistent library cache | `--no-cache`, `--cache-dir` |
+| Malbolge20 byte API and batch CLI | `auto`: native when loadable, otherwise Python | `--engine` (`python`, `native`, `jit`) / `run20(engine=...)` |
+| Original Malbolge, debugger, `eval20()` and terminal streaming without batch options | Python | Native/JIT applies to Malbolge20 batches |
+
+JIT remains an explicit ARM64 experiment. Compiler O3 and the runtime engine
+are independent choices. Detailed activation and evidence are in
+[optimization status](docs/design/optimization-status.md).
 
 ## Compiling Python to Malbolge20
 
@@ -85,6 +123,9 @@ uv run python -m malbolge compile examples/fib.py -O0 --no-cache -o fib.mb
 
 # Dump the intermediate stages
 uv run python -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
+
+# Inspect semantic IR after installing the ir extra
+uv run --no-sync python -m malbolge compile prog.py --backend=ir --emit-semantic-ir prog.semantic.mlir
 ```
 
 Compilation defaults to `-O3 --backend=auto`: compare Direct with the accepted
@@ -93,6 +134,12 @@ the smaller final MB through the structured target handoff. Explicit backend,
 IR frontend and target-pipeline choices remain authoritative. `-O0` disables
 optional transforms; `--backend=c` retains the reference C frontend, including
 its existing intrinsics. See [compiler optimization policy](docs/design/compiler-optimization.md).
+
+Without a supported IR installation, auto uses Direct. `--stats` reports the
+selected backend, candidate sizes and any skipped semantic candidate; the
+selection minimizes predicted image size, not measured execution time.
+`--emit-c` infers the C path when no backend is given, and IR exports infer
+the IR path, so diagnostic exports can change the selected frontend.
 
 O3 CLI compilation automatically caches stages under the source directory's
 `.cache/malbolge`, with a 64 MiB limit per cached artifact. `--no-cache` disables
@@ -108,11 +155,12 @@ produce concise diagnostics.
 
 ```python
 from malbolge.compiler import compile_python_to_mb
-from malbolge import eval20
+from malbolge import run20
 
 mb = compile_python_to_mb('print("Hello, world!")')                   # automatic O3
 mb = compile_python_to_mb('print("Hello, world!")', backend="direct") # direct backend
-print(eval20(mb))                                                     # Hello, world!
+result = run20(mb, max_steps=5_000_000, max_output=1024)               # auto engine
+print(result.output.decode("utf8"), end="")                            # Hello, world!
 
 # Every stage is exposed individually:
 from malbolge.compiler import (
@@ -148,39 +196,41 @@ nested/arbitrary tuple unpacking, starred/default arguments, classes,
 imports, comprehensions and nested functions. See the specification for
 unsigned range boundaries and conservative assignment/return checks.
 
-The [normative specification](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md)
+The [normative specification](docs/specs/python-subset-spec.md)
 covers the accepted-AST whitelist, the documented divergences from
 CPython semantics, and the diagnostic contract.
 
 ## How the pipeline works
 
 ```
-             py2c                c2mg            mg2mc            mc2mb
-Python  ──────────► Nagoya C ──────────► .mg ──────────► .mc ──────────► .mb
-subset      │        subset             pseudo-        LAL low-      Malbolge20
-            │                            instrs         level asm
-            └──────────────────────────►
-                  py2mg (direct backend)
+Python subset ── py2c ──► Nagoya C ── c2mg ──► MG
+       ├──────── py2mg (direct) ──────────────► MG
+       └── semantic IR + accepted passes ────► target AST ── py2mg ──► MG
+
+MG ── mg2mc ──► ordered LAL ── mc2mb ──► memory image ──► Malbolge20 (.mb)
+                     └──────── textual .mc/.data import/export ────────┘
 ```
 
 | Stage | What it is |
 |---|---|
 | `py2c` | **Ours.** Python AST → the Nagoya C subset. Lowers everything to three-address form, works around several defects in the downstream C compiler, and injects `zzmul` / `zzdiv` / `zzmod` library routines because the C subset has no `*`, `/` or `%`. |
 | `py2mg` | **Ours.** Python AST → `.mg` directly, skipping the C layer. Reuses the verified codegen primitives but replaces the frame strategy: per-function temporaries, real recursion-cycle detection, and protection of exactly the temporaries live across calls. |
+| Semantic IR | Optional Python AST → typed semantic IR → verified named passes → explicit target AST adapter. O3 considers the applicable accepted profile; `--backend=ir` selects it explicitly. |
 | `c2mg` | Pure-Python port of `nagoya-highlevel` (C subset → pseudo-instructions), reproduced bug-for-bug so that output stays byte-identical to the reference. |
 | `mg2mc` | Pure-Python port of `nagoya-ternary` (pseudo-instructions → LAL). |
 | `mc2mb` | Pure-Python port of `nagoya-lowass` (LAL → Malbolge20), replacing the two-stage Perl + C++ original. Padding is deterministic instead of time-seeded. |
 
-Every port is checked byte-for-byte against the original tools on a fixture
-corpus, and the two front-ends are cross-checked end to end: the same source
-compiled through both backends must produce identical *program output*.
+Reference-port conformance fixtures compare bytes under controlled styles and
+padding. Optimized frontends and structured handoffs are also checked for exact
+output, consumed input, errors and termination against independent execution.
+An optimization may change image bytes and steps while preserving that contract.
 
 ### Compared to the Nagoya toolchain
 
 |  | Nagoya toolchain | pyMalbolge |
 |---|---|---|
 | Implementation | C++ / flex / bison / Perl | Pure Python |
-| Getting it | Build from source locally | `pip install malbolge` |
+| Getting it | Build from source locally | `uv pip install malbolge` or a source checkout |
 | Source language | C subset | Python subset (the C subset path is kept as one backend) |
 | `*` `/` `%` | Not in the C subset | Constant-folded, or emitted as library routines |
 | `for` loops | `while` only | `for i in range(...)`, desugared to `while` |
@@ -192,15 +242,15 @@ compiled through both backends must produce identical *program output*.
 | Diagnostics | Parser errors | Line-numbered `CompileError` with a source excerpt |
 | Inline double recursion (`f(n-1) + f(n-2)`) | Miscompiled from fib(4) up | Correct on both backends |
 | Output determinism | `srand(time(NULL))` padding — deliberately different on every compile | Byte-for-byte reproducible |
-| Backends | One | Two; the direct one roughly halves output size |
-| Runtime | Reference C interpreter | Interpreters for both variants, plus a debugger |
+| Backends | One | C/direct plus optional semantic IR; O3 selects the smaller applicable candidate |
+| Runtime | Reference C interpreter | Python for both variants; optional native Malbolge20 VM and explicit JIT; debugger |
 | Last upstream commit | 2021 | Actively maintained |
 
 Obfuscation was a design goal upstream — the pseudo-instruction layer is
 *supposed* to emit something different each time. Trading that for determinism
-is what makes reproducible builds and byte-exact conformance testing possible,
-and it is the one place where this project deliberately diverges from the
-original behaviour rather than reproducing it.
+is what makes reproducible builds and byte-exact conformance testing possible.
+Controlled port-conformance paths retain reference behavior; optimized paths
+are judged by program semantics and machine invariants rather than byte identity.
 
 ## Performance
 
@@ -208,7 +258,35 @@ Malbolge20 has no instructions in the usual sense. Addition alone is a
 twenty-step loop over ternary digits, every cell rewrites itself after being
 executed, and control flow is carried in a register. Compiled programs are
 therefore *enormous* relative to their source and run slowly — this is inherent
-to the target, not an artifact of this implementation.
+to the target. Compiler lowering and execution-engine choices both affect those
+costs and are measured separately.
+
+### Current optimization and native execution
+
+O3 selects by final image size and uses the structured target handoff. The
+[integration receipt](docs/notes/compiler-optimization-validation.json) records
+selection, image identity and independent execution contracts. The
+[benchmark guide](benchmarks/README.md) separates cold compilation, MB bytes
+and execution, including a comparison on one fixed reference VM.
+
+The [native VM acceptance](docs/notes/native-vm-validation.json) records five
+fresh-process samples per engine on macOS ARM64 / CPython 3.12.9. Median CPU
+times for the same images were:
+
+| Same image | Python CPU ms | Native CPU ms | Reference C CPU ms |
+|---|---:|---:|---:|
+| Hi | 61.213 | 0.694 | 2.466 |
+| Byte echo | 27.854 | 0.308 | 1.576 |
+| Repeated output | 82.946 | 0.899 | 3.087 |
+| Function call | 168.335 | 1.837 | 5.322 |
+| Synthetic million NOP/self-modification | 652.489 | 6.641 | 4.298 |
+
+These small fixtures show a native-core benefit, with reference C still faster
+on the synthetic NOP case. They are dated measurements, not a rerun of the
+current binary or a universal speed claim. The [JIT experiment](docs/design/native-jit.md)
+regressed on the four real fixtures and remains explicit. The older Fibonacci
+and Python-only timings below retain their original source, artifact and engine
+boundaries; they do not describe today's automatic compile/run combination.
 
 ### Runtime QoS (2026-10-08)
 
@@ -217,6 +295,8 @@ the fresh **285,466,345-byte** Fibonacci artifact and its exact hash. Cold
 cached compilation took **38.173 s** wall time (**37.974 s** CLI metrics);
 a warm repeat took **1.415 s** wall (**1.212 s** CLI metrics) and produced
 identical bytes. These are whole fresh compilations, not final-stage timings.
+This predates O3's automatic 64 MiB cache cap; reproducing the large-image warm
+cache case requires an explicit `--cache-dir`.
 
 | Fresh artifact execution | Whole-process time | Verified result |
 |---|---|---|
@@ -317,7 +397,7 @@ and the sparse memory materializes blocks lazily as it goes.
 Practically: small programs are fine, and anything with real recursion is a
 patience exercise. Both are expected.
 
-### Against the reference toolchain
+### Historical comparison against the reference toolchain
 
 Compiling the same `print("Hello, world!")` — identical C input, identical
 `.mg` and `.mc` intermediates — through the Nagoya tools and through this port:
@@ -349,11 +429,11 @@ same `.mb`:
 | Nagoya reference (C) | 0.16 s |
 | pyMalbolge (CPython) | 3.07 s |
 
-That is a **19x gap**, and it is the honest reason the end-to-end tests reach
-for `ref/nagoya-malbolge20-interpreter` when it is available. If you are
-running large compiled programs rather than debugging them, use the C
-interpreter; if you want breakpoints, step-back and a memory view, use this
-one.
+That historical **19x gap** compares reference C with the older Python path;
+it does not include this project's native extension. Current Malbolge20 batches
+prefer the native VM when installed. Use `--engine=python` to reproduce Python
+measurements; the debugger keeps Python stepping and history. Reference tools
+remain useful for independent correctness checks and controlled comparisons.
 
 ## Running Malbolge programs
 
@@ -529,16 +609,24 @@ variants with a real debugger.
 ## Documentation
 
 Design notes and reverse-engineered language specifications live in
-[`docs/`](https://github.com/Aiaid/pyMalbolge/blob/master/docs/README.md).
-Every document exists in English (`<name>.md`) and Chinese (`<name>.zh.md`).
+[`docs/`](docs/README.md).
+Prose documents have English (`<name>.md`) and Chinese (`<name>.zh.md`)
+versions; both share the machine-readable JSON receipts.
 
-- [python-subset-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md) — normative spec for the accepted Python subset
-- [py2mg-backend](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/py2mg-backend.md) — design of the direct `py → .mg` backend
-- [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/highlevel-to-malbolge.md) — why the pipeline looks like this
-- [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered from `ternary`
-- [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/lmao-internals.md) — HeLL and the LMAO assembler's algorithms
-- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) — historical profiling baseline; current measurements are in the QoS report
-- [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/toolchain-guide.md) — building the reference tools, for conformance work
+- [optimization-status](docs/design/optimization-status.md) — default, explicit and experimental optimization status
+- [compiler-optimization](docs/design/compiler-optimization.md) — O0–O3, automatic selection, structured handoff and caching
+- [semantic-ir](docs/design/semantic-ir.md) / [semantic passes](docs/design/semantic-optimization-passes.md) — optional verified frontend and accepted transforms
+- [native-vm](docs/design/native-vm.md) / [native-jit](docs/design/native-jit.md) — execution engines and same-image measurements
+- [native-packaging](docs/design/native-packaging.md) — source builds, wheel compatibility and TestPyPI acceptance
+- [examples](examples/README.md) / [benchmarks](benchmarks/README.md) — runnable examples, fixed workloads and measurement boundaries
+
+- [python-subset-spec](docs/specs/python-subset-spec.md) — normative spec for the accepted Python subset
+- [py2mg-backend](docs/design/py2mg-backend.md) — design of the direct `py → .mg` backend
+- [highlevel-to-malbolge](docs/design/highlevel-to-malbolge.md) — why the pipeline looks like this
+- [mg-spec](docs/specs/mg-spec.md) — the `.mg` pseudo-instruction language, reverse-engineered from `ternary`
+- [hell-spec](docs/specs/hell-spec.md) / [lmao-internals](docs/upstream/lmao-internals.md) — HeLL and the LMAO assembler's algorithms
+- [perf-baseline](docs/notes/perf-baseline.md) — historical profiling baseline; current measurements are in the QoS report
+- [toolchain-guide](docs/upstream/toolchain-guide.md) — building the reference tools, for conformance work
 
 ## Development
 
@@ -558,9 +646,16 @@ subtests) and portable execution of both compiler backends on the project VM
 is resolved by the [validation report](docs/notes/python-qos-validation.json),
 without rewriting its original counterexamples.
 
+The later 2026-10-10 [compiler integration receipt](docs/notes/compiler-optimization-validation.json)
+records **2,788 passed, 29 skipped and 3,610 subtests** for its full working-tree
+run, including separately owned native work. A subsequent focused run overlaps
+it; counts are dated acceptance evidence and must not be added together.
+
 [CI configuration](.github/workflows/qos.yml) covers Python 3.8/3.12/3.13
 and a separate portable semantic job. Python 3.8/3.13 smoke checks passed
 locally; as of 2026-10-08 the workflow has not been pushed or run on GitHub.
+Native wheel CI and the completed TestPyPI trial have separate scope and
+receipts in [native packaging](docs/design/native-packaging.md).
 
 ## Roadmap
 
@@ -569,6 +664,10 @@ locally; as of 2026-10-08 the workflow has not been pushed or run on GitHub.
 - [x] Pure-Python port of the full Nagoya toolchain, byte-exact
 - [x] Python front end, plus a direct `py → .mg` backend
 - [x] Unsigned decimal input/output, basic print f-strings, flat tuple swaps and simple keyword calls
+- [x] Semantic IR with verified named passes, O3 automatic selection and structured target handoff
+- [x] Native-first Malbolge20 batches, Python fallback and explicit guarded ARM64 JIT
+- [x] Native source-wheel hook, wheel CI configuration and one hosted TestPyPI installation check
+- [ ] Complete hosted native-wheel platform matrix and production release validation
 - [ ] Compiler v2: signed integers, general runtime objects/strings and arrays via `IND_OPR`
 - [ ] Malbolge Unshackled support (3-adic integers, variable rotation width, Unicode I/O)
 

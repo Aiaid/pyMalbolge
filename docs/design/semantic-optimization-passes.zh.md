@@ -52,7 +52,9 @@
 已验收顺序为 OPTIMIZATION_PASSES，现为语义路径默认。
 用 --backend=ir --ir-frontend=semantic --opt-level 0 只做校验，
 --opt-level 1 使用已验收 profile；显式 --semantic-passes 是等级的替代选择。
-原始前端库 API 仍不优化，C/direct 与默认 compat 源路径行为不变。
+原始前端库 API 仍不优化；显式 compat 保留 direct 兼容桥。整程序 O3
+auto 可选择已验收 semantic 候选，显式 IR 默认 semantic。C/direct 算术
+开关遵循[现行策略](compiler-optimization.zh.md)。
 lower-decimal-output 已注册，但不在等级 1 内。不声称普遍提速：中性负载
 目标结构不变，校验/分析增加少量宿主开销。失败十进制候选保留为显式实验，
 便于可复现调查。

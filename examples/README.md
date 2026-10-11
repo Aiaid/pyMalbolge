@@ -10,10 +10,14 @@
 | `countdown.py` | `for` / `range`, `break`, `continue`, `%`, `putchar()` | None | `ACE` (no newline) |
 | `fib.py` | Double recursion, decimal `int(input())` and integer `print()` | `6\n` | `8\n` |
 
-Both the default `c` backend and `direct` backend compile all three examples
-to Malbolge20. Use a separate filename for each backend:
+Compilation now defaults to O3/auto, comparing Direct with an applicable
+semantic candidate. Both explicit `c` and `direct` backends compile all three
+examples to Malbolge20. Use separate filenames for comparisons:
 
 ```bash
+uv run python -m malbolge compile examples/hello.py -o hello-auto.mb --stats
+uv run python -m malbolge --variant=malbolge20 hello-auto.mb --input '' --stats
+
 uv run python -m malbolge compile examples/hello.py --backend=c -o hello-c.mb
 uv run python -m malbolge compile examples/hello.py --backend=direct -o hello-direct.mb
 uv run python -m malbolge --variant=malbolge20 hello-direct.mb --input '' --max-steps 400000000 --max-output 4096 --stats
@@ -27,13 +31,19 @@ uv run python -m malbolge --variant=malbolge20 fib.mb --input '6' --max-steps 40
 ```
 
 The bounded commands return exit 3 when a budget is reached. `--stats`
-reports metrics on stderr while program output stays on stdout. The CLI's
+reports metrics on stderr while program output stays on stdout. Malbolge20
+batches default to native when available, otherwise Python; `--stats` identifies
+the actual engine. Use `--engine=python` to compare with the dated Python
+measurements below. JIT requires explicit selection. The CLI's
 explicit `--input '6'` ends at EOF; decimal conversion also accepts `6\n`.
 The comments in older sources may show historical commands or an older
 constant-only `print()` restriction; the current subset also supports
 unsigned integer decimal output. See the [Python subset spec](../docs/specs/python-subset-spec.md).
 
-## Comparison after the 2026-10-08 performance work
+## Historical comparison after the 2026-10-08 performance work
+
+This explicit-backend Python-VM snapshot predates O3/auto and native-first
+batch defaults. Its sizes and times do not describe current automatic selection.
 
 | Source | Backend | MB bytes | Compiler stages, baseline → current (s) | Current VM total (s) | Executed steps |
 |---|---|---:|---:|---:|---:|

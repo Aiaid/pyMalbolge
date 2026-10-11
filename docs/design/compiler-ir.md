@@ -11,7 +11,7 @@
 > Current-branch update, 2026-10-10: [O3 policy](compiler-optimization.md) now
 > defaults whole-program compilation to auto selection and structured handoff.
 > Explicit IR defaults to semantic; compat remains explicit. Target-interface
-> integration is pending final [combined acceptance](../notes/compiler-optimization-validation.json).
+> integration passed local [combined acceptance](../notes/compiler-optimization-validation.json).
 > The 2026-10-09 architecture and measurements remain their dated evidence.
 
 ## 1. First milestone and compatibility

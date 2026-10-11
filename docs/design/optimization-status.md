@@ -2,7 +2,8 @@
 
 > **English** | [中文](optimization-status.zh.md)
 >
-> Snapshot: 2026-10-09. This inventory separates accepted code, explicit
+> Activation documentation refreshed: 2026-10-12; measurements retain their dates.
+> This inventory separates accepted code, explicit
 > experiments and documented local prototypes. The detailed dated measurements
 > live in the private companion's optimization overview; public validation
 > records are linked below.
@@ -46,7 +47,8 @@ explicitly selected frozen paths; they do not measure a new auto-selection run.
 | C reference arithmetic, frames, MC layout/encoding caches, bootstrap storage/emission and shared Python VM primitives | Remain in their applicable implementations. C0 retains reference arithmetic intrinsics; it is not a no-optimization arithmetic baseline. |
 | Target-AST initialization/loop/predicate interface | Integrated and locally accepted. All three controls are enabled in semantic O1–O3 and disabled in O0; final combined acceptance is separate from old prototype receipts. |
 | Decimal-output candidate and rejected bulk-NOP experiment | Excluded from accepted defaults; the decimal candidate requires explicit pass selection. |
-| Native VM / JIT | Runtime engine and packaging work has separate ownership and acceptance. Compiler O3 does not enable JIT; JIT remains explicit. |
+| Native VM | `run20` and Malbolge20 batch CLI default to auto: prefer a loadable native extension, otherwise Python. Original/legacy/debugger/terminal streaming paths retain Python. |
+| Native packaging / JIT | Source-wheel builds attempt native; editable installs need a local build. Matching wheels need no compiler. JIT stays explicit; compiler O3 does not enable it. Full wheel-matrix acceptance remains pending. |
 
 Default selection and explicit direct selection:
 
@@ -83,6 +85,11 @@ selection does not establish a universal compile-time or runtime optimum.
 
 ## Evidence and boundaries
 
+- [Native engine selection](../notes/native-engine-selection-validation.json):
+  current auto/native/Python behavior and compatibility contracts.
+- [Native packaging](native-packaging.md) and [TestPyPI receipt](../notes/testpypi-ci-validation.json):
+  local macOS ARM64 and one hosted Linux x86-64 installed-artifact acceptance;
+  the full configured platform matrix remains pending.
 - [Python QoS validation](../notes/python-qos-validation.json): language/runtime
   contracts, compact storage, real target execution, cache and package checks.
 - [Semantic pass validation](../notes/semantic-pass-validation.json): accepted

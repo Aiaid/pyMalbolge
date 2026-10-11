@@ -133,6 +133,13 @@ workloads on the current compiler and VM.
 
 ## Target pipeline and correctness-only reference
 
+The runner deliberately keeps explicit `direct`/`c` backends and
+`--target-pipeline text` as its defaults; it does not exercise the product
+compiler's O3/auto selection. Runtime calls `core.run_memory` on Python, so
+product native-first selection does not change this benchmark engine. Use the
+separate `benchmark_native_vm.py` / `benchmark_native_jit.py` runners for engine
+comparisons. Record these boundaries with every result.
+
 `--target-pipeline text` remains the runner default. Use
 `--target-pipeline structured` for the native MG → LAL records → memory image
 handoff. The `ir` backend requires the optional IR dependencies and defaults to

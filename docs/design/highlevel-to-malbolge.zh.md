@@ -2,6 +2,12 @@
 
 > [English](highlevel-to-malbolge.md) | **中文**
 
+> 文档审计，2026-10-12：路线决策仍适用，下方子集限制、命令及测试/性能
+> 数量是早期实现快照。现已支持运行时十进制 I/O、基本 print f-string、
+> 平坦 tuple、简单关键字调用与递减 range。现行契约见
+> [子集规格](../specs/python-subset-spec.zh.md)、[编译策略](compiler-optimization.zh.md)
+> 和[原生 VM](native-vm.zh.md)。旧架构与测量保留为历史证据。
+
 > 调研"把高级语言(如 Python)编译到 HeLL/Malbolge"的已有工作与落地路线。
 > 2026-07-20。结论:可行,且名古屋大学已有先例栈可复用,推荐目标为 Malbolge20。
 

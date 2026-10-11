@@ -3,8 +3,9 @@
 > [English](native-packaging.md) | **中文**
 >
 > 状态：源码构建 hook 与 wheel CI 配置已实现，2026-10-10。
-> 本地 macOS ARM64 安装检查通过；托管 Linux、Windows、macOS Intel
-> 矩阵尚未运行，原生 wheel 尚未发布到 PyPI。
+> 本地 macOS ARM64 安装检查及一次托管 CPython 3.12 Linux x86-64
+> TestPyPI 构建/上传/安装试运行已通过。其余完整托管矩阵仍待验收，
+> 这不代表正式向 PyPI 发布原生包。
 
 ## 安装行为
 

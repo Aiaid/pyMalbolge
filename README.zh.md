@@ -6,8 +6,9 @@
 
 pyMalbolge 是一个纯 Python 实现的编译器,把 Python 的一个子集编译到
 [Malbolge20](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/),并附带
-两个 Malbolge 变体的解释器和一个功能完整的调试器。不需要 C++、flex、bison 或
-Perl 这些构建依赖 —— `pip install malbolge`,整条工具链就都在了。
+两个 Malbolge 变体的解释器和一个功能完整的调试器。编译器与 Python 解释器
+不需要 C++、flex、bison 或 Perl 工具。可选 C 扩展加速 Malbolge20 批量执行，
+可选 `ir` extra 提供语义 IR 优化。
 
 [Fibonacci 示例](examples/fib.py)使用普通 Python 输入输出与内联双重递归。
 十进制转换由编译器生成：
@@ -45,20 +46,53 @@ Malbolge 由 Ben Olmstead 在 1998 年设计,目标是让一门语言尽可能�
 "crazy" 运算。第一个 Malbolge 程序不是写出来的,而是在语言问世两年后被集束搜索
 *找到*的。本项目关心的是这段历史的另一端 —— 把普通代码编译进去。
 
-- **编译器** —— Python 子集 → Malbolge20,两个相互独立的后端,输出完全确定
-- **解释器** —— 原版 Malbolge(10 个三进制位(trit))和 Malbolge20(20 个 trit,稀疏内存)
+- **编译器** —— Python 子集 → Malbolge20；默认 O3 在 Direct 与适用的语义 IR 候选中选择，保留显式 C/direct 路径，输出确定
+- **解释器** —— 原版 Malbolge（10 个 trit）和 Malbolge20（20 个 trit，稀疏内存）；Malbolge20 批量执行优先原生 VM，Python 回退
 - **调试器** —— 断点、观察点、回退单步、内存查看、反汇编;CLI 与 TUI 两种界面
-- **已验证** —— 工具链移植与参考 C++/Perl 工具逐字节一致;一致性与端到端测试
-- **零运行时依赖** —— 只有想用 TUI 调试器时才需要 `textual`
+- **已验证** —— 参考移植一致性夹具、独立真实映像执行与端到端测试；优化路径保持可观察行为
+- **无必需 Python 依赖** —— TUI 可选 `textual`，IR 可选 `xdsl`
 
 ## 安装
 
 ```bash
-pip install malbolge          # 编译器 + 解释器 + CLI 调试器
-pip install malbolge[tui]     # 追加 TUI 调试器(textual)
+uv venv
+uv pip install malbolge          # 编译器 + 解释器 + CLI 调试器
+uv pip install 'malbolge[tui]'    # 追加 TUI 调试器(textual)
 ```
 
 需要 Python 3.8+。
+
+本 README 描述当前源码副本；包索引中的发布版本可能滞后。使用当前源码及
+可选 IR 功能：
+
+```bash
+uv sync --extra dev              # 开发用 editable 安装
+uv sync --extra dev --extra ir   # 可选 xDSL 工具，需要 Python 3.10+
+```
+
+Editable 安装在手动构建本地扩展前使用 Python。匹配的原生 wheel 已包含扩展；
+普通源码安装（`uv pip install .`）使用 C 编译器与 Python 头文件尝试构建。
+`MALBOLGE_NATIVE_BUILD=auto|required|disabled` 控制源码 wheel 构建：尝试原生并
+允许 Python 回退、强制原生、或纯 Python 构建。导入与执行不会构建扩展。
+详见[原生打包](docs/design/native-packaging.zh.md)。
+
+2026-10-10 的[打包记录](docs/notes/native-packaging-validation.json)包含本地
+macOS ARM64 验收；[TestPyPI 记录](docs/notes/testpypi-ci-validation.json)包含
+托管 CPython 3.12 Linux x86-64 构建、上传及安装 wheel 验收。这些证据不代表
+完整平台矩阵已验收，也不代表已正式向 PyPI 发布原生包。
+
+### 当前默认行为
+
+| 操作 | 默认 | 显式控制 |
+|---|---|---|
+| 整程序编译 | O3/auto，按预测最终 MB 字节数比较 Direct 与适用的语义 IR | `--backend`（`c`、`direct`、`ir`）、`-O0`–`-O3` |
+| 目标传递 | O2/O3 使用结构化 LAL 记录与内存映像；C/direct 无需 xDSL | `--target-pipeline=text` |
+| 编译缓存 | O3 CLI 使用源码旁缓存，单产物上限 64 MiB；库无持久缓存 | `--no-cache`、`--cache-dir` |
+| Malbolge20 字节 API 与批量 CLI | `auto`：可加载时用原生 VM，否则 Python | `--engine`（`python`、`native`、`jit`）/ `run20(engine=...)` |
+| 原版 Malbolge、调试器、`eval20()` 与无批处理选项的终端流式执行 | Python | 原生/JIT 适用于 Malbolge20 批量执行 |
+
+JIT 仍是显式 ARM64 实验。编译器 O3 与运行引擎是独立选择，完整开启方式
+和证据见[优化现状](docs/design/optimization-status.zh.md)。
 
 ## 把 Python 编译到 Malbolge20
 
@@ -79,12 +113,20 @@ uv run python -m malbolge compile examples/fib.py -O0 --no-cache -o fib.mb
 
 # 导出各个中间阶段
 uv run python -m malbolge compile prog.py --emit-c prog.c --emit-mg prog.mg --emit-mc prog.mc
+
+# 安装 ir extra 后查看语义 IR
+uv run --no-sync python -m malbolge compile prog.py --backend=ir --emit-semantic-ir prog.semantic.mlir
 ```
 
 编译默认 `-O3 --backend=auto`：可选 IR 环境可用时比较 Direct 和已验收
 Semantic 候选，经结构化目标传递生成最终 MB 更小的方案。显式后端、IR 前端
 和目标管线选择始终优先。`-O0` 关闭可选变换；`--backend=c` 保留参考 C 前端
 及其已有内建简化。详见[编译优化策略](docs/design/compiler-optimization.zh.md)。
+
+没有受支持的 IR 环境时，auto 使用 Direct。`--stats` 报告所选后端、候选
+体积与跳过 semantic 的原因；选择目标是预测映像大小，而非实测执行耗时。
+未指定后端时，`--emit-c` 推断 C 路径，IR 导出推断 IR 路径，因此诊断导出
+可能改变所选前端。
 
 O3 CLI 默认在源码目录的 `.cache/malbolge` 缓存阶段，每个缓存产物上限
 64 MiB。`--no-cache` 关闭；`--cache-dir` 显式启用不限单个产物大小的缓存。
@@ -97,11 +139,12 @@ O3 CLI 默认在源码目录的 `.cache/malbolge` 缓存阶段，每个缓存产
 
 ```python
 from malbolge.compiler import compile_python_to_mb
-from malbolge import eval20
+from malbolge import run20
 
 mb = compile_python_to_mb('print("Hello, world!")')                   # 默认自动 O3
 mb = compile_python_to_mb('print("Hello, world!")', backend="direct") # 直连后端
-print(eval20(mb))                                                     # Hello, world!
+result = run20(mb, max_steps=5_000_000, max_output=1024)               # auto 引擎
+print(result.output.decode("utf8"), end="")                            # Hello, world!
 
 # 每个阶段都单独暴露出来:
 from malbolge.compiler import (
@@ -131,37 +174,39 @@ f-string conversion/格式规格或 print 之外的 f-string、嵌套/任意 tup
 拆包、starred/默认参数、类、import、推导式与嵌套函数。无符号边界以及保守的
 赋值/返回路径检查细节见规格。
 
-[规范性说明文档](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md)
+[规范性说明文档](docs/specs/python-subset-spec.zh.md)
 覆盖了受理的 AST 白名单、与 CPython 语义之间有记录的分歧,以及诊断契约。
 
 ## 流水线如何工作
 
 ```
-             py2c                c2mg            mg2mc            mc2mb
-Python  ──────────► Nagoya C ──────────► .mg ──────────► .mc ──────────► .mb
-subset      │        subset             pseudo-        LAL low-      Malbolge20
-            │                            instrs         level asm
-            └──────────────────────────►
-                  py2mg (direct backend)
+Python 子集 ── py2c ──► Nagoya C ── c2mg ──► MG
+       ├────── py2mg (direct) ──────────────► MG
+       └── 语义 IR + 已验收 pass ──────────► 目标 AST ── py2mg ──► MG
+
+MG ── mg2mc ──► 有序 LAL ── mc2mb ──► 内存映像 ──► Malbolge20 (.mb)
+                    └──────── 文本 .mc/.data 导入/导出 ─────────┘
 ```
 
 | 阶段 | 是什么 |
 |---|---|
 | `py2c` | **我们自己写的。** Python AST → Nagoya C 子集。把一切降级为三地址式,绕开下游 C 编译器的若干缺陷,并注入 `zzmul` / `zzdiv` / `zzmod` 库例程,因为该 C 子集没有 `*`、`/` 和 `%`。 |
 | `py2mg` | **我们自己写的。** Python AST → 直接生成 `.mg`,跳过 C 这一层。复用了已验证的代码生成原语,但替换了栈帧策略:按函数分配临时量、真正的递归环检测,以及只保护跨调用存活的那些临时量。 |
+| 语义 IR | 可选 Python AST → 类型化语义 IR → 经校验的具名 pass → 显式目标 AST 适配器。O3 考虑适用的已验收 profile；`--backend=ir` 显式选择。 |
 | `c2mg` | `nagoya-highlevel`(C 子集 → 伪指令)的纯 Python 移植,连 bug 一起复现,以保证输出与参考实现逐字节一致。 |
 | `mg2mc` | `nagoya-ternary`(伪指令 → LAL)的纯 Python 移植。 |
 | `mc2mb` | `nagoya-lowass`(LAL → Malbolge20)的纯 Python 移植,取代了原来两阶段的 Perl + C++ 实现。填充是确定性的,而不是以时间作种子。 |
 
-每个移植都在一个夹具语料库上与原始工具逐字节比对,两个前端还做了端到端交叉检查:
-同一份源码经两个后端编译,必须产生完全相同的*程序输出*。
+参考移植夹具在受控风格和填充方式下逐字节比对。优化前端与结构化传递还通过
+独立执行核对精确输出、输入消耗、错误与终止。优化可以改变映像字节与步数，
+同时保持这些契约。
 
 ### 与 Nagoya 工具链的对比
 
 |  | Nagoya 工具链 | pyMalbolge |
 |---|---|---|
 | 实现 | C++ / flex / bison / Perl | 纯 Python |
-| 获取方式 | 本地从源码构建 | `pip install malbolge` |
+| 获取方式 | 本地从源码构建 | `uv pip install malbolge` 或源码副本 |
 | 源语言 | C 子集 | Python 子集(C 子集这条路径作为其中一个后端保留) |
 | `*` `/` `%` | C 子集里没有 | 常量折叠,或生成为库例程 |
 | `for` 循环 | 只有 `while` | `for i in range(...)`,脱糖为 `while` |
@@ -173,19 +218,43 @@ subset      │        subset             pseudo-        LAL low-      Malbolge2
 | 诊断 | 解析器报错 | 带行号的 `CompileError`,附源码摘录 |
 | 内联双重递归(`f(n-1) + f(n-2)`) | 从 fib(4) 起就编译错误 | 两个后端上都正确 |
 | 输出确定性 | `srand(time(NULL))` 填充 —— 每次编译刻意都不一样 | 逐字节可复现 |
-| 后端 | 一个 | 两个;直连的那个把输出体积大致减半 |
-| 运行时 | 参考 C 解释器 | 两个变体的解释器,外加一个调试器 |
+| 后端 | 一个 | C/direct 与可选语义 IR；O3 选择较小的适用候选 |
+| 运行时 | 参考 C 解释器 | 两个变体的 Python 解释器、可选原生 Malbolge20 VM、显式 JIT 与调试器 |
 | 上游最后一次提交 | 2021 | 处于活跃维护 |
 
 混淆在上游是一项设计目标 —— 伪指令层*本就应该*每次生成不同的东西。用它换来确定性,
-才使得可复现构建和逐字节一致性测试成为可能;这也是本项目唯一一处刻意偏离原始行为、
-而不是照原样复现的地方。
+才使得可复现构建和逐字节一致性测试成为可能。受控移植路径保留参考行为；
+优化路径按程序语义与机器不变量验收，而不要求字节一致。
 
 ## 性能
 
 Malbolge20 没有通常意义上的指令。光是加法就是一个在三进制位上跑二十步的循环,每个
 单元在被执行后都会重写自己,而控制流则承载在一个寄存器里。因此编译出来的程序相对
-源码而言*大得惊人*,而且跑得慢 —— 这是目标语言本身固有的,不是这个实现造成的。
+源码而言*大得惊人*，而且跑得慢。编译 lowering 与执行引擎选择都会影响成本，
+需要分别衡量。
+
+### 当前优化与原生执行
+
+O3 按最终映像体积选择，并使用结构化目标传递。
+[集成记录](docs/notes/compiler-optimization-validation.json)包含选择、映像
+一致性与独立执行契约；[基准指南](benchmarks/README.zh.md)分别衡量冷编译、
+MB 字节数与执行，包含固定同一参考 VM 的产物比较。
+
+[原生 VM 验收](docs/notes/native-vm-validation.json)记录了 macOS ARM64 /
+CPython 3.12.9 上每引擎五次全新进程采样。同映像 CPU 耗时中位数为：
+
+| 同映像 | Python CPU ms | 原生 CPU ms | 参考 C CPU ms |
+|---|---:|---:|---:|
+| Hi | 61.213 | 0.694 | 2.466 |
+| 字节回显 | 27.854 | 0.308 | 1.576 |
+| 重复输出 | 82.946 | 0.899 | 3.087 |
+| 函数调用 | 168.335 | 1.837 | 5.322 |
+| 合成百万 NOP/自修改 | 652.489 | 6.641 | 4.298 |
+
+这些小夹具显示了原生核心的收益；合成 NOP 案例仍是参考 C 更快。这是带日期的
+测量，不是当前二进制的重跑，也不代表普遍提速。[JIT 实验](docs/design/native-jit.zh.md)
+在四个真实夹具上回退，继续显式选择。下方旧 Fibonacci 与纯 Python 耗时保留
+各自源码、产物与引擎边界，不描述当前默认自动编译/运行组合。
 
 ### 运行时 QoS（2026-10-08）
 
@@ -193,6 +262,8 @@ Malbolge20 没有通常意义上的指令。光是加法就是一个在三进制
 **285,466,345 字节** Fibonacci 产物及完整哈希。缓存冷编译墙钟耗时
 **38.173 s**（CLI 指标 **37.974 s**）；热缓存重复编译为 **1.415 s**
 墙钟（CLI **1.212 s**），产物逐字节一致。这是完整新编译，非最终阶段耗时。
+此测量早于 O3 自动缓存的 64 MiB 上限；复现大映像的热缓存案例需显式
+指定 `--cache-dir`。
 
 | 新产物执行 | 整进程耗时 | 已验证结果 |
 |---|---|---|
@@ -274,7 +345,7 @@ Python 示例经纯 Python `direct` 后端编译耗时 **103.43 s**，产物为
 
 实际上:小程序没问题,任何带真正递归的程序都是对耐心的考验。两者都在预期之中。
 
-### 与参考工具链的对比
+### 与参考工具链的历史对比
 
 把同一个 `print("Hello, world!")` —— 相同的 C 输入、相同的 `.mg` 与 `.mc` 中间产物
 —— 分别过名古屋的工具和本项目的移植:
@@ -301,9 +372,10 @@ Python 移植端到端**快了约 2 倍**,但这不是关于 Python 快慢的结
 | 名古屋参考实现(C) | 0.16 s |
 | pyMalbolge(CPython) | 3.07 s |
 
-差距 **19 倍**。这也是端到端测试在 `ref/nagoya-malbolge20-interpreter` 可用时会优先
-调用它的真实原因。如果你要跑的是大型编译产物而不是调试它们,用 C 解释器;
-如果你想要断点、回退单步和内存视图,用这个。
+这个历史 **19 倍**差距比较的是参考 C 与旧 Python 路径，没有包含本项目原生
+扩展。当前 Malbolge20 批量执行优先使用已安装的原生 VM；复现 Python 测量时
+指定 `--engine=python`。调试器保留 Python 单步与历史；参考工具继续用于
+独立正确性核对和受控比较。
 
 ## 运行 Malbolge 程序
 
@@ -458,16 +530,24 @@ Szewczyk 的 **MalbolgeLISP** —— 一个约 350 MB 的 LISP 解释器 —— 
 ## 文档
 
 设计笔记和逆向得到的语言规范都放在
-[`docs/`](https://github.com/Aiaid/pyMalbolge/blob/master/docs/README.md)。
-每份文档都有英文(`<name>.md`)和中文(`<name>.zh.md`)两个版本。
+[`docs/`](docs/README.zh.md)。
+叙述性文档都有英文（`<name>.md`）和中文（`<name>.zh.md`）两个版本；
+机器可读 JSON 验收记录由两种语言共享。
 
-- [python-subset-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md) —— 受理的 Python 子集的规范性说明
-- [py2mg-backend](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/py2mg-backend.md) —— `py → .mg` 直连后端的设计
-- [highlevel-to-malbolge](https://github.com/Aiaid/pyMalbolge/blob/master/docs/design/highlevel-to-malbolge.md) —— 流水线为什么长这样
-- [mg-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/mg-spec.md) —— `.mg` 伪指令语言,从 `ternary` 逆向而来
-- [hell-spec](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/hell-spec.md) / [lmao-internals](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/lmao-internals.md) —— HeLL 与 LMAO 汇编器的算法
-- [perf-baseline](https://github.com/Aiaid/pyMalbolge/blob/master/docs/notes/perf-baseline.md) —— 历史性能剖析基线；当前测量见 QoS 报告
-- [toolchain-guide](https://github.com/Aiaid/pyMalbolge/blob/master/docs/upstream/toolchain-guide.md) —— 构建参考工具,用于一致性工作
+- [optimization-status](docs/design/optimization-status.zh.md) —— 默认、显式及实验优化状态
+- [compiler-optimization](docs/design/compiler-optimization.zh.md) —— O0–O3、自动选择、结构化传递与缓存
+- [semantic-ir](docs/design/semantic-ir.zh.md) / [semantic passes](docs/design/semantic-optimization-passes.zh.md) —— 可选校验前端与已验收变换
+- [native-vm](docs/design/native-vm.zh.md) / [native-jit](docs/design/native-jit.zh.md) —— 执行引擎与同映像测量
+- [native-packaging](docs/design/native-packaging.zh.md) —— 源码构建、wheel 兼容性及 TestPyPI 验收
+- [examples](examples/README.zh.md) / [benchmarks](benchmarks/README.zh.md) —— 可运行示例、固定程序库与测量边界
+
+- [python-subset-spec](docs/specs/python-subset-spec.zh.md) —— 受理的 Python 子集的规范性说明
+- [py2mg-backend](docs/design/py2mg-backend.zh.md) —— `py → .mg` 直连后端的设计
+- [highlevel-to-malbolge](docs/design/highlevel-to-malbolge.zh.md) —— 流水线为什么长这样
+- [mg-spec](docs/specs/mg-spec.zh.md) —— `.mg` 伪指令语言,从 `ternary` 逆向而来
+- [hell-spec](docs/specs/hell-spec.zh.md) / [lmao-internals](docs/upstream/lmao-internals.zh.md) —— HeLL 与 LMAO 汇编器的算法
+- [perf-baseline](docs/notes/perf-baseline.zh.md) —— 历史性能剖析基线；当前测量见 QoS 报告
+- [toolchain-guide](docs/upstream/toolchain-guide.zh.md) —— 构建参考工具,用于一致性工作
 
 ## 开发
 
@@ -484,9 +564,15 @@ uv run --no-sync pytest test/ -n 2
 编译后端在项目 VM 上的便携执行（2 项测试/2 个 subtest）。[历史审计快照](docs/notes/python-qos-audit.json)由[验收报告](docs/notes/python-qos-validation.json)
 结案，不改写原反例证据。
 
+后续 2026-10-10 的[编译集成记录](docs/notes/compiler-optimization-validation.json)
+记录完整工作区测试 **2,788 passed、29 skipped、3,610 subtests**，包含独立
+维护的原生工作。后续定向测试与其重叠；这些是带日期的验收证据，不能累加。
+
 [CI 配置](.github/workflows/qos.yml)覆盖 Python 3.8/3.12/3.13，并设单独的
 便携语义作业。Python 3.8/3.13 已通过本地冒烟检查；截至 2026-10-08，工作流
 尚未推送或在 GitHub 运行。
+原生 wheel CI 与已完成的 TestPyPI 试运行具有独立范围，记录见
+[原生打包](docs/design/native-packaging.zh.md)。
 
 ## 路线图
 
@@ -495,6 +581,10 @@ uv run --no-sync pytest test/ -n 2
 - [x] 完整 Nagoya 工具链的纯 Python 移植,逐字节一致
 - [x] Python 前端,以及一个 `py → .mg` 直连后端
 - [x] 无符号十进制输入输出、基本 print f-string、平坦 tuple 交换与简单关键字调用
+- [x] 语义 IR、经校验的具名 pass、O3 自动选择与结构化目标传递
+- [x] Malbolge20 批量执行优先原生、Python 回退与显式带守卫 ARM64 JIT
+- [x] 原生源码 wheel hook、wheel CI 配置及一次托管 TestPyPI 安装验收
+- [ ] 完成托管原生 wheel 平台矩阵与正式发布验收
 - [ ] 编译器 v2：有符号整数、一般运行时对象/字符串，以及通过 `IND_OPR` 支持数组
 - [ ] Malbolge Unshackled 支持(3-adic 整数、可变旋转宽度、Unicode I/O)
 

@@ -6,8 +6,13 @@ Prose documents have both an English version (`<name>.md`) and a Chinese
 version (`<name>.zh.md`), kept in sync. Machine-readable measurement data is
 shared between languages as one JSON file, without a duplicated translation.
 The reverse-engineering notes were originally written in Chinese. Documents are grouped into subdirectories
-by category; bilingual pairs always move together. Status markers: ✅ current /
+by category; bilingual pairs always move together. Status markers: ✅ current / ⚠️ partially outdated /
 🧊 shelved / 📌 historical snapshot (kept as-is with a superseding note).
+
+For current behavior, start with [compiler policy](design/compiler-optimization.md),
+[optimization status](design/optimization-status.md), [native VM](design/native-vm.md)
+and [packaging](design/native-packaging.md). Dated receipts describe their recorded
+checkout and tests; they are not a current full-suite count or a fresh benchmark.
 
 ## specs/ — language specifications
 
@@ -22,13 +27,13 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 | Document | Status | Contents |
 |---|---|---|
 | [native-jit.md](design/native-jit.md) | ✅ local opt-in experiment | Actual guarded ARM64 NOP code generation, exact exits/COW/budgets, cold versus warm evidence and short-fixture regressions |
-| [native-packaging.md](design/native-packaging.md) | ✅ implemented; hosted matrix pending | Native source-build hook, build modes, staged binary/ABI tags, GitHub wheel artifacts and installed-package acceptance |
-| [native-vm.md](design/native-vm.md) | ✅ local opt-in prototype | Python API over a native Malbolge20 execution/memory core; correctness, snapshots, local build, same-image measurements and guarded-JIT scope |
-| [highlevel-to-malbolge.md](design/highlevel-to-malbolge.md) | ✅ | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
+| [native-packaging.md](design/native-packaging.md) | ✅ local + TestPyPI acceptance; full matrix pending | Native source-build hook, build modes, staged binary/ABI tags, GitHub wheel artifacts and installed-package acceptance |
+| [native-vm.md](design/native-vm.md) | ✅ native-first batch default | Python API over a native Malbolge20 execution/memory core; correctness, snapshots, local build, same-image measurements and guarded-JIT scope |
+| [highlevel-to-malbolge.md](design/highlevel-to-malbolge.md) | ⚠️ route current; subset/measurements historical | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
 | [optimization-status.md](design/optimization-status.md) | ✅ dated snapshot | All optimization layers, accepted/default versus opt-in/local prototype status, evidence links and remaining limits |
 | [compiler-optimization.md](design/compiler-optimization.md) | ✅ current O3 policy | Automatic applicable candidate selection, exact final-size prediction, O0–O3 controls, explicit locks and cache/error boundaries |
 | [py2mg-backend.md](design/py2mg-backend.md) | ✅ | Design of the direct `py → .mg` backend (`--backend=direct`): frame strategy, recursion-cycle detection, size comparison against the C path |
-| [compiler-ir.md](design/compiler-ir.md) | ✅ | Optional structured LAL/semantic boundaries, verified pass infrastructure and migration milestones; variable SSA, optimization, layout and LLVM/MLIR remain future |
+| [compiler-ir.md](design/compiler-ir.md) | ✅ | Optional structured LAL/semantic boundaries, verified pass infrastructure and migration milestones; full variable SSA/liveness, new layout and LLVM/MLIR remain future |
 | [semantic-ir.md](design/semantic-ir.md) | ✅ | Direct Python AST frontend, typed semantic IR, independent execution oracle, explicit target adapter, CLI selection and diagnostic limits |
 | [semantic-optimization-passes.md](design/semantic-optimization-passes.md) | ✅ accepted profile; decimal experimental | Named semantic arithmetic/dataflow/control/emission passes, target arithmetic gate, level 0/1 and complete comparison contracts |
 | [structured-lowering.md](design/structured-lowering.md) | ✅ O2/O3 default | Dependency-free MG→LAL→memory-image→MB handoff, optional xDSL adaptation, explicit text selection and behavioral optimization gate |
@@ -51,7 +56,7 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 | [native-engine-selection-validation.json](notes/native-engine-selection-validation.json) | ✅ current | Native-first batch defaults, explicit engine selection, Python fallback and CLI compatibility checks |
 | [native-packaging-validation.json](notes/native-packaging-validation.json) | ✅ local acceptance; hosted matrix pending | Native/pure/source installation, Python ABI wheels, packaging policy, CI syntax and wheel-identifier checks |
 | [testpypi-ci-validation.json](notes/testpypi-ci-validation.json) | ✅ hosted test release accepted | CPython 3.12 manylinux native build, TestPyPI upload and exact-version remote installation/native smoke |
-| [native-vm-validation.json](notes/native-vm-validation.json) | ✅ local opt-in acceptance | Native VM correctness, review, ABI/package checks and five-repeat same-image Python/native/C execution measurements |
+| [native-vm-validation.json](notes/native-vm-validation.json) | 📌 initial opt-in acceptance; default checks separate | Native VM correctness, review, ABI/package checks and five-repeat same-image Python/native/C execution measurements |
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | First LAL/pass foundation acceptance and source fingerprints; later frontend/integration changes are covered by semantic-ir-validation.json |
 | [semantic-ir-validation.json](notes/semantic-ir-validation.json) | 📌 | Semantic architecture acceptance before pass promotion; later changes are covered by semantic-pass-validation.json |
 | [semantic-pass-validation.json](notes/semantic-pass-validation.json) | ✅ accepted pass profile | Pass acceptance; current unified compiler policy is covered by compiler-optimization-validation.json |
@@ -63,7 +68,7 @@ by category; bilingual pairs always move together. Status markers: ✅ current /
 | [perf-baseline.md](notes/perf-baseline.md) | 📌 | Pre-QoS profiling baseline; its runtime representation/hotspot description is superseded by compact periodic memory and python-qos-validation.json |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | Pre-QoS 2026-10-08 shared measurement data: ordinary-Python Fibonacci, direct compilation, optimized C reference execution, CPython comparison, and a resource-bounded project Python CLI stop; bilingual interpretation is in the main README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | Historical 11-group counterexamples; resolved by python-qos-validation.json, original evidence retained |
-| [python-qos-validation.json](notes/python-qos-validation.json) | ✅ | Final local acceptance, native/portable VM evidence, fresh and retained artifacts, bounded runtime/storage, cache and assembly measurements; hosted CI is configured but not run |
+| [python-qos-validation.json](notes/python-qos-validation.json) | 📌 2026-10-08 acceptance | Final local acceptance, native/portable VM evidence, fresh and retained artifacts, bounded runtime/storage, cache and assembly measurements; hosted CI is configured but not run |
 
 Further research notes (the findings log, the `mb-dialect-plan` design, the
 all-directions `roadmap`, the Nagoya array dissection, the ecosystem survey)

@@ -2,7 +2,8 @@
 
 > [English](optimization-status.md) | **中文**
 >
-> 快照：2026-10-09。区分已验收代码、显式实验和已记录的本地原型。
+> 开启方式说明更新于 2026-10-12；测量保留原日期。
+> 区分已验收代码、显式实验和已记录的本地原型。
 > 带日期的完整测量保存在私有配套仓库的优化总览；公开验收记录见下方。
 
 > 2026-10-10 后续：最新冻结工作 cohort（含本地目标接口原型）在计时前
@@ -40,7 +41,8 @@
 | C 参考算术、帧处理、MC 布局/编码缓存、启动代码存储/发射及共享 Python VM 原语 | 保留在各自适用实现内。C0 仍保留参考算术固有行为，不是完全无算术优化的基线。 |
 | 目标 AST 初始化/循环/谓词接口 | 已集成并通过本地验收；semantic O1–O3 开启三个开关，O0 关闭。最终组合验收独立于旧原型记录。 |
 | 十进制输出候选及被拒绝的批量 NOP 实验 | 排除已验收默认策略；十进制候选需手动选择 pass。 |
-| 原生 VM / JIT | 运行引擎与打包工作独立管理和验收。编译器 O3 不开启 JIT，JIT 仍显式选择。 |
+| 原生 VM | `run20` 与 Malbolge20 批量 CLI 默认 auto：优先可加载原生扩展，否则 Python。原版/旧 API/调试器/终端流式路径继续 Python。 |
+| 原生打包 / JIT | 源码 wheel 尝试构建原生；editable 安装需本地手动构建；匹配 wheel 无需编译器。JIT 仍显式选择，O3 不开启它。完整 wheel 矩阵待验收。 |
 
 默认选择与显式 direct 选择：
 
@@ -75,6 +77,10 @@ uv run --no-sync python -m malbolge compile program.py --backend=ir \
 
 ## 证据与边界
 
+- [原生引擎选择](../notes/native-engine-selection-validation.json)：当前
+  auto/native/Python 行为与兼容契约。
+- [原生打包](native-packaging.zh.md)与 [TestPyPI 记录](../notes/testpypi-ci-validation.json)：
+  本地 macOS ARM64 与一次托管 Linux x86-64 安装包验收；完整配置矩阵待验收。
 - [Python QoS 验收](../notes/python-qos-validation.json)：语言/运行时契约、
   紧凑存储、实际目标执行、缓存与打包。
 - [语义 pass 验收](../notes/semantic-pass-validation.json)：已验收源变换及

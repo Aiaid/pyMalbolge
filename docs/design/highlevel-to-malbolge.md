@@ -2,6 +2,14 @@
 
 > [中文](highlevel-to-malbolge.zh.md) | **English**
 
+> Documentation audit, 2026-10-12: the route decision remains useful, but
+> the subset restrictions, commands and test/performance counts below are an
+> earlier implementation snapshot. Runtime decimal I/O, basic print f-strings,
+> flat tuples, simple keyword calls and descending ranges now exist. Current
+> contracts are in [the subset spec](../specs/python-subset-spec.md),
+> [compiler policy](compiler-optimization.md) and [native VM](native-vm.md).
+> The old architecture and measurements are retained as historical evidence.
+
 > A survey of prior work and a practical path for compiling a high-level language (e.g. Python) to HeLL/Malbolge.
 > 2026-07-20. Conclusion: feasible, and Nagoya University already has a prior-art stack that can be reused; the recommended target is Malbolge20.
 

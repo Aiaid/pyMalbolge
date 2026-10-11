@@ -108,6 +108,11 @@ VM 上的 MB 执行结果，需要运行完整基准并启用运行时检查。
 
 ## 目标传递与仅正确性参考
 
+执行器刻意保留显式 `direct`/`c` 后端和 `--target-pipeline text` 默认值，
+不会测量产品编译器 O3/auto 候选选择。运行时调用 Python `core.run_memory`，
+产品默认优先原生不改变此基准引擎。引擎比较使用独立的
+`benchmark_native_vm.py` / `benchmark_native_jit.py`；每份结果都应记录这些边界。
+
 执行器仍默认 `--target-pipeline text`。用 `--target-pipeline structured`
 选择原生 MG → LAL 记录 → 内存映像传递。`ir` 后端需要可选 IR 依赖，且本执行器
 默认使用 semantic 前端；`--ir-frontend compat` 显式选择旧兼容前端。每个 cohort

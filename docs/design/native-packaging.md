@@ -3,8 +3,9 @@
 > **English** | [中文](native-packaging.zh.md)
 >
 > Status: implemented source-build hook and wheel CI configuration, 2026-10-10.
-> Local macOS ARM64 installation checks passed. The hosted Linux, Windows and
-> macOS Intel matrix has not run; native wheels have not been published to PyPI.
+> Local macOS ARM64 installation checks and one hosted CPython 3.12 Linux
+> x86-64 TestPyPI build/upload/install trial passed. The remaining hosted matrix
+> awaits acceptance; this is not a production PyPI native release.
 
 ## Installation behavior
 

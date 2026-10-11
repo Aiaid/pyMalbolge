@@ -62,7 +62,9 @@ The accepted order is `OPTIMIZATION_PASSES` and is now the semantic default.
 Use `--backend=ir --ir-frontend=semantic --opt-level 0` for verification only,
 or `--opt-level 1` for the accepted profile. An explicit `--semantic-passes`
 list is an alternative to a level. The raw frontend library API remains
-unoptimized. C/direct and default `compat` source paths keep their behavior.
+unoptimized. Explicit `compat` retains the direct bridge. Whole-program O3
+auto may select the accepted semantic candidate; explicit IR defaults to
+semantic. C/direct arithmetic switches follow [the current policy](compiler-optimization.md).
 `lower-decimal-output` is registered but absent from level 1. The accepted
 profile does not claim universal speedup: neutral cases retain target structure,
 and verification/analysis add small host overhead. The rejected decimal

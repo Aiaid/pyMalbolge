@@ -8,7 +8,7 @@
 
 > 当前分支更新，2026-10-10：[O3 策略](compiler-optimization.zh.md)将整程序
 > 编译默认改为 auto 选择和 structured 传递。显式 IR 默认 semantic，compat
-> 仍可显式选择；目标接口集成等待[最终组合验收](../notes/compiler-optimization-validation.json)。
+> 仍可显式选择；目标接口集成已通过本地[最终组合验收](../notes/compiler-optimization-validation.json)。
 > 2026-10-09 架构记录与测量继续对应其原日期。
 
 ## 1. 首个里程碑与兼容性
