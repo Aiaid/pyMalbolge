@@ -2,10 +2,11 @@
 """Stamp a disposable CI checkout with a unique TestPyPI development version.
 
 Run with Python 3.11+ (stdlib tomllib). The stable repository version is not
-bumped: only the supplied checkout's static project version is rewritten.
+bumped: only the supplied checkout's project and module versions are rewritten.
 """
 
 import argparse
+import ast
 import copy
 import json
 import os
@@ -21,15 +22,20 @@ except ImportError:
     tomllib = None
 
 
-BASE_VERSION = "1.0.1"
+BASE_VERSION = "1.1.0"
 _DECIMAL = re.compile(r"[0-9]+\Z")
+_RELEASE_VERSION = re.compile(r"(?P<base>[0-9]+\.[0-9]+\.[0-9]+)(?:\.dev[0-9]+)?\Z")
 _VERSION_LINE = re.compile(
     r"^[ \t]*version[ \t]*=[ \t]*(?P<quote>['\"])(?P<value>[^'\"\r\n]*)"
     r"(?P=quote)[ \t]*(?:\#[^\r\n]*)?(?:\r?\n|\Z)", re.MULTILINE
 )
+_MODULE_VERSION_LINE = re.compile(
+    r"^__version__[ \t]*=[ \t]*(?P<quote>['\"])(?P<value>[^'\"\r\n]*)"
+    r"(?P=quote)[ \t]*(?:\#[^\r\n]*)?(?:\r?\n|\Z)", re.MULTILINE
+)
 
 
-def development_version(run_id, attempt):
+def development_version(run_id, attempt, base_version=BASE_VERSION):
     """Return an injective version stamp for positive run IDs and attempts 1..999."""
     values = []
     for label, value in (("run ID", run_id), ("attempt", attempt)):
@@ -42,23 +48,21 @@ def development_version(run_id, attempt):
     run_number, attempt_number = values
     if attempt_number > 999:
         raise ValueError("attempt must be between 1 and 999")
+    match = _RELEASE_VERSION.fullmatch(base_version)
+    if match is None or match.group("base") != base_version:
+        raise ValueError("base version must be a numeric major.minor.patch release")
     return {
-        "base_version": BASE_VERSION,
+        "base_version": base_version,
         "test_version": "%s.dev%d" % (
-            BASE_VERSION, run_number * 1000 + attempt_number
+            base_version, run_number * 1000 + attempt_number
         ),
         "run_id": run_number,
         "attempt": attempt_number,
     }
 
 
-def replace_project_version(source, version):
-    """Validate complete TOML, then find the sole edit changing project.version.
-
-    Re-parsing each candidate proves the edit changes only the intended field.
-    This also excludes lookalike assignments in other tables or multiline strings.
-    Formatting, comments, and line endings are preserved byte-for-byte otherwise.
-    """
+def project_document(source):
+    """Read the static project version without importing the package."""
     if tomllib is None:
         raise ValueError("this CI helper requires Python 3.11 or newer")
     try:
@@ -76,6 +80,17 @@ def replace_project_version(source, version):
         raise ValueError("[project].dynamic must be a list")
     if "version" in dynamic:
         raise ValueError("[project].version cannot also be dynamic")
+    return document
+
+
+def replace_project_version(source, version):
+    """Find the sole edit changing project.version, preserving other bytes.
+
+    Re-parsing each candidate excludes lookalike assignments in other tables or
+    multiline strings and proves the edit changes only the intended field.
+    """
+    document = project_document(source)
+    old_version = document["project"]["version"]
     expected = copy.deepcopy(document)
     # Use a distinct probe even when retrying the same stamp, so equality also
     # proves which field is being edited on an idempotent invocation.
@@ -97,6 +112,36 @@ def replace_project_version(source, version):
     return replacements[0]
 
 
+def replace_module_version(source, old_version, version):
+    """Change the sole plain module version assignment without executing it."""
+    try:
+        document = ast.parse(source)
+    except SyntaxError:
+        raise ValueError("malbolge/__init__.py must be valid Python") from None
+    assignments = [node for node in document.body
+                   if isinstance(node, ast.Assign) and len(node.targets) == 1
+                   and isinstance(node.targets[0], ast.Name)
+                   and node.targets[0].id == "__version__"]
+    if len(assignments) != 1 or not isinstance(assignments[0].value, ast.Constant):
+        raise ValueError("module must contain one plain __version__ string assignment")
+    if assignments[0].value.value != old_version:
+        raise ValueError("module __version__ must match [project].version")
+    probe = "0.0.0.dev0" if old_version != "0.0.0.dev0" else "0.0.0.dev1"
+    assignments[0].value = ast.Constant(value=probe)
+    expected = ast.dump(document)
+    replacements = []
+    for candidate in _MODULE_VERSION_LINE.finditer(source):
+        if candidate.group("value") != old_version:
+            continue
+        start, end = candidate.span("value")
+        updated = source[:start] + probe + source[end:]
+        if ast.dump(ast.parse(updated)) == expected:
+            replacements.append(source[:start] + version + source[end:])
+    if len(replacements) != 1:
+        raise ValueError("module must contain one plain __version__ string assignment")
+    return replacements[0]
+
+
 def atomic_write(path, payload):
     """Replace a file atomically, preserving its permission bits."""
     mode = stat.S_IMODE(path.stat().st_mode)
@@ -115,16 +160,35 @@ def atomic_write(path, payload):
             temporary.unlink()
 
 
-def write_version(pyproject, original, updated, github_output, version):
+def write_versions(updates, github_output, version):
+    """Atomically replace each file and restore all prior bytes on I/O failure."""
+    def write_files(output=None, separator=b""):
+        written = []
+        try:
+            for path, original, updated in updates:
+                atomic_write(path, updated)
+                written.append((path, original))
+            if output is not None:
+                output.write(separator + ("version=%s\n" % version).encode("ascii"))
+                output.flush()
+        except OSError:
+            # Restore package identity even if truncating the output fails.
+            try:
+                if output is not None:
+                    output.truncate(original_size)
+            finally:
+                for path, original in reversed(written):
+                    atomic_write(path, original)
+            raise
+
     if github_output is None:
-        atomic_write(pyproject, updated)
+        write_files()
         return
-    if github_output.resolve() == pyproject.resolve():
-        raise ValueError("GitHub output must differ from pyproject.toml")
-    if github_output.exists() and os.path.samefile(str(github_output), str(pyproject)):
-        raise ValueError("GitHub output must differ from pyproject.toml")
+    for path, _, _ in updates:
+        if (github_output.resolve() == path.resolve() or
+                github_output.exists() and os.path.samefile(str(github_output), str(path))):
+            raise ValueError("GitHub output must differ from version source files")
     existed = github_output.exists()
-    project_written = False
     # Reserve a usable output file before touching the project. On an I/O
     # failure, restore the project and the previous output contents.
     try:
@@ -136,16 +200,7 @@ def write_version(pyproject, original, updated, github_output, version):
                 output.seek(-1, os.SEEK_END)
                 if output.read(1) != b"\n":
                     separator = b"\n"
-            try:
-                atomic_write(pyproject, updated)
-                project_written = True
-                output.write(separator + ("version=%s\n" % version).encode("ascii"))
-                output.flush()
-            except OSError:
-                output.truncate(original_size)
-                if project_written:
-                    atomic_write(pyproject, original)
-                raise
+            write_files(output, separator)
     except OSError:
         if not existed and github_output.is_file():
             github_output.unlink()
@@ -161,13 +216,24 @@ def main(argv=None):
                         default=os.environ.get("GITHUB_OUTPUT"))
     args = parser.parse_args(argv)
     try:
-        result = development_version(args.run_id, args.attempt)
         original = args.pyproject.read_bytes()
+        source = original.decode("utf-8")
+        current = project_document(source)["project"]["version"]
+        match = _RELEASE_VERSION.fullmatch(current)
+        if match is None:
+            raise ValueError("project version must be a numeric release or development version")
+        result = development_version(args.run_id, args.attempt, match.group("base"))
         updated = replace_project_version(
-            original.decode("utf-8"), result["test_version"]
+            source, result["test_version"]
         ).encode("utf-8")
-        write_version(args.pyproject, original, updated,
-                      args.github_output, result["test_version"])
+        module = args.pyproject.parent / "malbolge" / "__init__.py"
+        module_original = module.read_bytes()
+        module_updated = replace_module_version(
+            module_original.decode("utf-8"), current, result["test_version"]
+        ).encode("utf-8")
+        write_versions([(args.pyproject, original, updated),
+                        (module, module_original, module_updated)],
+                       args.github_output, result["test_version"])
     except (ValueError, OSError, UnicodeError) as error:
         print("prepare_testpypi_version: %s" % error, file=sys.stderr)
         return 2

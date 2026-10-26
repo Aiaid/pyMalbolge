@@ -139,6 +139,7 @@ function warnIfDirty() {
 let wheel = findWheel();
 const srcMtime = Math.max(...[
   "malbolge", "scripts", "pyproject.toml", "README.md", "README.zh.md", "LICENSE",
+  "docs/notes/pypi-description.md",
 ].map((name) => join(REPO, name)).filter(existsSync).map((path) =>
   statSync(path).isDirectory() ? newestMtime(path) : statSync(path).mtimeMs));
 // Whether the git state below describes the wheel itself, or merely the tree at

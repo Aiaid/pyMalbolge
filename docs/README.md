@@ -52,6 +52,8 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 
 | Document | Status | Contents |
 |---|---|---|
+| [release-1.1.0.md](notes/release-1.1.0.md) | ✅ local candidate; not published | Changes since PyPI 1.0.0, portable/native artifact scope and installed-package release acceptance |
+| [pypi-description.md](notes/pypi-description.md) | ✅ current candidate metadata | Concise package introduction used by pyproject.toml; English text is embedded in distribution metadata |
 | [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ local CI matrix acceptance | Clean-source Python 3.8/3.12/3.13 base suites, optional IR and semantic differential; pinned independent reference setup and AST/CLI/test portability repairs |
 | [web-demo-deployment.json](notes/web-demo-deployment.json) | ✅ public Pages deployment verified | Actual public Hello execution, deployed revision/wheel identity, successful build/deploy and separate full-CI failures |
 | [web-demo-validation.json](notes/web-demo-validation.json) | ✅ local Chromium acceptance | Portable browser-wheel build fix, freshness/vendor regression checks, Pyodide worker protocol and actual browser debugging controls; hosted evidence is recorded separately above |

@@ -430,7 +430,9 @@ def packaging_source(destination):
     (destination / "scripts").mkdir()
     for name in ("native_build.py", "hatch_native.py"):
         shutil.copy2(ROOT / "scripts" / name, destination / "scripts" / name)
-    for name in ("pyproject.toml", "README.md", "README.zh.md", "LICENSE"):
+    for name in ("pyproject.toml", "README.md", "README.zh.md", "LICENSE",
+                 "docs/notes/pypi-description.md"):
+        (destination / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / name, destination / name)
     for name in ("_native_vm.stale.so", "_native_vm.stale.pyd"):
         (destination / "malbolge" / name).write_bytes(b"stale checkout binary")

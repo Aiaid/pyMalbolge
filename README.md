@@ -5,7 +5,7 @@
 **Write Python. Get a running [Malbolge](https://en.wikipedia.org/wiki/Malbolge) program.**
 
 pyMalbolge is a pure-Python compiler from a subset of Python to
-[Malbolge20](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/), bundled
+[Malbolge20](https://malbolge20.gitlab.io/index-en.html), bundled
 with interpreters for both Malbolge variants and a full-featured debugger.
 The compiler and Python interpreter need no C++, flex, bison or Perl tools.
 An optional C extension accelerates Malbolge20 batch execution; semantic IR
@@ -238,9 +238,9 @@ MG ── mg2mc ──► ordered LAL ── mc2mb ──► memory image ──
 | `py2c` | **Ours.** Python AST → the Nagoya C subset. Lowers everything to three-address form, works around several defects in the downstream C compiler, and injects `zzmul` / `zzdiv` / `zzmod` library routines because the C subset has no `*`, `/` or `%`. |
 | `py2mg` | **Ours.** Python AST → `.mg` directly, skipping the C layer. Reuses the verified codegen primitives but replaces the frame strategy: per-function temporaries, real recursion-cycle detection, and protection of exactly the temporaries live across calls. |
 | Semantic IR | Optional Python AST → typed semantic IR → verified named passes → explicit target AST adapter. O3 considers the applicable accepted profile; `--backend=ir` selects it explicitly. |
-| `c2mg` | Pure-Python port of `nagoya-highlevel` (C subset → pseudo-instructions), reproduced bug-for-bug so that output stays byte-identical to the reference. |
-| `mg2mc` | Pure-Python port of `nagoya-ternary` (pseudo-instructions → LAL). |
-| `mc2mb` | Pure-Python port of `nagoya-lowass` (LAL → Malbolge20), replacing the two-stage Perl + C++ original. Padding is deterministic instead of time-seeded. |
+| `c2mg` | Pure-Python port of the frozen legacy `nagoya-highlevel` (C subset → pseudo-instructions), retaining reference behavior for controlled conformance fixtures. |
+| `mg2mc` | Pure-Python port of the frozen legacy `nagoya-ternary` (pseudo-instructions → LAL). |
+| `mc2mb` | Pure-Python port of the frozen legacy `nagoya-lowass` (LAL → Malbolge20), replacing its two-stage Perl + C++ implementation. This port uses deterministic padding. |
 
 Reference-port conformance fixtures compare bytes under controlled styles and
 padding. Optimized frontends and structured handoffs are also checked for exact
@@ -249,9 +249,16 @@ An optimization may change image bytes and steps while preserving that contract.
 
 ### Compared to the Nagoya toolchain
 
-|  | Nagoya toolchain | pyMalbolge |
+Upstream is active. As checked on **2026-10-26**, the official project page
+links to the consolidated [Malbolge20 creator repository](https://gitlab.com/malbolge20/malbolge20_creator),
+whose main revision was [`2b42f481`](https://gitlab.com/malbolge20/malbolge20_creator/-/commit/2b42f4817afecca6b4c4f7374e21a399b6488e31)
+(2026-10-06). Its current pipeline includes an `mbcc` driver, Python
+`parse_mc2.py`, explicit seed controls and address-search caching. Our legacy
+reference fixtures and historical timings below do not describe that revision.
+
+|  | Current upstream toolchain (checked 2026-10-26) | pyMalbolge |
 |---|---|---|
-| Implementation | C++ / flex / bison / Perl | Pure Python |
+| Implementation | C++ / flex / bison plus Python; Perl retained for legacy comparison | Pure-Python compiler; optional native runtime |
 | Getting it | Build from source locally | `uv pip install malbolge` or a source checkout |
 | Source language | C subset | Python subset (the C subset path is kept as one backend) |
 | `*` `/` `%` | Not in the C subset | Constant-folded, or emitted as library routines |
@@ -262,17 +269,24 @@ An optimization may change image bytes and steps while preserving that contract.
 | Text output | `putchar` per character | `print()` with runtime unsigned integers and static strings; decimal helpers injected on demand |
 | Decimal input | Manual character parsing | Module/function `int(input([literal_prompt]))`, with explicit unsigned range/error semantics |
 | Diagnostics | Parser errors | Line-numbered `CompileError` with a source excerpt |
-| Inline double recursion (`f(n-1) + f(n-2)`) | Miscompiled from fib(4) up | Correct on both backends |
-| Output determinism | `srand(time(NULL))` padding — deliberately different on every compile | Byte-for-byte reproducible |
+| Inline double recursion (`f(n-1) + f(n-2)`) | Specific Fibonacci reproducer reported in [issue 1](https://gitlab.com/malbolge20/malbolge20_creator/-/work_items/1); see below | Tested with C/direct backends |
+| Output determinism | `mbcc --seed N` fixes ternary and initializer seeds; unseeded padding remains randomized | Deterministic padding by default |
 | Backends | One | C/direct plus optional semantic IR; O3 selects the smaller applicable candidate |
 | Runtime | Reference C interpreter | Python for both variants; optional native Malbolge20 VM and explicit JIT; debugger |
-| Last upstream commit | 2021 | Actively maintained |
+| Maintenance | Active consolidated repository; revision above | Actively maintained |
 
-Obfuscation was a design goal upstream — the pseudo-instruction layer is
-*supposed* to emit something different each time. Trading that for determinism
-is what makes reproducible builds and byte-exact conformance testing possible.
-Controlled port-conformance paths retain reference behavior; optimized paths
-are judged by program semantics and machine invariants rather than byte identity.
+At that upstream revision, our inline `fib(4)` reproducer emitted raw byte
+`02` instead of `03`; splitting the recursive calls into separate assignments
+emitted `03`. Inline `fib(10)` emitted `10` instead of `37` (hex). These are
+specific source-level reproductions, not a claim about every input from 4
+onward or an isolated root cause. [Issue 1](https://gitlab.com/malbolge20/malbolge20_creator/-/work_items/1)
+contains the sources and commands. [Issue 2](https://gitlab.com/malbolge20/malbolge20_creator/-/work_items/2)
+separately records ternary diagnostics that still return success.
+
+Upstream supports both randomized generation and fixed seeds. Controlled
+port-conformance paths compare reference behavior under matched settings;
+optimized paths are judged by program semantics and machine invariants rather
+than byte identity.
 
 ## Performance
 
@@ -291,7 +305,7 @@ selection, image identity and independent execution contracts. The
 [benchmark guide](benchmarks/README.md) separates cold compilation, MB bytes
 and execution, including a comparison on one fixed reference VM.
 
-The [native VM acceptance](docs/notes/native-vm-validation.json) records five
+The **2026-10-10** [native VM acceptance](docs/notes/native-vm-validation.json) records five
 fresh-process samples per engine on macOS ARM64 / CPython 3.12.9. Median CPU
 times for the same images were:
 
@@ -386,7 +400,8 @@ invalid input; its artifact is 572,759,579 bytes and compiled in 283.06 s.
 
 ### Historical baselines
 
-Historical measurements on an M-series Mac, CPython 3.9. The `fib(6)` row
+Historical measurements documented on **2026-08-01**, on an M-series Mac with
+CPython 3.9. The `fib(6)` row
 uses the original fixed-input recursive source, without the runtime decimal
 parser or formatter in the current `examples/fib.py`:
 
@@ -396,60 +411,58 @@ parser or formatter in the current `examples/fib.py`:
 | `for i in range(3): putchar(65+i)` | 27.3 MB | 11.9 MB | 5.7 s | 9.5 s | 3.0 M |
 | fixed-input recursive `fib(6)` (historical) | 110.5 MB | 56.8 MB | 28.2 s | 53.8 s | — |
 
-**Output size.** The direct backend is no help on straight-line code — the two
-`hello` builds differ by under a kilobyte — but roughly halves anything with
-control flow or function calls. Size is driven by call sites and loops, not by
-the input's numeric values: a bootstrap of about 91 KB plus a few hundred KB
-per `putchar` call site is typical.
+**Output size in these fixtures.** The two `hello` builds differ by under a
+kilobyte; direct generation roughly halves the loop and recursive examples.
+Those observations do not predict the size of arbitrary programs.
 
-**Compilation** is dominated by the final assembly stage, which runs at roughly
+**Historical compilation** was dominated by the final assembly stage, at roughly
 **0.5 s per MB of output** and is effectively linear in it. It did not start
 that way: the address search in `mc2mb` was recursing without memoization,
 which made assembly superlinear at about 40 s/MB and turned multi-MB programs
 into multi-minute builds. Caching that search on `(d, pos, depth)` made it
 about **100x faster with byte-identical output**.
 
-**Execution** runs at roughly **240,000–320,000 instructions per second** under
+**Historical execution** ran at roughly **240,000–320,000 instructions per second** under
 CPython, measured end to end including startup and parsing the `.mb`. The
 debugger is another 2–2.4x slower, because step-back records execution history.
 Wall-clock time is superlinear in recursion depth even
 though `.mb` size is not — deep recursion touches more of the address space,
 and the sparse memory materializes blocks lazily as it goes.
 
-Practically: small programs are fine, and anything with real recursion is a
-patience exercise. Both are expected.
+These observations predate the current compiler policy, compact memory and
+native runtime. Use the dated measurements above for their respective scope.
 
 ### Historical comparison against the reference toolchain
 
-Compiling the same `print("Hello, world!")` — identical C input, identical
-`.mg` and `.mc` intermediates — through the Nagoya tools and through this port:
+The following measurements were documented on **2026-08-01**, using the frozen
+legacy reference tools retained for conformance. They have
+not been rerun against current upstream. The same `print("Hello, world!")`
+used identical C input and `.mg`/`.mc` intermediates:
 
-| Stage | Nagoya (C++ / bison / Perl) | pyMalbolge (pure Python) |
+| Stage | Frozen legacy reference (C++ / bison / Perl) | Historical pyMalbolge (pure Python) |
 |---|---|---|
 | C subset → `.mg` | 0.028 s | <0.001 s |
 | `.mg` → `.mc` | 0.030 s | 0.003 s |
 | `.mc` → `.mb` | 3.49 s | 1.72 s |
 | **Total** | **3.55 s** | **1.72 s** |
 
-The Python port is about **2x faster end to end**, which is not a statement
-about Python. Assembly dominates the pipeline, and its inner address search is
-memoized here and is not upstream — the same change that took this stage from
-roughly 40 s/MB to 0.5 s/MB. Everything else is fast enough that the language
-gap never shows up.
+The Python port took about half the total time in this one historical case.
+It cached an address search that the frozen legacy reference repeated.
+Current upstream also caches this search; these numbers establish no speed
+ranking against current upstream.
 
-Both toolchains emit **exactly 3,467,473 bytes**. About 69% of those bytes
-differ, and all of them are padding: cells the program never executes, which
-upstream fills from `srand(time(NULL))` and this port fills deterministically.
-The two binaries behave identically, and each one runs correctly on the other
-project's interpreter.
+Both historical artifacts contained **3,467,473 bytes**. About 69% of their
+bytes differed, attributed to randomized legacy padding versus this port's
+deterministic padding. Both produced the expected output on both interpreters
+in that check. Equal artifact size is not byte identity or a general
+equivalence proof.
 
-Where the reference implementation does win decisively is execution. On the
-same `.mb`:
+Historical execution times for the same `.mb` were:
 
 | Interpreter | Time |
 |---|---|
-| Nagoya reference (C) | 0.16 s |
-| pyMalbolge (CPython) | 3.07 s |
+| Frozen legacy reference (C) | 0.16 s |
+| Historical pyMalbolge (CPython) | 3.07 s |
 
 That historical **19x gap** compares reference C with the older Python path;
 it does not include this project's native extension. Current Malbolge20 batches
@@ -613,19 +626,18 @@ procedures, and in 2013 introducing **Malbolge20**: a 20-trit variant whose
 larger word and address space make a real compiler feasible. Their toolchain
 (MIT-licensed) is a three-stage descent — a C subset compiles to a
 pseudo-instruction language, which lowers to the LAL low-level assembler, which
-assembles to Malbolge20. Notably, the pseudo-instruction layer treats
-*obfuscation as a feature*: the same input is meant to produce different output
-on each compile.
+assembles to Malbolge20. The pseudo-instruction layer supports randomized
+obfuscation; the current consolidated toolchain also provides fixed seeds for
+reproducible generation.
 
-**What this project adds.** The Nagoya stack is C++/flex/bison/Perl and needs a
-local build; its last commit was in 2021. pyMalbolge reimplements all three
-stages in pure Python, verified byte-for-byte against the originals, and puts a
+**What this project adds.** pyMalbolge ports the three legacy compiler stages
+to pure Python, checks controlled fixtures against frozen references, and puts a
 Python front end on top — including `*`, `//` and `%`, which the upstream C
 subset does not have, plus `for`-loops, chained comparisons, short-circuit
 booleans and line-numbered diagnostics. The direct backend bypasses the C layer
-entirely. Output is made deterministic rather than obfuscated, which is what
-makes reproducible builds and byte-exact conformance testing possible in the
-first place. Alongside that, it is a maintained modern runtime for both
+entirely. Deterministic padding is the default. Optimized compilation preserves
+observable program behavior without requiring reference-byte identity.
+Alongside that, it is a maintained runtime for both
 variants with a real debugger.
 
 ## Documentation
@@ -693,7 +705,7 @@ receipts in [native packaging](docs/design/native-packaging.md).
 
 - [x] Malbolge20 variant support (20 trits, sparse memory)
 - [x] Debugger (CLI + TUI, with step-back)
-- [x] Pure-Python port of the full Nagoya toolchain, byte-exact
+- [x] Pure-Python port of the legacy Nagoya toolchain, with controlled conformance fixtures
 - [x] Python front end, plus a direct `py → .mg` backend
 - [x] Unsigned decimal input/output, basic print f-strings, flat tuple swaps and simple keyword calls
 - [x] Semantic IR with verified named passes, O3 automatic selection and structured target handoff
@@ -713,8 +725,9 @@ receipts in [native packaging](docs/design/native-packaging.md).
 
 **Malbolge20 and the Nagoya toolchain** (MIT)
 
-- [Project page](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/) — papers, online assemblers and interpreter
-- [Toolchain sources](https://git.trs.css.i.nagoya-u.ac.jp/malbolge) — `highlevel` (C subset → `.mg`), `ternary` (`.mg` → LAL), `lowass` (LAL → Malbolge20), and the reference interpreter. Mirrored under `ref/` here for conformance testing only.
+- [Official project page](https://malbolge20.gitlab.io/index-en.html) — papers, tools and current source links
+- [Canonical consolidated toolchain](https://gitlab.com/malbolge20/malbolge20_creator) — `highlevel` (C subset → `.mg`), `ternary` (`.mg` → LAL), `lowass` (LAL → Malbolge20), and the reference interpreter
+- [Legacy university repositories](https://git.trs.css.i.nagoya-u.ac.jp/malbolge) — the frozen sources used by this port's `ref/` conformance fixtures; distinct from current consolidated upstream
 - Kato et al. (2013), *Malbolge with 20trits word length and its programming support tool*, IEICE — introduces Malbolge20
 - Kanbe et al. (2016), *An intermediate language for a compiler generating highly obfuscated Malbolge codes*, IEICE SS2016 — the `.mg` layer
 - Sakanashi et al. (2017), *A compiler that translates to Malbolge from a C-language subset containing recursive calls*, IEICE SS2017-18 — the C front end

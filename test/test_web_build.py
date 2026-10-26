@@ -28,9 +28,11 @@ def browser_build(tmp_path):
     sources = {
         "malbolge/__init__.py": "",
         "scripts/hatch_native.py": "# fixture build hook\n",
-        "pyproject.toml": '[project]\nname = "malbolge"\nversion = "1.0.1"\n',
+        "pyproject.toml": ('[project]\nname = "malbolge"\nversion = "1.0.1"\n'
+                           'readme = "docs/notes/pypi-description.md"\n'),
         "README.md": "Fixture package\n",
         "README.zh.md": "Fixture package\n",
+        "docs/notes/pypi-description.md": "Fixture package description\n",
         "LICENSE": "Fixture license\n",
     }
     old = time.time() - 100
@@ -122,6 +124,23 @@ def test_package_metadata_and_build_script_changes_trigger_rebuild(browser_build
     assert (root / "uv-call.json").is_file(), "newer package input must invoke uv"
     info = json.loads((root / "web/vendor/build.json").read_text())
     assert info["wheel"] == PORTABLE
+
+
+def test_packaged_description_edit_invalidates_reused_wheel(browser_build):
+    root, old, invoke = browser_build
+    stale_wheel(root, old + 10)
+    completed = invoke()
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert not (root / "uv-call.json").exists()
+
+    description = root / "docs/notes/pypi-description.md"
+    description.write_text("Revised package description\n", encoding="utf8")
+    os.utime(description, (old + 20, old + 20))
+    completed = invoke()
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert (root / "uv-call.json").is_file(), "edited wheel description must invoke uv"
+    assert (root / "web/vendor" / PORTABLE).read_text() == "fresh fixture wheel"
+    assert not (root / "web/vendor" / STALE).exists()
 
 
 @pytest.mark.parametrize("args,offset", [((), 10), (("--no-build",), -10)])

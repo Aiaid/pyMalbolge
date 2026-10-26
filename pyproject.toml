@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "malbolge"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
   { name="Anend", email="anend@live.com" },
 ]
 description = "Malbolge / Malbolge20 interpreter, debugger and pure-Python Python-to-Malbolge20 compiler"
-readme = "README.md"
+readme = "docs/notes/pypi-description.md"
 requires-python = ">=3.8"
 keywords = ["malbolge", "malbolge20", "esolang", "interpreter", "compiler", "debugger"]
 classifiers = [
@@ -47,6 +47,8 @@ malbolge-tui = "malbolge.debug_tui:main"
 [project.urls]
 Homepage = "https://github.com/Aiaid/pyMalbolge"
 Issues = "https://github.com/Aiaid/pyMalbolge/issues"
+Documentation = "https://github.com/Aiaid/pyMalbolge/tree/master/docs"
+"Online debugger" = "https://aiaid.github.io/pyMalbolge/"
 
 # Explicit allowlist. Hatchling's default is "everything not VCS-ignored",
 # which swept a local virtualenv, scratch files and .claude/ into the sdist.
