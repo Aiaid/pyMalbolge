@@ -21,7 +21,16 @@ class TargetASTError(ValueError):
         super().__init__(message)
 
 
-class TargetAST(ast.Module):
+class _TargetNode:
+    def __reduce__(self):
+        # Python 3.13's AST reduction calls the constructor with one positional
+        # None per field. Our constructors have explicit metadata arguments and
+        # defaults, so reconstruct empty nodes and restore the complete state.
+        # Keeping state separate also preserves shared references during copy.
+        return type(self), (), self.__dict__
+
+
+class TargetAST(_TargetNode, ast.Module):
     """A module with explicit generated-local names, keyed by function name."""
 
     def __init__(self, body=(), *, generated_locals=None, type_ignores=()):
@@ -29,14 +38,17 @@ class TargetAST(ast.Module):
         self.generated_locals = {} if generated_locals is None else deepcopy(generated_locals)
 
 
-class TargetWhile(ast.While):
+class TargetWhile(_TargetNode, ast.While):
     """Run condition_prelude before every test, then execute the original body."""
 
     _fields = ("condition_prelude", "test", "body", "orelse")
+    if hasattr(ast.While, "_field_types"):
+        # CPython uses this schema to initialize fields starting with 3.13.
+        _field_types = dict(ast.While._field_types, condition_prelude=list[ast.stmt])
 
     def __init__(self, test=None, body=(), *, condition_prelude=(), orelse=()):
-        super().__init__(test=test, body=list(body), orelse=list(orelse))
-        self.condition_prelude = list(condition_prelude)
+        super().__init__(test=test, body=list(body), orelse=list(orelse),
+                         condition_prelude=list(condition_prelude))
 
 
 def _function_bindings(function):

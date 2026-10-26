@@ -12,10 +12,24 @@
 
 ## 1. 获取
 
+完整测试套件的独立 C 正确性门禁只需下面的显式准备命令，无需克隆整个工具链：
+
 ```bash
-# 名古屋五仓库(MIT;站点证书链不完整,需跳过验证)
+uv run --no-sync python scripts/verify_mb_reference.py fetch
+```
+
+它仅获取固定上游版本 `21ebda787362ab009276e216be34c169e4d049f4` 的
+`malbolge20.c` 及 MIT 声明，校验两份文件哈希并保留 TLS 证书验证。
+已有内容不同的本地文件会被拒绝而非覆盖。CI 还在受保护的编译器 PATH 中
+确认 clang 存在，再运行独立门禁测试。
+
+以下完整工具链获取方法用于可选的编译对照和研究。各仓库许可证不同；
+`highlevel-examples` 没有许可证文件。
+
+```bash
+# 可选名古屋工具链，保留正常 TLS 验证
 for r in highlevel highlevel-examples ternary lowass malbolge20-interpreter; do
-  GIT_SSL_NO_VERIFY=1 git clone --depth 1 \
+  git clone --depth 1 \
     "https://git.trs.css.i.nagoya-u.ac.jp/malbolge/$r" "ref/nagoya-$r"
 done
 
@@ -23,7 +37,8 @@ done
 git clone https://github.com/esoteric-programmer/LMAO ref/LMAO
 ```
 
-网页资料同理:`curl -sk https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/`。
+历史上游证书链故障应在遇到时具体诊断；当前正确性门禁准备使用经过验证的
+HTTPS 和固定内容哈希。
 
 ## 2. 构建(macOS 实测)
 

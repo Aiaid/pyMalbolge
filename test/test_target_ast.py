@@ -1,9 +1,11 @@
 """Base-toolchain contracts for structured target AST to the MG backend."""
 
 import ast
-from copy import deepcopy
+from copy import copy, deepcopy
 import itertools
 from pathlib import Path
+import pickle
+import warnings
 
 import pytest
 
@@ -57,6 +59,32 @@ def test_target_fields_remain_visible_to_existing_ast_visitors():
     clone = deepcopy(tree)
     assert clone.generated_locals == tree.generated_locals
     assert isinstance(clone.body[0].body[0], TargetWhile)
+
+
+@pytest.mark.parametrize("clone", [copy, deepcopy, lambda tree: pickle.loads(pickle.dumps(tree))],
+                         ids=["copy", "deepcopy", "pickle"])
+def test_target_copy_protocol_preserves_metadata_locations_and_loop_behavior(clone):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        tree = structured_loop(
+            "def f():\n    while 1:\n        putchar(condition)\nf()\n",
+            "condition=getchar()", generated_locals={"f": {"condition"}})
+        tree.type_ignores = [ast.TypeIgnore(lineno=1, tag="[example]")]
+        duplicate = clone(tree)
+    assert duplicate is not tree
+    assert type(duplicate) is TargetAST
+    assert type(duplicate.body[0].body[0]) is TargetWhile
+    assert ast.dump(duplicate, include_attributes=True) == ast.dump(tree, include_attributes=True)
+    assert duplicate.generated_locals == {"f": {"condition"}}
+    assert execute(duplicate, b"AB\0")[:2] == (b"AB", [65, 66, 0])
+    if clone is copy:
+        assert duplicate.body is tree.body
+        assert duplicate.generated_locals is tree.generated_locals
+    else:
+        duplicate.generated_locals["f"].add("other")
+        duplicate.body[0].body[0].condition_prelude.clear()
+        assert tree.generated_locals == {"f": {"condition"}}
+        assert execute(tree, b"C\0")[:2] == (b"C", [67, 0])
 
 
 @pytest.mark.parametrize("skip,structured", OPTIONS)

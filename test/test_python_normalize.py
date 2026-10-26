@@ -163,13 +163,22 @@ class TestKeywordBinding(unittest.TestCase):
         self.assertEqual(ast.dump(tree), before)
 
     def test_invalid_binding_forms_have_source_located_errors(self):
-        for expression in ('f(1, 2, 3)', 'f(1, a=2)', 'f(a=1, a=2)',
+        for expression in ('f(1, 2, 3)', 'f(1, a=2)',
                            'f(c=1)', 'f(a=1)', 'f(*values)', 'f(**values)'):
             with self.subTest(expression=expression):
                 call = ast.parse('\n' + expression).body[0].value
                 with self.assertRaises(LocatedError) as caught:
                     bind_call_arguments(call, ['a', 'b'], error=LocatedError)
                 self.assertEqual(caught.exception.lineno, 2)
+
+    def test_repeated_keyword_ast_has_source_located_error(self):
+        # Python 3.8 rejects repeated keyword names during ast.parse(), while
+        # newer parsers can return the AST. Exercise the binder on every host.
+        call = ast.parse('\nf(a=1, b=2)').body[0].value
+        call.keywords[1].arg = 'a'
+        with self.assertRaises(LocatedError) as caught:
+            bind_call_arguments(call, ['a', 'b'], error=LocatedError)
+        self.assertEqual(caught.exception.lineno, 2)
 
 
 class TestRuntimeErrorReachability(unittest.TestCase):

@@ -658,9 +658,18 @@ uv run --no-sync pytest test/
 uv run --no-sync pytest test/ -n 2
 ```
 
-The reference tools under `ref/` are optional. When present, the end-to-end
-tests build through them for speed and cross-check the results; when absent,
-everything falls back to the pure-Python pipeline.
+The external compiler tools under `ref/` are optional: compiler tests fall
+back to the pure-Python pipeline when those tools are absent. The independent
+C correctness-gate tests additionally require clang and the pinned reference
+interpreter source. Prepare a fresh checkout before running the full suite:
+
+```bash
+uv run --no-sync python scripts/verify_mb_reference.py fetch
+```
+
+This explicit setup downloads the audited upstream revision and MIT notice,
+verifies both SHA256 hashes and preserves normal TLS certificate checking.
+Interpreter and compiler execution never download reference tools.
 
 Local QoS acceptance also includes a final focused 207-test run (128
 subtests) and portable execution of both compiler backends on the project VM
@@ -673,9 +682,10 @@ records **2,788 passed, 29 skipped and 3,610 subtests** for its full working-tre
 run, including separately owned native work. A subsequent focused run overlaps
 it; counts are dated acceptance evidence and must not be added together.
 
-[CI configuration](.github/workflows/qos.yml) covers Python 3.8/3.12/3.13
-and a separate portable semantic job. Python 3.8/3.13 smoke checks passed
-locally; as of 2026-10-08 the workflow has not been pushed or run on GitHub.
+[CI configuration](.github/workflows/qos.yml) covers the base suite on Python
+3.8/3.12/3.13, optional IR on 3.10/3.12/3.13 and a separate portable semantic
+job. Each base job provisions the pinned C reference before running tests;
+local or historical receipts do not establish the latest hosted result.
 Native wheel CI and the completed TestPyPI trial have separate scope and
 receipts in [native packaging](docs/design/native-packaging.md).
 

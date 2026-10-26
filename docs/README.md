@@ -52,6 +52,7 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 
 | Document | Status | Contents |
 |---|---|---|
+| [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ local CI matrix acceptance | Clean-source Python 3.8/3.12/3.13 base suites, optional IR and semantic differential; pinned independent reference setup and AST/CLI/test portability repairs |
 | [web-demo-deployment.json](notes/web-demo-deployment.json) | ✅ public Pages deployment verified | Actual public Hello execution, deployed revision/wheel identity, successful build/deploy and separate full-CI failures |
 | [web-demo-validation.json](notes/web-demo-validation.json) | ✅ local Chromium acceptance | Portable browser-wheel build fix, freshness/vendor regression checks, Pyodide worker protocol and actual browser debugging controls; hosted evidence is recorded separately above |
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ local opt-in acceptance | JIT semantics/review/ABI/package checks, five-mode three-repeat same-image timings, emission/coverage/warmup costs and rejected first warmup |

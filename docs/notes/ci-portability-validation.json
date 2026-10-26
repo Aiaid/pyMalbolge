@@ -1,0 +1,125 @@
+{
+  "date": "2026-10-26",
+  "status": "local_ci_matrix_passed",
+  "base_commit": "fe8d538b6145ecc55926f232a5ddf9ab9b9062ba",
+  "scope": {
+    "host": "macOS ARM64",
+    "base_suite": "Fresh tracked-source snapshot overlaid with this change; no native libraries, uv.lock, local reference toolchain or cached .venv",
+    "reference_setup": "Actual verified-HTTPS fetch into the initially empty reference directory; both source and MIT license SHA256 verified",
+    "hosted_results": "Reported separately by GitHub Actions for the committed revision"
+  },
+  "fixes": [
+    {
+      "kind": "CI configuration",
+      "change": "Provision the checksum-pinned independent C interpreter and MIT notice before every base regression job; require clang on the gate compiler PATH"
+    },
+    {
+      "kind": "implementation",
+      "change": "Preserve complete custom AST state during copy/deepcopy/pickle and declare TargetWhile prelude schema for Python 3.13"
+    },
+    {
+      "kind": "implementation",
+      "change": "Keep injected run/file positional arguments contiguous in the direct Malbolge20 module wrapper for Python 3.8 argparse"
+    },
+    {
+      "kind": "test portability",
+      "change": "Construct repeated keyword AST explicitly so binder error/location coverage does not depend on host parser acceptance"
+    }
+  ],
+  "reference": {
+    "commit": "21ebda787362ab009276e216be34c169e4d049f4",
+    "source_sha256": "0ea5d2cfd8e597256f91bae3ea505f2f8467e3704e5c362b24fc91b56b9782b0",
+    "license": "MIT",
+    "license_sha256": "486cfd5e51a3cb7f1e8424e4691064e575bdd3002d8fc551e62496e39743eced",
+    "source_vendored": false,
+    "tls_verification": true,
+    "failed_checks_removed_or_skipped": false
+  },
+  "base_suites": [
+    {
+      "python": "3.8.19",
+      "passed": 1359,
+      "skipped": 413,
+      "seconds": 68.55
+    },
+    {
+      "python": "3.12.9",
+      "passed": 1371,
+      "skipped": 401,
+      "subtests_passed": 3572,
+      "seconds": 39.69
+    },
+    {
+      "python": "3.13.14",
+      "passed": 1371,
+      "skipped": 401,
+      "subtests_passed": 3572,
+      "seconds": 45.08
+    }
+  ],
+  "base_command": "uv run --no-project --python <isolated-base-env>/bin/python python -m pytest test/ -q -n 2",
+  "optional_ir": {
+    "xdsl": "0.69.0",
+    "modules": [
+      "test_lal_ir.py",
+      "test_ir_pipeline.py",
+      "test_ir_cli.py",
+      "test_semantic_ir.py",
+      "test_semantic_frontend.py",
+      "test_semantic_lowering.py",
+      "test_semantic_pipeline.py",
+      "test_semantic_cli.py"
+    ],
+    "results": [
+      {
+        "python": "3.10.20",
+        "passed": 587,
+        "seconds": 24.77,
+        "scope": "working source with three additional ignored local lowass sample MC fixtures"
+      },
+      {
+        "python": "3.12.9",
+        "passed": 584,
+        "seconds": 16.02,
+        "scope": "clean tracked-source snapshot"
+      },
+      {
+        "python": "3.13.14",
+        "passed": 587,
+        "seconds": 19.2,
+        "scope": "working source with three additional ignored local lowass sample MC fixtures"
+      }
+    ],
+    "warning": "Only the intentional is-with-literal SyntaxWarning diagnostic fixture; custom AST DeprecationWarnings are resolved"
+  },
+  "semantic_differential": {
+    "python": "3.12.9",
+    "passed": 2,
+    "subtests_passed": 2,
+    "seconds": 117.66,
+    "scope": "clean source snapshot, MALBOLGE_QOS_E2E=1; both compiler backends executed on project VM"
+  },
+  "focused_checks": {
+    "reference_gate_with_freshly_downloaded_source": "33 passed",
+    "target_ast_and_semantic_interface_python_312_313": "143 passed on each, deprecations treated as errors",
+    "target_ast_python_38": "68 passed",
+    "cli_without_native_library_python_38_312": "54 passed, 10 optional-native skips on each"
+  },
+  "workflow_syntax": "actionlint accepted qos.yml and pages.yml",
+  "limits": [
+    "Local acceptance is macOS ARM64; hosted Linux jobs must independently execute after push",
+    "Base-suite skips retain existing optional IR/native and gated slow/packaging boundaries",
+    "Counts overlap and are not additive",
+    "No Windows or new Python support matrix is claimed"
+  ],
+  "source_sha256": {
+    ".github/workflows/qos.yml": "26c2c83ff58753fc3c1365dfabc4340f7b7e1bd94285c9abac44fa397f443198",
+    "malbolge/compiler/target_ast.py": "08bd9d727fc6def0ad24dc040a88c80547aafa6be750fee4f3ce088a40a1bb58",
+    "malbolge/malbolge20.py": "7fd61c643017a0176a7c37f933578619642296384336a47d53eb7bcea9f0fa4e",
+    "scripts/verify_mb_reference.py": "53ff81edbf69e33405d2f6bb1c7b2d30cb2d6d736cce05efabdbf08b22a08e37",
+    "test/test_engine_selection.py": "59b0526aa59569c570d275f845b6475e775ad614795db691c86b1e099ff1ec74",
+    "test/test_mb_reference_gate.py": "aec2ac39900c61ba6c29d46daa874ef54ac3a288e7ff7c74d0aabba28220c023",
+    "test/test_python_normalize.py": "30db3b64390e559e7c192cbf9e1a9bafeaf68e690ea94384082a6c6705de1dfa",
+    "test/test_target_ast.py": "021bee51855db95b9c568e6c40478838a5e46a5fd6d3ab553c274dbf46e9ed98"
+  }
+}

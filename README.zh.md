@@ -577,8 +577,16 @@ uv run --no-sync pytest test/
 uv run --no-sync pytest test/ -n 2
 ```
 
-`ref/` 下的参考工具是可选的。存在时,端到端测试会走它们来提速并交叉检查结果;不存在
-时,一切回退到纯 Python 流水线。
+`ref/` 下的外部编译器工具是可选的，缺少时编译器测试会回退到纯 Python 流水线。
+独立 C 正确性门禁测试另需 clang 和固定版本参考解释器源码。全新检出后，先准备
+该依赖，再运行完整测试：
+
+```bash
+uv run --no-sync python scripts/verify_mb_reference.py fetch
+```
+
+这个显式准备命令下载已审计的上游版本及 MIT 声明，核对两份文件的 SHA256，
+保留正常 TLS 证书校验；解释器及编译器运行期间不会下载参考工具。
 
 本地 QoS 验收还包含最终定向的 207 项测试（128 个 subtest），以及两个
 编译后端在项目 VM 上的便携执行（2 项测试/2 个 subtest）。[历史审计快照](docs/notes/python-qos-audit.json)由[验收报告](docs/notes/python-qos-validation.json)
@@ -588,9 +596,9 @@ uv run --no-sync pytest test/ -n 2
 记录完整工作区测试 **2,788 passed、29 skipped、3,610 subtests**，包含独立
 维护的原生工作。后续定向测试与其重叠；这些是带日期的验收证据，不能累加。
 
-[CI 配置](.github/workflows/qos.yml)覆盖 Python 3.8/3.12/3.13，并设单独的
-便携语义作业。Python 3.8/3.13 已通过本地冒烟检查；截至 2026-10-08，工作流
-尚未推送或在 GitHub 运行。
+[CI 配置](.github/workflows/qos.yml)覆盖 Python 3.8/3.12/3.13 基础套件、
+3.10/3.12/3.13 可选 IR 和独立的便携语义作业。每个基础作业先准备固定 C 参考
+源码再运行测试；本地或历史验收记录不代表最新托管结果。
 原生 wheel CI 与已完成的 TestPyPI 试运行具有独立范围，记录见
 [原生打包](docs/design/native-packaging.zh.md)。
 

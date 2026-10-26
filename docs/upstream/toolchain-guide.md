@@ -15,10 +15,26 @@
 
 ## 1. Acquisition
 
+For the full test suite's independent C correctness gate, use this explicit
+setup command rather than cloning the whole toolchain:
+
 ```bash
-# The five Nagoya repos (MIT; the site's cert chain is incomplete, so verification must be skipped)
+uv run --no-sync python scripts/verify_mb_reference.py fetch
+```
+
+It retrieves only `malbolge20.c` and its MIT notice from pinned upstream
+revision `21ebda787362ab009276e216be34c169e4d049f4`, checks both hashes and
+keeps TLS certificate verification enabled. Existing different local files
+are rejected, not overwritten. CI also requires clang on its protected
+compiler PATH before executing the independent gate tests.
+
+The broader toolchain acquisition below is for optional compiler comparison
+and research. Licenses vary; `highlevel-examples` has no license file.
+
+```bash
+# Optional Nagoya compiler toolchain; retain normal TLS verification
 for r in highlevel highlevel-examples ternary lowass malbolge20-interpreter; do
-  GIT_SSL_NO_VERIFY=1 git clone --depth 1 \
+  git clone --depth 1 \
     "https://git.trs.css.i.nagoya-u.ac.jp/malbolge/$r" "ref/nagoya-$r"
 done
 
@@ -26,7 +42,8 @@ done
 git clone https://github.com/esoteric-programmer/LMAO ref/LMAO
 ```
 
-Web resources follow the same pattern: `curl -sk https://www.trs.css.i.nagoya-u.ac.jp/projects/Malbolge/`.
+Historical upstream certificate-chain failures need diagnosis when encountered;
+the current correctness-gate setup uses verified HTTPS and pinned content hashes.
 
 ## 2. Build (verified on macOS)
 

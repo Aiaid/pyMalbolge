@@ -203,7 +203,9 @@ def run(code, input_data=b"", *, max_steps=None, max_output=None,
 def main():
     """Use the shared CLI policy, including automatic batch engine selection."""
     from .__main__ import main as cli_main
-    cli_main(["run", "--variant=malbolge20"] + sys.argv[1:])
+    # Keep the injected positionals adjacent: argparse on Python 3.8 cannot
+    # resume optional positional parsing after an intervening option.
+    cli_main(["--variant=malbolge20", "run"] + sys.argv[1:])
 
 
 def _interactive_main(filename):

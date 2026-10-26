@@ -1,6 +1,7 @@
 """Cross-check the bounded C correctness gate against both independent VMs."""
 
 import hashlib
+import io
 import json
 from pathlib import Path
 import shutil
@@ -20,6 +21,57 @@ def instructions(*opcodes):
     return "".join(next(chr(value) for value in range(33, 127)
                         if (value + index) % 94 == opcode)
                    for index, opcode in enumerate(opcodes))
+
+
+def test_fetch_provisions_a_clean_directory_and_reuses_verified_files(tmp_path, monkeypatch):
+    source = tmp_path / "reference" / "malbolge20.c"
+    payloads = {"malbolge20.c": b"test source", "LICENSE": b"test MIT notice"}
+    monkeypatch.setattr(gate, "SOURCE_SHA256", hashlib.sha256(payloads["malbolge20.c"]).hexdigest())
+    monkeypatch.setattr(gate, "LICENSE_SHA256", hashlib.sha256(payloads["LICENSE"]).hexdigest())
+    requested = []
+
+    def download(url, timeout):
+        assert timeout == 30
+        assert url.startswith(gate.SOURCE_REPOSITORY + "/-/raw/" + gate.SOURCE_COMMIT + "/")
+        requested.append(url)
+        return io.BytesIO(payloads[url.rsplit("/", 1)[1]])
+
+    monkeypatch.setattr(gate.urllib.request, "urlopen", download)
+    manifest = gate.fetch_reference(source)
+    assert source.read_bytes() == payloads["malbolge20.c"]
+    assert source.with_name("LICENSE").read_bytes() == payloads["LICENSE"]
+    assert manifest["commit"] == gate.SOURCE_COMMIT
+    assert manifest["license"] == "MIT"
+    assert len(requested) == 2
+    assert gate.fetch_reference(source) == manifest
+    assert len(requested) == 2
+
+
+@pytest.mark.parametrize("bad_file", ("malbolge20.c", "LICENSE"))
+def test_fetch_rejects_changed_downloads_before_writing(tmp_path, monkeypatch, bad_file):
+    source = tmp_path / "reference" / "malbolge20.c"
+    payloads = {"malbolge20.c": b"test source", "LICENSE": b"test MIT notice"}
+    monkeypatch.setattr(gate, "SOURCE_SHA256", hashlib.sha256(payloads["malbolge20.c"]).hexdigest())
+    monkeypatch.setattr(gate, "LICENSE_SHA256", hashlib.sha256(payloads["LICENSE"]).hexdigest())
+    payloads[bad_file] += b"changed"
+    monkeypatch.setattr(gate.urllib.request, "urlopen", lambda url, timeout:
+                        io.BytesIO(payloads[url.rsplit("/", 1)[1]]))
+    with pytest.raises(gate.ReferenceGateError, match="fingerprint"):
+        gate.fetch_reference(source)
+    assert not source.parent.exists()
+
+
+def test_fetch_preserves_unknown_local_source(tmp_path, monkeypatch):
+    source = tmp_path / "malbolge20.c"
+    source.write_bytes(b"local changes")
+
+    def unexpected_download(*args, **kwargs):
+        pytest.fail("an unrecognized local source must be refused before downloading")
+
+    monkeypatch.setattr(gate.urllib.request, "urlopen", unexpected_download)
+    with pytest.raises(gate.ReferenceGateError, match="fingerprint"):
+        gate.fetch_reference(source)
+    assert source.read_bytes() == b"local changes"
 
 
 @pytest.fixture(scope="module")

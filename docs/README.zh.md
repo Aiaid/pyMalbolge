@@ -50,6 +50,7 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
+| [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ 本地 CI 矩阵验收 | 干净源码 Python 3.8/3.12/3.13 基础套件、可选 IR 和语义对照；固定独立参考准备及 AST/CLI/测试可移植性修复 |
 | [web-demo-deployment.json](notes/web-demo-deployment.json) | ✅ 公开 Pages 部署已核验 | 公网实际运行 Hello、部署版本/wheel 身份、构建部署成功及独立全量 CI 失败 |
 | [web-demo-validation.json](notes/web-demo-validation.json) | ✅ 本地 Chromium 验收 | 浏览器纯 Python wheel 构建修复、新鲜度/vendor 回归、Pyodide worker 协议与真实浏览器调试操作；托管证据另见上行 |
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ 本地显式验收 | JIT 语义/审查/ABI/打包、同映像五模式三轮计时、发射/覆盖率/预热成本及首次预热被拒记录 |

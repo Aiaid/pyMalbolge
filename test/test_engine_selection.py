@@ -253,12 +253,21 @@ def test_tty_without_batch_options_keeps_interactive_python(monkeypatch, source_
 
 
 @pytest.mark.parametrize("extension", ["mal", "mb"])
-def test_redirected_plain_command_is_byte_batch_execution(tmp_path, extension):
+@pytest.mark.parametrize("module,args", [
+    ("malbolge", ["--variant=malbolge20"]), ("malbolge.malbolge20", []),
+])
+def test_redirected_plain_command_is_byte_batch_execution(tmp_path, extension, module, args):
     path = tmp_path / ("program." + extension)
     path.write_bytes(program(23, 5, 81))
-    proc = subprocess.run([sys.executable, "-m", "malbolge", "--variant=malbolge20",
-                           str(path)], input=b"\xff", capture_output=True, timeout=10)
-    assert (proc.returncode, proc.stdout, proc.stderr) == (0, b"\xff", b"")
+    proc = subprocess.run([sys.executable, "-m", module] + args + [str(path)],
+                          input=b"\xff", capture_output=True, timeout=10)
+    assert (proc.returncode, proc.stdout) == (0, b"\xff")
+    # The direct module can emit a runpy import warning before execution.
+    if module == "malbolge":
+        assert proc.stderr == b""
+    else:
+        assert b"error:" not in proc.stderr
+        assert b"Traceback" not in proc.stderr
 
 
 def test_redirected_plain_command_uses_default_native_selection(monkeypatch, source_file):
@@ -339,6 +348,7 @@ def test_plain_redirected_unicode_source_preserves_legacy_text_contract(tmp_path
     # instruction because it exceeds printable ASCII (the batch exit is 2).
     assert (plain.returncode, plain.stdout) == (2, b"")
     assert b"Invalid character" not in plain.stderr
+    assert b"error:" not in plain.stderr
     # Explicit batch options preserve the byte-source API: UTF-8 bytes do not
     # represent the single wide character accepted by the legacy text loader.
     bounded = subprocess.run(command + ["--max-steps", "1"], input=b"",
@@ -346,6 +356,21 @@ def test_plain_redirected_unicode_source_preserves_legacy_text_contract(tmp_path
     assert (bounded.returncode, bounded.stdout) == (1, b"")
     assert b"Invalid character" in bounded.stderr
     assert b"Traceback" not in bounded.stderr
+
+
+@pytest.mark.parametrize("limit,value,reason", [
+    ("--max-steps", "1", "step_limit"),
+    ("--max-output", "0", "output_limit"),
+])
+def test_direct_module_entry_preserves_budget_exit_without_native(source_file, limit, value, reason):
+    proc = subprocess.run([
+        sys.executable, "-m", "malbolge.malbolge20", source_file,
+        "--engine=python", "--input", "X", limit, value, "--stats",
+    ], capture_output=True, timeout=10)
+    assert (proc.returncode, proc.stdout) == (3, b"")
+    stats = json.loads(proc.stderr.splitlines()[-1])
+    assert stats["stop_reason"] == reason
+    assert (stats["engine"], stats["requested_engine"]) == ("python", "python")
 
 
 @pytest.mark.parametrize("limit,value,reason", [

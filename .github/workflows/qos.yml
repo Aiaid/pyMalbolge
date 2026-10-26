@@ -30,6 +30,10 @@ jobs:
           version: '0.11.25'
           python-version: ${{ matrix.python }}
       - run: uv sync --extra dev
+      - name: Provision the pinned independent C reference and license
+        run: |
+          PATH=/usr/bin:/bin:/usr/sbin:/sbin command -v clang
+          uv run --no-sync python scripts/verify_mb_reference.py fetch
       - run: uv run --no-sync pytest test/ -q -n 2
 
   semantic-differential:

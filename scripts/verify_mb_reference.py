@@ -12,11 +12,15 @@ import math
 from pathlib import Path
 import shutil
 import subprocess
+import urllib.request
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = ROOT / "ref/nagoya-malbolge20-interpreter/malbolge20.c"
+SOURCE_REPOSITORY = "https://git.trs.css.i.nagoya-u.ac.jp/malbolge/malbolge20-interpreter"
+SOURCE_COMMIT = "21ebda787362ab009276e216be34c169e4d049f4"
 SOURCE_SHA256 = "0ea5d2cfd8e597256f91bae3ea505f2f8467e3704e5c362b24fc91b56b9782b0"
+LICENSE_SHA256 = "486cfd5e51a3cb7f1e8424e4691064e575bdd3002d8fc551e62496e39743eced"
 REPORT_PREFIX = "PYMALBOLGE_REFERENCE_GATE:"
 _SAFE_PATH = "/usr/bin:/bin:/usr/sbin:/sbin"
 _MAX_COUNTER = 2 ** 64 - 1
@@ -92,6 +96,40 @@ static int gate_setup(int *argc, char ***argv) {
 
 def _digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def fetch_reference(source=DEFAULT_SOURCE):
+    """Explicitly provision the audited upstream source and its MIT notice.
+
+    This is the only network operation in this module. TLS verification stays
+    enabled; both files must match their pinned hashes before either is written.
+    Existing files are checked and never replaced with different content.
+    """
+    source = Path(source).resolve()
+    files = ((source, "malbolge20.c", SOURCE_SHA256),
+             (source.with_name("LICENSE"), "LICENSE", LICENSE_SHA256))
+    pending = []
+    for destination, upstream_name, expected_hash in files:
+        if destination.exists():
+            data = destination.read_bytes()
+        else:
+            url = "%s/-/raw/%s/%s" % (SOURCE_REPOSITORY, SOURCE_COMMIT, upstream_name)
+            try:
+                with urllib.request.urlopen(url, timeout=30) as response:
+                    data = response.read(65537)
+            except OSError as exc:
+                raise ReferenceGateError("could not fetch pinned reference %s: %s" %
+                                         (upstream_name, exc)) from exc
+            pending.append((destination, data))
+        if _digest(data) != expected_hash:
+            raise ReferenceGateError("reference %s fingerprint differs from the audited version" %
+                                     upstream_name)
+    source.parent.mkdir(parents=True, exist_ok=True)
+    for destination, data in pending:
+        destination.write_bytes(data)
+    return {"source": str(source), "repository": SOURCE_REPOSITORY,
+            "commit": SOURCE_COMMIT, "source_sha256": SOURCE_SHA256,
+            "license": "MIT", "license_sha256": LICENSE_SHA256}
 
 
 def _environment(output_dir=None):
@@ -305,6 +343,8 @@ def verify_image(binary, image, input_bytes, expected_output, expected_consumed,
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+    fetch = subparsers.add_parser("fetch", help="fetch the pinned C reference and MIT license")
+    fetch.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     build = subparsers.add_parser("build", help="build a pinned correctness-only C reference")
     build.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     build.add_argument("--output-dir", type=Path, required=True)
@@ -318,7 +358,10 @@ def main(argv=None):
     verify.add_argument("--max-output", type=int, required=True)
     verify.add_argument("--timeout", type=float, required=True)
     args = parser.parse_args(argv)
-    if args.command == "build":
+    if args.command == "fetch":
+        result = fetch_reference(args.source)
+        code = 0
+    elif args.command == "build":
         _, result = build_reference_gate(args.source, args.output_dir)
         code = 0
     else:

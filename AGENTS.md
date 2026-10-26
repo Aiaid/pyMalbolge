@@ -99,6 +99,7 @@ Subset spec: `docs/specs/python-subset-spec.md`. Direct-backend design: `docs/de
 
 ### Run tests
 ```bash
+uv run --no-sync python scripts/verify_mb_reference.py fetch  # pinned C reference + MIT notice
 uv run --no-sync pytest test/ -n auto     # ~6 min (parallel, via pytest-xdist)
 uv run --no-sync pytest test/             # serial
 uv run --no-sync pytest test/test_mg2mc.py -q          # single module
@@ -110,9 +111,11 @@ and `test_py2c_diagnostics.py` needs pytest importable either way.
 
 Latest local QoS acceptance (2026-10-08): full suite 710 passed / 14 skipped
 plus 532 subtests; subsequent focused checks and portable VM execution are
-recorded in `docs/notes/python-qos-validation.json`. CI is configured for
-Python 3.8/3.12/3.13 but has not yet run on GitHub. The older test counts above
-remain historical timing evidence.
+recorded in `docs/notes/python-qos-validation.json`. CI runs the base suite on
+Python 3.8/3.12/3.13 and optional IR checks on 3.10/3.12/3.13. The full base
+suite needs clang and the explicitly fetched reference source; fetch verifies
+both upstream source and license hashes without disabling TLS checks. The
+older test counts above remain historical timing evidence.
 
 ### Build package
 ```bash
