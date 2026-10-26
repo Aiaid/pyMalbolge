@@ -167,7 +167,7 @@ jobs:
           - {label: linux-py312-native, runner: ubuntu-24.04, python: '3.12', mode: native, ir: false, source: false}
           - {label: linux-py313-pure, runner: ubuntu-24.04, python: '3.13', mode: pure, ir: false, source: false}
           - {label: linux-arm64-pure, runner: ubuntu-24.04-arm, python: '3.12', mode: pure, ir: false, source: false}
-          - {label: macos-arm64-pure, runner: macos-14, python: '3.12', mode: pure, ir: false, source: false}
+          - {label: macos-arm64-pure, runner: macos-15, python: '3.12', mode: pure, ir: false, source: false}
           - {label: macos-intel-pure, runner: macos-15-intel, python: '3.12', mode: pure, ir: false, source: false}
           - {label: windows-pure, runner: windows-2022, python: '3.12', mode: pure, ir: false, source: false}
           - {label: linux-source-native, runner: ubuntu-24.04, python: '3.12', mode: native, ir: false, source: true}

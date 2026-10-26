@@ -45,7 +45,7 @@ jobs:
             platform: linux
             arch: aarch64
             jit: --require-jit
-          - runner: macos-14
+          - runner: macos-15
             platform: macos
             arch: arm64
             jit: --require-jit
