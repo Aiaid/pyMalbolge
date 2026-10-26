@@ -48,7 +48,10 @@ jobs:
           - runner: macos-15
             platform: macos
             arch: arm64
-            jit: --require-jit
+            # Hosted macOS can lack thread-local JIT write protection. The
+            # helper checks the OS probe and explicit unavailable rejection;
+            # if available, real machine-code execution is still mandatory.
+            jit: ''
           - runner: macos-15-intel
             platform: macos
             arch: x86_64
