@@ -24,6 +24,9 @@ LICENSE_SHA256 = "486cfd5e51a3cb7f1e8424e4691064e575bdd3002d8fc551e62496e39743ec
 REPORT_PREFIX = "PYMALBOLGE_REFERENCE_GATE:"
 _SAFE_PATH = "/usr/bin:/bin:/usr/sbin:/sbin"
 _MAX_COUNTER = 2 ** 64 - 1
+# Strict C99 hides getopt/optind on glibc unless POSIX interfaces are requested.
+# Keep this in build flags so the hash-pinned upstream source stays unchanged.
+_COMPILER_FLAGS = ("-O3", "-std=c99", "-D_POSIX_C_SOURCE=200809L")
 
 
 class ReferenceGateError(RuntimeError):
@@ -206,7 +209,7 @@ def build_reference_gate(source=DEFAULT_SOURCE, output_dir=None):
     if compiler is None:
         raise ReferenceGateError("clang is unavailable")
     generated.write_bytes(instrumented)
-    command = [compiler, "-O3", "-std=c99", str(generated), "-lm", "-o", str(binary)]
+    command = [compiler, *_COMPILER_FLAGS, str(generated), "-lm", "-o", str(binary)]
     try:
         compiled = subprocess.run(command, capture_output=True, timeout=60,
                                   env=_environment(output_dir), cwd=output_dir)
@@ -226,7 +229,7 @@ def build_reference_gate(source=DEFAULT_SOURCE, output_dir=None):
         "binary": str(binary), "binary_sha256": _digest(binary.read_bytes()),
         "compiler": compiler,
         "compiler_version": version.stdout.decode("utf-8", errors="replace").strip(),
-        "compiler_flags": ["-O3", "-std=c99", "-lm"],
+        "compiler_flags": [*_COMPILER_FLAGS, "-lm"],
         "insertion_anchor_counts": counts,
         "eof_policy": "sentinel", "eof_sentinel": 59049,
         "step_contract": "HALT counts; invalid and budget-blocked instructions do not count",

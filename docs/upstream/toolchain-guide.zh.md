@@ -22,6 +22,8 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 `malbolge20.c` 及 MIT 声明，校验两份文件哈希并保留 TLS 证书验证。
 已有内容不同的本地文件会被拒绝而非覆盖。CI 还在受保护的编译器 PATH 中
 确认 clang 存在，再运行独立门禁测试。
+仪器化门禁与未经修改的参考程序均按 C99 编译，并定义
+`_POSIX_C_SOURCE=200809L`，让 glibc 提供 `getopt`/`optind` 声明，无需修改固定源码。
 
 以下完整工具链获取方法用于可选的编译对照和研究。各仓库许可证不同；
 `highlevel-examples` 没有许可证文件。

@@ -27,6 +27,9 @@ revision `21ebda787362ab009276e216be34c169e4d049f4`, checks both hashes and
 keeps TLS certificate verification enabled. Existing different local files
 are rejected, not overwritten. CI also requires clang on its protected
 compiler PATH before executing the independent gate tests.
+Both the instrumented gate and untouched reference compile as C99 with
+`_POSIX_C_SOURCE=200809L`, making `getopt`/`optind` visible on glibc without
+editing the pinned source.
 
 The broader toolchain acquisition below is for optional compiler comparison
 and research. Licenses vary; `highlevel-examples` has no license file.

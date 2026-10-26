@@ -112,13 +112,41 @@
     "Counts overlap and are not additive",
     "No Windows or new Python support matrix is claimed"
   ],
-  "source_sha256": {
+  "initial_repair_commit": "b28326604a9d5edf6d03c8736675ddd363b24329",
+  "initial_repair_source_sha256": {
     ".github/workflows/qos.yml": "26c2c83ff58753fc3c1365dfabc4340f7b7e1bd94285c9abac44fa397f443198",
     "malbolge/compiler/target_ast.py": "08bd9d727fc6def0ad24dc040a88c80547aafa6be750fee4f3ce088a40a1bb58",
     "malbolge/malbolge20.py": "7fd61c643017a0176a7c37f933578619642296384336a47d53eb7bcea9f0fa4e",
     "scripts/verify_mb_reference.py": "53ff81edbf69e33405d2f6bb1c7b2d30cb2d6d736cce05efabdbf08b22a08e37",
     "test/test_engine_selection.py": "59b0526aa59569c570d275f845b6475e775ad614795db691c86b1e099ff1ec74",
     "test/test_mb_reference_gate.py": "aec2ac39900c61ba6c29d46daa874ef54ac3a288e7ff7c74d0aabba28220c023",
+    "test/test_python_normalize.py": "30db3b64390e559e7c192cbf9e1a9bafeaf68e690ea94384082a6c6705de1dfa",
+    "test/test_target_ast.py": "021bee51855db95b9c568e6c40478838a5e46a5fd6d3ab553c274dbf46e9ed98"
+  },
+  "linux_followup": {
+    "observed_run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40268738888",
+    "observation": "Reference fetch and all three IR jobs passed; Linux base suites exposed 22 reference fixture setup errors from missing getopt/optind declarations under strict C99",
+    "fix": "Compile both instrumented and untouched upstream reference with -D_POSIX_C_SOURCE=200809L; preserve upstream bytes and VM semantics",
+    "compiler_flags": [
+      "-O3",
+      "-std=c99",
+      "-D_POSIX_C_SOURCE=200809L",
+      "-lm"
+    ],
+    "local_recheck": {
+      "python_38": "33 passed",
+      "python_312": "33 passed",
+      "python_313": "33 passed"
+    },
+    "hosted_acceptance": "Must be checked separately for the follow-up commit; the initial macOS full-matrix results above predate this compiler-flag change"
+  },
+  "source_sha256": {
+    ".github/workflows/qos.yml": "26c2c83ff58753fc3c1365dfabc4340f7b7e1bd94285c9abac44fa397f443198",
+    "malbolge/compiler/target_ast.py": "08bd9d727fc6def0ad24dc040a88c80547aafa6be750fee4f3ce088a40a1bb58",
+    "malbolge/malbolge20.py": "7fd61c643017a0176a7c37f933578619642296384336a47d53eb7bcea9f0fa4e",
+    "scripts/verify_mb_reference.py": "ab740145eacdadd743c8a98ea53e4e980f34a7636097d4c1bf923f1b38183bd2",
+    "test/test_engine_selection.py": "59b0526aa59569c570d275f845b6475e775ad614795db691c86b1e099ff1ec74",
+    "test/test_mb_reference_gate.py": "886f5b056c9efcd06360cdae19c308fcb2e876a29c37b042d993db1d504bd99d",
     "test/test_python_normalize.py": "30db3b64390e559e7c192cbf9e1a9bafeaf68e690ea94384082a6c6705de1dfa",
     "test/test_target_ast.py": "021bee51855db95b9c568e6c40478838a5e46a5fd6d3ab553c274dbf46e9ed98"
   }

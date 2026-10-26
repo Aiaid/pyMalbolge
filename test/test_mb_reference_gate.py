@@ -82,7 +82,7 @@ def references(tmp_path_factory):
     source_before = gate.DEFAULT_SOURCE.read_bytes()
     binary, manifest = gate.build_reference_gate(gate.DEFAULT_SOURCE, folder)
     original_binary = folder / "malbolge20-original"
-    subprocess.run([manifest["compiler"], "-O3", "-std=c99",
+    subprocess.run([manifest["compiler"], *gate._COMPILER_FLAGS,
                     str(gate.DEFAULT_SOURCE), "-lm", "-o", str(original_binary)],
                    check=True, capture_output=True, timeout=60,
                    env=gate._environment(folder))
@@ -208,6 +208,7 @@ def test_manifest_fingerprints_source_instrumentation_binary_and_anchor_counts(r
     assert manifest["instrumented_source_sha256"] == hashlib.sha256(generated).hexdigest()
     assert manifest["purpose"] == "correctness_only"
     assert manifest["performance_measurement"] is False
+    assert "-D_POSIX_C_SOURCE=200809L" in manifest["compiler_flags"]
     assert manifest["insertion_anchor_counts"]["diagnostic_close"] == 10
     assert manifest["insertion_anchor_counts"]["halt"] == 1
 
