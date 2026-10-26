@@ -15,6 +15,16 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      macos_arm64_only:
+        description: Retry only the macOS ARM64 wheel group
+        type: boolean
+        default: false
+      macos_arm64_runner:
+        description: Supported Apple Silicon runner image
+        type: choice
+        default: macos-15
+        options: [macos-15, macos-26]
 
 # Build and retain reviewable artifacts; this workflow never publishes to PyPI.
 permissions:
@@ -45,7 +55,7 @@ jobs:
             platform: linux
             arch: aarch64
             jit: --require-jit
-          - runner: macos-15
+          - runner: ${{ inputs.macos_arm64_runner || 'macos-15' }}
             platform: macos
             arch: arm64
             # Hosted macOS can lack thread-local JIT write protection. The
@@ -84,6 +94,7 @@ jobs:
               output.write('version=' + version + '\n')
           PY
       - name: Build, repair and test installed wheels
+        if: ${{ !inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64') }}
         env:
           # PR: one interpreter per OS (both libc variants on Linux).
           # Dispatch/tag: 3.9-3.13, 35 wheels across the same five jobs.
@@ -138,6 +149,7 @@ jobs:
             --report "/native-provenance/release-$CIBUILDWHEEL_BUILD_IDENTIFIER.json"
         run: uvx --python 3.12 cibuildwheel==4.3.0 --platform '${{ matrix.platform }}' --output-dir wheelhouse
       - name: Record wheel hashes and tags
+        if: ${{ !inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64') }}
         run: |
           uv run --no-project --python 3.12 python - <<'PY'
           import hashlib, json, os
@@ -160,6 +172,7 @@ jobs:
               'host_uv': '0.11.25', 'wheels': wheels}, indent=2) + '\n')
           PY
       - name: Retain wheels
+        if: ${{ !inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64') }}
         uses: actions/upload-artifact@v6.0.0
         with:
           name: native-wheels-${{ matrix.runner }}
@@ -167,7 +180,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Retain installed smoke provenance (including failures)
-        if: always()
+        if: ${{ always() && (!inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64')) }}
         uses: actions/upload-artifact@v6.0.0
         with:
           name: native-provenance-${{ matrix.runner }}
@@ -176,6 +189,7 @@ jobs:
           retention-days: 14
 
   python38-compatibility:
+    if: ${{ !inputs.macos_arm64_only }}
     # cibuildwheel 4 intentionally excludes EOL Python 3.8. This separate
     # source build checks the declared floor; its linux wheel is NOT manylinux.
     name: CPython 3.8 source-wheel compatibility
