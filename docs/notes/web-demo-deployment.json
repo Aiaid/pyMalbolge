@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-26",
+  "status": "public_pages_deployed_and_browser_verified",
+  "url": "https://aiaid.github.io/pyMalbolge/",
+  "repository": "https://github.com/Aiaid/pyMalbolge",
+  "deployed_commit": "ba42692dbb9c81f66ac9a5fbabb69bd76ebb8b9f",
+  "workflow": ".github/workflows/pages.yml",
+  "workflow_run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40262006284",
+  "jobs": {"build": "success", "deploy": "success"},
+  "initial_deployment_run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40261685403",
+  "artifact": {
+    "runtime_files": 15,
+    "scope": "Explicit runtime allowlist, selected portable wheel and manifest-selected examples",
+    "excludes": ["development fixtures", "node_modules", "build/test scripts", "private research notes"],
+    "wheel": "malbolge-1.0.0-py3-none-any.whl",
+    "wheel_bytes": 246315,
+    "wheel_sha256": "56d01d229ce5c0ab45a5fdb0f0db065353d61c9c43508ccc3fac8922a11f00c1",
+    "public_build_metadata": {
+      "head": "ba42692",
+      "dirty": false,
+      "describes": "wheel",
+      "pyodide_version": "314.0.6",
+      "variant": "original"
+    }
+  },
+  "acceptance": {
+    "local_regressions": "80 passed, 1 separately gated native packaging skip",
+    "local_worker_smoke": "79/79 checks passed",
+    "workflow_syntax": "actionlint passed",
+    "hosted_checks": "Build/staging/native-policy regressions and actual Pyodide worker/bridge smoke completed successfully before deployment",
+    "public_browser": "Chromium, actual HTTPS project-subpath URL, cache-bypassing reload",
+    "hello": {"loaded_from_card": true, "terminated": true, "output": "Hello World!", "displayed_step": 39, "history": 40},
+    "console_errors_or_warnings_after_final_reload": 0,
+    "repository_website_readback": "https://aiaid.github.io/pyMalbolge/"
+  },
+  "separate_quality_ci": {
+    "run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40261685405",
+    "conclusion": "failure",
+    "successful_jobs": ["semantic-differential", "ir-foundation (3.10)", "ir-foundation (3.12)"],
+    "failed_jobs": ["regression (3.8)", "regression (3.12)", "regression (3.13)", "ir-foundation (3.13)"],
+    "observed_failure_categories": [
+      "Clean checkout lacks ignored Nagoya reference-interpreter source required by reference-gate tests",
+      "Python 3.13 semantic TargetAST constructor compatibility",
+      "Legacy text/error exit-code expectations in engine-selection tests",
+      "Python 3.8 duplicate-keyword syntax is rejected before frontend validation"
+    ],
+    "scope": "Separate from the successful browser deployment; no compiler fixes included in this task"
+  },
+  "limits": [
+    "Browser demo supports original Malbolge only; no browser Malbolge20 execution or Python compilation",
+    "Pyodide and fonts load from external CDNs; offline availability is not promised",
+    "No Safari, Firefox or mobile-browser acceptance",
+    "A successful Pages workflow does not mean the separate full quality workflow passed"
+  ]
+}
