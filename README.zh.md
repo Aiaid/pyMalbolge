@@ -101,6 +101,11 @@ macOS ARM64 验收；[TestPyPI 记录](docs/notes/testpypi-ci-validation.json)�
 托管 CPython 3.12 Linux x86-64 构建、上传及安装 wheel 验收。这些证据不代表
 完整平台矩阵已验收，也不代表已正式向 PyPI 发布原生包。
 
+更新的 [2026-10-27 发版验收](docs/notes/release-1.1.0-acceptance.json)记录了以
+1.1.0 为基础的 TestPyPI 开发版本：源码、可移植及 Linux 原生分发文件已上传，
+九组远端安装核对了精确包身份、编译输出与执行契约。原生平台覆盖和仍待运行的
+托管用例在该回执中分别记录。
+
 ### 当前默认行为
 
 | 操作 | 默认 | 显式控制 |

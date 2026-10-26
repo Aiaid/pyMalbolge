@@ -112,6 +112,12 @@ records a hosted CPython 3.12 Linux x86-64 build, upload and installed-wheel
 check. These do not establish acceptance of the full platform matrix or a
 production PyPI native release.
 
+The newer [2026-10-27 release acceptance](docs/notes/release-1.1.0-acceptance.json)
+records a 1.1.0-based TestPyPI development release: source, portable and Linux
+native distributions were uploaded, then nine remote installations verified
+exact package identity, compiler output and runtime contracts. Native platform
+coverage and any pending hosted cases are recorded separately in that receipt.
+
 ### Current defaults
 
 | Operation | Default | Explicit control |

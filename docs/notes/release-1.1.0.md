@@ -52,3 +52,17 @@ their own source archive.
 The separately configured TestPyPI workflow is a test-site path. Neither its
 past success nor preparation of these local artifacts publishes this release.
 Production upload, Git tags and the Wiki edits are separate actions.
+
+## Test-site execution, 2026-10-27
+
+[TestPyPI run 40355946022](https://github.com/Aiaid/pyMalbolge/actions/runs/40355946022)
+published `1.1.0.dev40355946022001` as a source archive, portable wheel and
+CPython 3.12 manylinux wheel. All nine remote installation jobs passed,
+including Python 3.8, optional IR, a required-native source rebuild, Windows,
+Linux x86-64/ARM64 and macOS Intel/ARM64. The downloaded reports and public
+TestPyPI file hashes agree with the build provenance.
+
+The [acceptance receipt](release-1.1.0-acceptance.json) separates these completed
+remote checks from the native-wheel platform matrix and its exact JIT scope.
+The product-quality workflow passed all seven jobs; later CI/helper-only
+changes do not change the packaged interpreter/compiler modules.

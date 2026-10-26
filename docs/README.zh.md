@@ -51,6 +51,7 @@
 | 文档 | 状态 | 内容 |
 |---|---|---|
 | [release-1.1.0.zh.md](notes/release-1.1.0.zh.md) | ✅ 本地候选；未发布 | 相对 PyPI 1.0.0 的变化、可移植/原生产物范围与安装包发版验收 |
+| [release-1.1.0-acceptance.json](notes/release-1.1.0-acceptance.json) | ✅ TestPyPI 远端验收；平台范围单列 | 构建/公开文件哈希、九组远端安装、产品 CI 与各平台原生/JIT 证据 |
 | [pypi-description.zh.md](notes/pypi-description.zh.md) | ✅ 现行候选元数据 | pyproject.toml 使用的简洁安装包介绍；英文版嵌入分发元数据 |
 | [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ 本地 CI 矩阵验收 | 干净源码 Python 3.8/3.12/3.13 基础套件、可选 IR 和语义对照；固定独立参考准备及 AST/CLI/测试可移植性修复 |
 | [web-demo-deployment.json](notes/web-demo-deployment.json) | ✅ 公开 Pages 部署已核验 | 公网实际运行 Hello、部署版本/wheel 身份、构建部署成功及独立全量 CI 失败 |

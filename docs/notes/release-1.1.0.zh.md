@@ -36,3 +36,15 @@
 
 单独配置的 TestPyPI 工作流仅面向测试站点。此前试发布成功或本地产物准备
 均不代表本版本正式发布。正式上传、Git tag 与 Wiki 修改是分开的动作。
+
+## 测试站执行，2026-10-27
+
+[TestPyPI 运行 40355946022](https://github.com/Aiaid/pyMalbolge/actions/runs/40355946022)
+以 `1.1.0.dev40355946022001` 上传源码归档、可移植 wheel 和 CPython 3.12
+manylinux wheel。九组远端安装作业全部通过，包括 Python 3.8、可选 IR、
+强制原生源码重建、Windows、Linux x86-64/ARM64 及 macOS Intel/ARM64。
+下载的回执、测试站公开文件哈希与构建来源记录一致。
+
+[验收回执](release-1.1.0-acceptance.json)区分已完成的远端检查与原生 wheel
+平台矩阵及其实际 JIT 范围。产品质量工作流七项作业全部通过；后续仅修改
+CI/helper 的提交未改变安装包内的解释器与编译器模块。
