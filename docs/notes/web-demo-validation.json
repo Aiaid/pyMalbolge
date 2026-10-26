@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-26",
+  "status": "local_browser_acceptance_passed_hosting_pending",
+  "source_head": "47853bd",
+  "working_tree_change": "web/build.mjs portable wheel policy and freshness checks; test/test_web_build.py regression coverage",
+  "scope": {
+    "host": "macOS ARM64",
+    "browser": "Chromium via Chrome DevTools",
+    "origin": "local loopback HTTP server",
+    "variant": "original Malbolge",
+    "pyodide_version": "314.0.6",
+    "hosted": false
+  },
+  "regression_reproduced": {
+    "trigger": "A stale portable wheel exists while the default native build succeeds",
+    "before": "uv builds a host-specific wheel, then the browser builder copies the old portable wheel and reports wheel-build provenance",
+    "after": "Browser builds force the native hook disabled; missing or stale portable output fails before vendor changes",
+    "freshness_inputs": ["malbolge/", "scripts/", "pyproject.toml", "README.md", "README.zh.md", "LICENSE"]
+  },
+  "artifact": {
+    "name": "malbolge-1.0.0-py3-none-any.whl",
+    "bytes": 246297,
+    "sha256": "f3a746470c7d172d36cea1ab3f28de54979b048a0fbbcf003346af4c5eed3044",
+    "tag": "py3-none-any",
+    "native_files": [],
+    "private_research_files": [],
+    "manifest_examples": 6
+  },
+  "automated_checks": [
+    {
+      "command": "uv run --no-sync pytest test/test_web_build.py test/test_native_packaging.py -q",
+      "passed": 56,
+      "skipped": 1,
+      "skip_reason": "Full native packaging acceptance is separately gated by MALBOLGE_PACKAGING_TESTS",
+      "new_web_build_cases": 10,
+      "web_fixture_limits": "Requires Node.js and a POSIX executable fixture; explicitly skipped on Windows"
+    },
+    {
+      "command": "node web/smoke.mjs",
+      "passed": 79,
+      "failed": 0,
+      "scope": "Actual Pyodide worker engine and bridge under Node, including input, stop, history and JSON/structuredClone checks"
+    }
+  ],
+  "browser_checks": [
+    {"action": "Load hello.mal from the launch card", "result": "Debugger shows step 0 and initialized registers/memory"},
+    {"action": "Step forward once", "result": "Step 1; mem[0] changes from 40 to 121"},
+    {"action": "Step back once", "result": "Step 0; mem[0] restored to 40"},
+    {"action": "Continue hello.mal to completion", "result": "Terminated; output exactly Hello World!; 12 characters; displayed step 39 and history 40"},
+    {"action": "Reset and set a breakpoint at address 2", "result": "Continue pauses at step 2, breakpoint address 00002, first hit"},
+    {"action": "Load 99bottles.mal and continue", "result": "Progress and output update during execution"},
+    {"action": "Pause the long run using its toolbar button", "result": "Paused at step 730000, before program completion; 593 output characters"},
+    {"action": "Focus timeline slider and press Home", "result": "Seek to earliest retained step 720000; latest retained step remains 730000"},
+    {"action": "Inspect browser errors and required resources", "result": "No console error/warning messages; local app, wheel, examples and CDN runtime requests succeeded"}
+  ],
+  "source_sha256": {
+    "web/build.mjs": "49bce1d15097e4d35bf8dffecac3827bec02426df3fa4869a9efd5074b09250d",
+    "web/worker.js": "9e696d15fb3ce23b9300affa134a934fb0b51cd9b9ce110b5811f27d292be1e4",
+    "web/bridge.js": "321900d3dddaa4c1323a3972ee378fcf95cf1a56ae2616859f07c3a88599bf90",
+    "web/screens/debugger.js": "458bd30308141a25957d809066810665d2c546f882a36bcbf9a32e47565cd1f3",
+    "test/test_web_build.py": "031cbda9c6eb1fb7893d09f92ec068ce9cb461716e1467f200a9bff785492d5b"
+  },
+  "limits": [
+    "No public deployment or hosted URL verified",
+    "No Safari, Firefox or mobile browser acceptance",
+    "Browser v1 does not run Malbolge20 or offer Python compilation",
+    "No offline-availability acceptance; Pyodide and fonts loaded over the network",
+    "Long-run pause was verified, not full completion or pause-latency benchmarking",
+    "Browser checks are manual actions; they are not a new automated browser suite"
+  ]
+}

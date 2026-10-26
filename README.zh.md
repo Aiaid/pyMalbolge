@@ -10,6 +10,25 @@ pyMalbolge 是一个纯 Python 实现的编译器,把 Python 的一个子集编�
 不需要 C++、flex、bison 或 Perl 工具。可选 C 扩展加速 Malbolge20 批量执行，
 可选 `ir` extra 提供语义 IR 优化。
 
+**先体验 Hello World。** 在源码副本中按[安装说明](#安装)准备环境，再编译
+并运行这个小示例，明确限制执行步数和输出量：
+
+```bash
+uv run python -m malbolge compile examples/hello.py --no-cache -o hello.mb
+uv run python -m malbolge --variant=malbolge20 hello.mb --engine python --input '' --max-steps 5000000 --max-output 64
+# Hello, world!
+```
+
+直接体验原版 Malbolge 解释器：
+
+```bash
+uv run python -m malbolge examples/hello.mal --input '' --max-steps 1000 --max-output 64
+# Hello World!
+```
+
+[浏览器调试器](web/README.md#running-it-locally)也可在本地运行原版 Malbolge，
+链接中包含构建和启动方法；它不运行编译器生成的 Malbolge20 程序。
+
 [Fibonacci 示例](examples/fib.py)使用普通 Python 输入输出与内联双重递归。
 十进制转换由编译器生成：
 

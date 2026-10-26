@@ -52,6 +52,7 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 
 | Document | Status | Contents |
 |---|---|---|
+| [web-demo-validation.json](notes/web-demo-validation.json) | ✅ local Chromium acceptance; hosting pending | Portable browser-wheel build fix, freshness/vendor regression checks, Pyodide worker protocol and actual browser debugging controls |
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ local opt-in acceptance | JIT semantics/review/ABI/package checks, five-mode three-repeat same-image timings, emission/coverage/warmup costs and rejected first warmup |
 | [native-engine-selection-validation.json](notes/native-engine-selection-validation.json) | ✅ current | Native-first batch defaults, explicit engine selection, Python fallback and CLI compatibility checks |
 | [native-packaging-validation.json](notes/native-packaging-validation.json) | ✅ local acceptance; hosted matrix pending | Native/pure/source installation, Python ABI wheels, packaging policy, CI syntax and wheel-identifier checks |

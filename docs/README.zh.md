@@ -50,6 +50,7 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
+| [web-demo-validation.json](notes/web-demo-validation.json) | ✅ 本地 Chromium 验收；托管待办 | 浏览器纯 Python wheel 构建修复、新鲜度/vendor 回归、Pyodide worker 协议与真实浏览器调试操作 |
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ 本地显式验收 | JIT 语义/审查/ABI/打包、同映像五模式三轮计时、发射/覆盖率/预热成本及首次预热被拒记录 |
 | [native-engine-selection-validation.json](notes/native-engine-selection-validation.json) | ✅ 现行 | 批处理默认优先原生 VM、显式引擎选择、Python 回退及 CLI 兼容检查 |
 | [native-packaging-validation.json](notes/native-packaging-validation.json) | ✅ 本地验收；托管矩阵待跑 | 原生/纯包/源码安装、Python ABI wheel、打包策略、CI 语法及 wheel 身份检查 |

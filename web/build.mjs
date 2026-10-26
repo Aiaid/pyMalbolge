@@ -71,7 +71,13 @@ function findWheel() {
 function buildWheel() {
   // The project rule is that every Python operation goes through uv.
   log("build.mjs: uv build --wheel");
-  const r = spawnSync("uv", ["build", "--wheel"], { cwd: REPO, stdio: "inherit" });
+  // Pyodide needs a portable wheel, even when the host can build the native VM
+  // or the caller requested a native wheel for a separate packaging task.
+  const r = spawnSync("uv", ["build", "--wheel"], {
+    cwd: REPO,
+    stdio: "inherit",
+    env: { ...process.env, MALBOLGE_NATIVE_BUILD: "disabled" },
+  });
   if (r.error && r.error.code === "ENOENT") {
     fail("`uv` not found on PATH. Install uv, or run with --no-build after building the wheel yourself.");
   }
@@ -131,21 +137,27 @@ function warnIfDirty() {
 // ---------------------------------------------------------------- wheel
 
 let wheel = findWheel();
-const srcMtime = newestMtime(join(REPO, "malbolge"));
+const srcMtime = Math.max(...[
+  "malbolge", "scripts", "pyproject.toml", "README.md", "README.zh.md", "LICENSE",
+].map((name) => join(REPO, name)).filter(existsSync).map((path) =>
+  statSync(path).isDirectory() ? newestMtime(path) : statSync(path).mtimeMs));
 // Whether the git state below describes the wheel itself, or merely the tree at
 // the moment an already-built wheel was copied out of dist/.
 let gitDescribes = "copy-time";
 
 if (!args.has("--no-build") && (!wheel || wheel.mtime < srcMtime)) {
-  if (wheel) log(`build.mjs: ${wheel.name} is older than malbolge/, rebuilding`);
+  if (wheel) log(`build.mjs: ${wheel.name} is older than package sources, rebuilding`);
   warnIfDirty();
   buildWheel();
   wheel = findWheel();
+  if (!wheel || wheel.mtime < srcMtime) {
+    fail("uv build did not produce an up-to-date py3-none-any wheel; vendor/ was not updated");
+  }
   gitDescribes = "wheel";
 }
-if (!wheel) fail("no wheel in dist/. Run `uv build` (or drop --no-build).");
+if (!wheel) fail("no py3-none-any wheel in dist/. Run `node web/build.mjs` without --no-build.");
 if (wheel.mtime < srcMtime) {
-  log(`build.mjs: WARNING ${wheel.name} is older than malbolge/ (--no-build was given)`);
+  log(`build.mjs: WARNING ${wheel.name} is older than package sources (--no-build was given)`);
 }
 
 // ---------------------------------------------------------------- vendor

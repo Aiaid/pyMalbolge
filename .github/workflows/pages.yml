@@ -1,0 +1,88 @@
+name: Public browser demo
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'web/**'
+      - 'malbolge/**'
+      - 'scripts/**'
+      - 'examples/*.mal'
+      - 'examples/manifest.json'
+      - 'test/test_web_*.py'
+      - 'test/test_native_packaging.py'
+      - 'pyproject.toml'
+      - 'README*.md'
+      - 'LICENSE'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'malbolge/**'
+      - 'scripts/**'
+      - 'examples/*.mal'
+      - 'examples/manifest.json'
+      - 'test/test_web_*.py'
+      - 'test/test_native_packaging.py'
+      - 'pyproject.toml'
+      - 'README*.md'
+      - 'LICENSE'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install build and test dependencies
+        run: |
+          uv sync --extra dev
+          npm ci --prefix web --ignore-scripts --no-audit --no-fund
+      - name: Verify portable browser build and native packaging policy
+        run: uv run --no-sync pytest test/test_web_build.py test/test_web_stage.py test/test_native_packaging.py -q
+      - name: Build portable wheel and browser assets
+        run: node web/build.mjs --clean
+      - name: Exercise the real Pyodide worker and bridge
+        run: node web/smoke.mjs
+      - name: Stage browser runtime files
+        run: node web/stage.mjs _site
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy public browser demo
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -11,6 +11,27 @@ The compiler and Python interpreter need no C++, flex, bison or Perl tools.
 An optional C extension accelerates Malbolge20 batch execution; semantic IR
 optimization is available through the optional `ir` extra.
 
+**Start with Hello World.** From a source checkout, follow the
+[installation instructions](#installation), then compile and run this small
+example with an explicit execution budget:
+
+```bash
+uv run python -m malbolge compile examples/hello.py --no-cache -o hello.mb
+uv run python -m malbolge --variant=malbolge20 hello.mb --engine python --input '' --max-steps 5000000 --max-output 64
+# Hello, world!
+```
+
+To try the original Malbolge interpreter directly:
+
+```bash
+uv run python -m malbolge examples/hello.mal --input '' --max-steps 1000 --max-output 64
+# Hello World!
+```
+
+The [browser debugger](web/README.md#running-it-locally) also runs original
+Malbolge locally; the link includes build and startup instructions. It does
+not run compiler-generated Malbolge20 programs.
+
 The [Fibonacci example](examples/fib.py) uses ordinary Python input and
 output alongside inline double recursion. The compiler supplies the decimal
 conversion routines:

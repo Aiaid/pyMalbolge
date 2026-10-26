@@ -66,9 +66,15 @@ open http://localhost:8000/
 an origin. No COOP/COEP headers are required — this build uses no
 `SharedArrayBuffer` and no threads.
 
-`build.mjs` rebuilds the wheel through `uv build --wheel` whenever anything
-under `malbolge/` is newer than the wheel in `dist/`. Flags: `--no-build` to
-copy whatever `dist/` already has, `--clean` to wipe `vendor/` first.
+`build.mjs` rebuilds the wheel through `uv build --wheel` when package code,
+build scripts, `pyproject.toml`, either README or `LICENSE` is newer than the
+portable wheel in `dist/`. It forces `MALBOLGE_NATIVE_BUILD=disabled` for this
+child build: Pyodide needs a `py3-none-any` wheel, even if the host can build
+native extensions or the calling shell requests them. A successful build
+that leaves no fresh portable wheel fails before changing `vendor/`.
+
+Flags: `--no-build` to explicitly copy an existing portable wheel, warning if
+it is stale; `--clean` to wipe `vendor/` after wheel validation.
 
 ## Testing it
 
@@ -90,11 +96,27 @@ the runtime proof that no `PyProxy` escapes the worker.
 What it cannot cover is the browser's own event loop and the real `Worker`
 boundary; for those, load the page.
 
+The dated [browser acceptance receipt](../docs/notes/web-demo-validation.json)
+records a local Chromium check of example loading, step/back, breakpoints,
+completion/output, long-run pause and timeline seek, alongside the worker
+smoke and build regression results. It does not establish hosted availability,
+other-browser compatibility or offline operation.
+
 ## Deploying
 
-Static hosting, GitHub Pages included: run `node web/build.mjs`, then publish
-the `web/` directory (minus `node_modules/`). Nothing is server-rendered and
-nothing needs a rewrite rule.
+For static hosting, run `node web/build.mjs`, then
+`node web/stage.mjs _site` and publish `_site/`. The staging script copies
+only the browser runtime, the selected portable wheel and the manifest's
+examples, excluding development fixtures, build scripts and npm dependencies.
+It refuses an existing nonempty destination. Nothing is server-rendered and
+nothing needs a rewrite rule; project subpaths are supported.
+
+The [Pages workflow](../.github/workflows/pages.yml) runs build/packaging
+regressions and the real Pyodide worker smoke test before uploading this
+allowlisted artifact. Changes to the runtime or package on `master` deploy
+through the `github-pages` environment; pull requests only build and test.
+Manual runs are available through Actions. Pages must first be configured to
+use GitHub Actions in the repository settings.
 
 `vendor/` is generated and deliberately **not** tracked, so the deploy workflow
 has to run `node web/build.mjs` before publishing. The reasons it stays out of

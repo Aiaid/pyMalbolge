@@ -218,7 +218,7 @@ export function renderLaunchHTML({ examples, bootPhase }) {
 
     <div style="margin-top:auto;padding:18px;display:flex;gap:8px;align-items:center;font-size:11.5px;color:${T.logo2};text-align:center;max-width:640px">
       <span style="width:7px;height:7px;border-radius:50%;background:${T.amb};animation:pulse 1.6s infinite;flex-shrink:0"></span>
-      <span>首次加载约 10 MB(Pyodide 解释器),之后离线可用 · v1 仅支持原始 Malbolge:3¹⁰ = 59,049 个内存单元</span>
+      <span>首次加载需要联网 · v1 仅支持原始 Malbolge:3¹⁰ = 59,049 个内存单元</span>
     </div>
   </div>`;
 }
