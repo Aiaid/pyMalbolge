@@ -1,5 +1,8 @@
 # `web/` — the browser debugger
 
+**[Open the public demo](https://aiaid.github.io/pyMalbolge/)** — original
+Malbolge, with no local installation.
+
 A fully static Pyodide build of the Malbolge debugger. No server, no bundler,
 no build step for the JavaScript: every file here is an ES module the browser
 loads directly. The only build step copies the Python wheel and the example

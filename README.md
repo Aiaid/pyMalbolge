@@ -28,9 +28,10 @@ uv run python -m malbolge examples/hello.mal --input '' --max-steps 1000 --max-o
 # Hello World!
 ```
 
-The [browser debugger](web/README.md#running-it-locally) also runs original
-Malbolge locally; the link includes build and startup instructions. It does
-not run compiler-generated Malbolge20 programs.
+The [online browser debugger](https://aiaid.github.io/pyMalbolge/) runs
+original Malbolge without a local installation. For local build and startup,
+see the [browser instructions](web/README.md#running-it-locally). The browser
+does not run compiler-generated Malbolge20 programs.
 
 The [Fibonacci example](examples/fib.py) uses ordinary Python input and
 output alongside inline double recursion. The compiler supplies the decimal

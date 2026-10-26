@@ -26,8 +26,9 @@ uv run python -m malbolge examples/hello.mal --input '' --max-steps 1000 --max-o
 # Hello World!
 ```
 
-[浏览器调试器](web/README.md#running-it-locally)也可在本地运行原版 Malbolge，
-链接中包含构建和启动方法；它不运行编译器生成的 Malbolge20 程序。
+[在线浏览器调试器](https://aiaid.github.io/pyMalbolge/)无需本地安装，即可运行
+原版 Malbolge。本地构建和启动方法见[浏览器说明](web/README.md#running-it-locally)；
+浏览器不运行编译器生成的 Malbolge20 程序。
 
 [Fibonacci 示例](examples/fib.py)使用普通 Python 输入输出与内联双重递归。
 十进制转换由编译器生成：
