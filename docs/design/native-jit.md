@@ -39,6 +39,14 @@ report unavailable. Explicit JIT selection raises an error when unavailable;
 unsupported guest operations use the native interpreter within the JIT engine.
 The prototype retains the GIL and the native VM's signal/budget contracts.
 
+ARM64 alone does not guarantee runtime JIT capability. On macOS the
+`pthread_jit_write_protect_supported_np()` probe must also report support;
+otherwise JIT is rejected while the native interpreter remains usable.
+The wheel acceptance helper records this OS probe and checks its agreement
+with the extension. When capability exists it requires actual machine-code
+execution; when absent it verifies explicit JIT rejection. The Linux ARM64
+matrix retains a separate mandatory machine-code execution check.
+
 ## Actual code generation and guards
 
 `_native_jit.h` emits actual ARM64 LDR/CMP/conditional-branch/MOVZ/STR/RET

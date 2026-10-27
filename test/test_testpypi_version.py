@@ -1,4 +1,4 @@
-"""TestPyPI stamping mutates only a disposable checkout's project version."""
+"""TestPyPI stamping preserves package and metadata version identity."""
 
 import contextlib
 import importlib.util
@@ -16,7 +16,8 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts/prepare_testpypi_version
 SPEC = importlib.util.spec_from_file_location("prepare_testpypi_version", SCRIPT)
 helper = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(helper)
-SOURCE = '[project]\nname = "malbolge"\nversion = "1.0.0"\n'
+SOURCE = '[project]\nname = "malbolge"\nversion = "1.1.0"\n'
+MODULE_SOURCE = '__version__ = "1.1.0"\n'
 
 
 @unittest.skipIf(helper.tomllib is None, "TestPyPI CI helper requires Python 3.11+")
@@ -27,6 +28,9 @@ class TestTestPyPIVersion(unittest.TestCase):
         self.root = Path(self.directory.name)
         self.project = self.root / "pyproject.toml"
         self.project.write_bytes(SOURCE.encode("utf-8"))
+        self.module = self.root / "malbolge" / "__init__.py"
+        self.module.parent.mkdir()
+        self.module.write_text(MODULE_SOURCE)
 
     def invoke(self, *args, **kwargs):
         stdout, stderr = io.StringIO(), io.StringIO()
@@ -41,7 +45,7 @@ class TestTestPyPIVersion(unittest.TestCase):
                     for run, attempt in pairs]
         self.assertEqual(len(set(versions)), len(pairs))
         self.assertEqual(versions[:3],
-                         ["1.0.1.dev1001", "1.0.1.dev1999", "1.0.1.dev2001"])
+                         ["1.1.0.dev1001", "1.1.0.dev1999", "1.1.0.dev2001"])
 
     def test_environment_defaults_and_json_contract(self):
         output = self.root / "github-output"
@@ -51,12 +55,23 @@ class TestTestPyPIVersion(unittest.TestCase):
         })
         self.assertEqual((code, stderr), (0, ""))
         self.assertEqual(json.loads(stdout), {
-            "base_version": "1.0.1", "test_version": "1.0.1.dev12345002",
+            "base_version": "1.1.0", "test_version": "1.1.0.dev12345002",
             "run_id": 12345, "attempt": 2,
         })
-        self.assertEqual(output.read_text(), "version=1.0.1.dev12345002\n")
+        self.assertEqual(output.read_text(), "version=1.1.0.dev12345002\n")
         self.assertEqual(helper.tomllib.loads(self.project.read_text())["project"]["version"],
-                         "1.0.1.dev12345002")
+                         "1.1.0.dev12345002")
+        self.assertEqual(self.module.read_text(), '__version__ = "1.1.0.dev12345002"\n')
+
+    def test_base_is_derived_from_current_project_for_future_releases(self):
+        self.project.write_text(SOURCE.replace("1.1.0", "2.3.4"))
+        self.module.write_text(MODULE_SOURCE.replace("1.1.0", "2.3.4"))
+        code, stdout, stderr = self.invoke("--run-id", "4", "--attempt", "1")
+        self.assertEqual((code, stderr), (0, ""))
+        self.assertEqual(json.loads(stdout)["base_version"], "2.3.4")
+        self.assertEqual(self.module.read_text(), '__version__ = "2.3.4.dev4001"\n')
+        self.assertEqual(helper.tomllib.loads(self.project.read_text())["project"]["version"],
+                         "2.3.4.dev4001")
 
     def test_explicit_arguments_override_environment_and_append_output(self):
         output = self.root / "github-output"
@@ -68,22 +83,22 @@ class TestTestPyPIVersion(unittest.TestCase):
                          "GITHUB_OUTPUT": str(other_output)},
         )
         self.assertEqual((code, stderr), (0, ""))
-        self.assertEqual(json.loads(stdout)["test_version"], "1.0.1.dev42003")
-        self.assertEqual(output.read_text(), "existing=value\nversion=1.0.1.dev42003\n")
+        self.assertEqual(json.loads(stdout)["test_version"], "1.1.0.dev42003")
+        self.assertEqual(output.read_text(), "existing=value\nversion=1.1.0.dev42003\n")
         self.assertFalse(other_output.exists())
 
     def test_exact_edit_preserves_other_versions_strings_comments_and_crlf(self):
-        source = ('[tool.other]\r\nversion = "1.0.0"\r\n'
+        source = ('[tool.other]\r\nversion = "1.1.0"\r\n'
                   '[project]\r\nname = "malbolge"\r\n'
-                  'description = """\r\nversion = "1.0.0"\r\n"""\r\n'
-                  "  version = '1.0.0'  # stable\r\n"
-                  '[project.urls]\r\nversion = "1.0.0"\r\n')
+                  'description = """\r\nversion = "1.1.0"\r\n"""\r\n'
+                  "  version = '1.1.0'  # stable\r\n"
+                  '[project.urls]\r\nversion = "1.1.0"\r\n')
         self.project.write_bytes(source.encode("utf-8"))
         self.project.chmod(0o640)
         code, _, stderr = self.invoke("--run-id", "4", "--attempt", "1")
         self.assertEqual((code, stderr), (0, ""))
         self.assertEqual(self.project.read_bytes(), source.replace(
-            "  version = '1.0.0'", "  version = '1.0.1.dev4001'"
+            "  version = '1.1.0'", "  version = '1.1.0.dev4001'"
         ).encode("utf-8"))
         self.assertEqual(stat.S_IMODE(self.project.stat().st_mode), 0o640)
 
@@ -91,7 +106,44 @@ class TestTestPyPIVersion(unittest.TestCase):
         for _ in range(2):
             code, _, stderr = self.invoke("--run-id", "4", "--attempt", "1")
             self.assertEqual((code, stderr), (0, ""))
-        self.assertEqual(self.project.read_text(), SOURCE.replace("1.0.0", "1.0.1.dev4001"))
+        self.assertEqual(self.project.read_text(), SOURCE.replace("1.1.0", "1.1.0.dev4001"))
+        self.assertEqual(self.module.read_text(), MODULE_SOURCE.replace("1.1.0", "1.1.0.dev4001"))
+
+    def test_module_exact_edit_preserves_lookalikes_comments_and_crlf(self):
+        source = ('"""\r\n__version__ = "1.1.0"\r\n"""\r\n'
+                  'unrelated = "1.1.0"\r\n'
+                  "__version__ = '1.1.0'  # stable\r\n")
+        self.module.write_bytes(source.encode("utf-8"))
+        self.module.chmod(0o640)
+        code, _, stderr = self.invoke("--run-id", "4", "--attempt", "1")
+        self.assertEqual((code, stderr), (0, ""))
+        self.assertEqual(self.module.read_bytes(), source.replace(
+            "__version__ = '1.1.0'", "__version__ = '1.1.0.dev4001'"
+        ).encode("utf-8"))
+        self.assertEqual(stat.S_IMODE(self.module.stat().st_mode), 0o640)
+
+    def test_invalid_or_mismatched_module_fails_without_any_writes(self):
+        output = self.root / "github-output"
+        for source in ('__version__ = "1.0.0"\n', '', '__version__ = 1\n',
+                       MODULE_SOURCE * 2, '__version__ = broken(\n',
+                       'if True:\n    __version__ = "1.1.0"\n'):
+            with self.subTest(source=source):
+                self.module.write_text(source)
+                code, stdout, stderr = self.invoke(
+                    "--run-id", "1", "--attempt", "1", "--github-output", str(output)
+                )
+                self.assertEqual((code, stdout), (2, ""))
+                self.assertTrue(stderr)
+                self.assertEqual(self.project.read_text(), SOURCE)
+                self.assertEqual(self.module.read_text(), source)
+                self.assertFalse(output.exists())
+
+    def test_missing_module_fails_without_project_write(self):
+        self.module.unlink()
+        code, stdout, stderr = self.invoke("--run-id", "1", "--attempt", "1")
+        self.assertEqual((code, stdout), (2, ""))
+        self.assertTrue(stderr)
+        self.assertEqual(self.project.read_text(), SOURCE)
 
     def test_missing_or_invalid_identifiers_fail_without_writes(self):
         arguments = ((), ("--run-id", "1"), ("--attempt", "1"),
@@ -116,17 +168,17 @@ class TestTestPyPIVersion(unittest.TestCase):
 
     def test_invalid_projects_fail_before_creating_output(self):
         fixtures = (
-            '[tool.other]\nname="malbolge"\nversion="1.0.0"\n',
+            '[tool.other]\nname="malbolge"\nversion="1.1.0"\n',
             SOURCE.replace('name = "malbolge"\n', ""),
             SOURCE.replace('"malbolge"', '"other"'),
-            SOURCE.replace('version = "1.0.0"\n', ""),
+            SOURCE.replace('version = "1.1.0"\n', ""),
             SOURCE + 'version = "2.0.0"\n',
             SOURCE + "[project]\n",
             SOURCE + "broken = [\n",
-            SOURCE.replace('version = "1.0.0"', "version = 1"),
+            SOURCE.replace('version = "1.1.0"', "version = 1"),
             SOURCE + 'dynamic = ["version"]\n',
             SOURCE + "dynamic = 7\n",
-            SOURCE.replace('version = "1.0.0"', '"version" = "1.0.0"'),
+            SOURCE.replace('version = "1.1.0"', '"version" = "1.1.0"'),
         )
         output = self.root / "github-output"
         for source in fixtures:
@@ -143,7 +195,10 @@ class TestTestPyPIVersion(unittest.TestCase):
     def test_output_cannot_overwrite_project_or_use_missing_directory(self):
         alias = self.root / "alias"
         os.link(str(self.project), str(alias))
-        for output in (self.project, alias, self.root / "missing/output"):
+        module_alias = self.root / "module-alias"
+        os.link(str(self.module), str(module_alias))
+        for output in (self.project, alias, self.module, module_alias,
+                       self.root / "missing/output"):
             with self.subTest(output=output):
                 code, stdout, stderr = self.invoke(
                     "--run-id", "1", "--attempt", "1", "--github-output", str(output)
@@ -151,6 +206,28 @@ class TestTestPyPIVersion(unittest.TestCase):
                 self.assertEqual((code, stdout), (2, ""))
                 self.assertTrue(stderr)
                 self.assertEqual(self.project.read_text(), SOURCE)
+                self.assertEqual(self.module.read_text(), MODULE_SOURCE)
+
+    def test_second_atomic_replace_failure_restores_first_file(self):
+        real_replace = helper.os.replace
+
+        def fail_module(source, destination):
+            if Path(destination) == self.module:
+                raise OSError("module replace failed")
+            real_replace(source, destination)
+
+        for output_args in ((), ("--github-output", str(self.root / "github-output"))):
+            with self.subTest(output_args=output_args):
+                with mock.patch.object(helper.os, "replace", side_effect=fail_module):
+                    code, stdout, stderr = self.invoke(
+                        "--run-id", "1", "--attempt", "1", *output_args
+                    )
+                self.assertEqual((code, stdout), (2, ""))
+                self.assertIn("module replace failed", stderr)
+                self.assertEqual(self.project.read_text(), SOURCE)
+                self.assertEqual(self.module.read_text(), MODULE_SOURCE)
+                self.assertFalse((self.root / "github-output").exists())
+                self.assertEqual(list(self.module.parent.iterdir()), [self.module])
 
     def test_atomic_replace_failure_preserves_source_and_cleans_temporary_file(self):
         with mock.patch.object(helper.os, "replace", side_effect=OSError("replace failed")):
@@ -158,7 +235,8 @@ class TestTestPyPIVersion(unittest.TestCase):
         self.assertEqual((code, stdout), (2, ""))
         self.assertIn("replace failed", stderr)
         self.assertEqual(self.project.read_text(), SOURCE)
-        self.assertEqual(list(self.root.iterdir()), [self.project])
+        self.assertEqual(set(self.root.iterdir()), {self.project, self.module.parent})
+        self.assertEqual(self.module.read_text(), MODULE_SOURCE)
 
     def test_failed_output_write_restores_project_and_existing_output(self):
         output = self.root / "github-output"
@@ -194,6 +272,7 @@ class TestTestPyPIVersion(unittest.TestCase):
         self.assertEqual((code, stdout), (2, ""))
         self.assertIn("output failed", stderr)
         self.assertEqual(self.project.read_text(), SOURCE)
+        self.assertEqual(self.module.read_text(), MODULE_SOURCE)
         self.assertEqual(output.read_text(), "existing=value\n")
 
     def test_old_python_has_friendly_failure(self):

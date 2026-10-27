@@ -161,6 +161,17 @@ def verify(args, report):
 
     jit_available = native.jit_available()
     report["jit"] = {"available": jit_available}
+    if sys.platform == "darwin" and platform.machine().lower() in ("arm64", "aarch64"):
+        # Apple's false result means MAP_JIT may stay RWX and its protection
+        # toggles are no-ops. Preserve the native guard, and verify that a
+        # reported unavailability agrees with the same interpreter's OS API.
+        import ctypes
+        protection_probe = ctypes.CDLL(None).pthread_jit_write_protect_supported_np
+        protection_probe.argtypes = []
+        protection_probe.restype = ctypes.c_int
+        protected = bool(protection_probe())
+        report["jit"]["thread_write_protection_supported"] = protected
+        check(jit_available == protected, "JIT capability differs from macOS thread write protection")
     check(jit_available or not args.require_jit, "required ARM64 machine-code JIT is unavailable")
     check(not jit_available or not args.expect_no_jit, "unexpected JIT capability on this platform")
     if jit_available:

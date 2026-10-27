@@ -1,0 +1,1236 @@
+{
+  "date": "2026-10-27",
+  "status": "testpypi_passed_hosted_macos_arm64_unacquired",
+  "production_upload_performed": false,
+  "testpypi": {
+    "run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40355946022",
+    "commit": "f781b45a96515f5e856319edbe84da5b07446e3b",
+    "version": "1.1.0.dev40355946022001",
+    "url": "https://test.pypi.org/project/malbolge/1.1.0.dev40355946022001/",
+    "artifacts": [
+      {
+        "bytes": 283329,
+        "file": "malbolge-1.1.0.dev40355946022001-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "6fc2199fbeec03b39ce1a04063e50468415b7ff10e6dd370cd2f372ac1206a08"
+      },
+      {
+        "bytes": 233173,
+        "file": "malbolge-1.1.0.dev40355946022001-py3-none-any.whl",
+        "sha256": "37b783e38b7cf82345e7ec6b556b6190ebdb7e291bc0d56ed81486f528a199b6"
+      },
+      {
+        "bytes": 1162361,
+        "file": "malbolge-1.1.0.dev40355946022001.tar.gz",
+        "sha256": "ff5bb8dc5f0d6fc3b3267750d0ae2d0391400d98ba112d5d1349f94cad5a0989"
+      }
+    ],
+    "public_hashes_match": true,
+    "helper_sha256": {
+      "verify_native_install.py": "7e94339ecfc718a7de2626f7645c6c714fa1291aa19dcd64333e18c6e7680520",
+      "verify_release_install.py": "65e53075755ddaea9e8a7102a71dd5c0c0a4835e5a94924641a2f707a73fe0cd"
+    },
+    "remote_installations": [
+      {
+        "case": "linux-arm64-pure",
+        "python": "3.12.3",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": false,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "python",
+        "status": "passed"
+      },
+      {
+        "case": "linux-py310-ir",
+        "python": "3.10.20",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": false,
+        "ir": true,
+        "compiler_paths": [
+          "auto",
+          "direct",
+          "ir"
+        ],
+        "auto_engine": "python",
+        "status": "passed"
+      },
+      {
+        "case": "linux-py312-native",
+        "python": "3.12.3",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": true,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "native",
+        "status": "passed"
+      },
+      {
+        "case": "linux-py313-pure",
+        "python": "3.13.14",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": false,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "python",
+        "status": "passed"
+      },
+      {
+        "case": "linux-py38-pure",
+        "python": "3.8.20",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": false,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "python",
+        "status": "passed"
+      },
+      {
+        "case": "linux-source-native",
+        "python": "3.12.3",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": true,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "native",
+        "status": "passed"
+      },
+      {
+        "case": "macos-arm64-pure",
+        "python": "3.12.10",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": false,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "python",
+        "status": "passed"
+      },
+      {
+        "case": "macos-intel-pure",
+        "python": "3.12.10",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": false,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "python",
+        "status": "passed"
+      },
+      {
+        "case": "windows-pure",
+        "python": "3.12.10",
+        "version": "1.1.0.dev40355946022001",
+        "native_available": false,
+        "ir": false,
+        "compiler_paths": [
+          "auto",
+          "direct"
+        ],
+        "auto_engine": "python",
+        "status": "passed"
+      }
+    ]
+  },
+  "native_matrix": {
+    "coverage_run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40356927572",
+    "status": "30_passed_5_not_run_runner_capacity",
+    "arm64_retry_run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40358838205",
+    "groups": [
+      {
+        "platform": "macos-15-intel",
+        "commit": "e97edc225be376559cd67190e4942a7e2a10342d",
+        "wheel_count": 5,
+        "wheels": [
+          {
+            "file": "malbolge-1.1.0-cp310-cp310-macosx_10_9_x86_64.whl",
+            "bytes": 243173,
+            "sha256": "52d3b42d8f857ffc6e4e4bd3d98bd12a9d867de9b5395c6ed8ea6106cfb57b0d",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp310-cp310-macosx_10_9_x86_64\nGenerator: delocate 0.13.0\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp311-cp311-macosx_10_9_x86_64.whl",
+            "bytes": 243174,
+            "sha256": "149e36394fb757ea7884eff73409a49a5ab9ac3413db67126ddc73cbd954bcdc",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp311-cp311-macosx_10_9_x86_64\nGenerator: delocate 0.13.0\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp312-cp312-macosx_10_13_x86_64.whl",
+            "bytes": 243290,
+            "sha256": "7b5925152d60b3989b85bb969a99a41bd831b0a7e4e2dca6c7835739510dc9cd",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-macosx_10_13_x86_64\nGenerator: delocate 0.13.0\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp313-cp313-macosx_10_13_x86_64.whl",
+            "bytes": 243281,
+            "sha256": "e2db3777946641fc7d3dc3aaf47cf707826d8ca192bd3e4c079072aea5a163cb",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-macosx_10_13_x86_64\nGenerator: delocate 0.13.0\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp39-cp39-macosx_10_9_x86_64.whl",
+            "bytes": 243170,
+            "sha256": "989e78c8b26ae34bb6525c378ed5c3b546268e1190ee933a3d7a983c26654061",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp39-cp39-macosx_10_9_x86_64\nGenerator: delocate 0.13.0\n\n"
+          }
+        ],
+        "vm_reports": 5,
+        "release_reports": 5
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "commit": "e97edc225be376559cd67190e4942a7e2a10342d",
+        "wheel_count": 10,
+        "wheels": [
+          {
+            "file": "malbolge-1.1.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+            "bytes": 281487,
+            "sha256": "815af0d2d9fae025ba45c4007fa4971d046d4b8f2169def27de908951855f780",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp310-cp310-manylinux_2_17_x86_64\nTag: cp310-cp310-manylinux2014_x86_64\nTag: cp310-cp310-manylinux_2_28_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp310-cp310-musllinux_1_2_x86_64.whl",
+            "bytes": 280467,
+            "sha256": "df45f1ca886d384926237bf7d0715f73d9d7c717f471508b2f296976fa475ac1",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp310-cp310-musllinux_1_2_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+            "bytes": 282199,
+            "sha256": "4bc6c91232ff8b1d436d11ecadace90e908a0e0ac28073c4a7dc15fc0e345a90",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp311-cp311-manylinux_2_17_x86_64\nTag: cp311-cp311-manylinux2014_x86_64\nTag: cp311-cp311-manylinux_2_28_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp311-cp311-musllinux_1_2_x86_64.whl",
+            "bytes": 281156,
+            "sha256": "15c850a7541bf62a8d5555aa26c4e9c648e0b7203f0bf3f8aad5554e26a5c129",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp311-cp311-musllinux_1_2_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+            "bytes": 283028,
+            "sha256": "b1ef35a579aa7553bf906e882ad4c05cbebcf845504dbd413e180c5da2c95f9a",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-manylinux_2_17_x86_64\nTag: cp312-cp312-manylinux2014_x86_64\nTag: cp312-cp312-manylinux_2_28_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp312-cp312-musllinux_1_2_x86_64.whl",
+            "bytes": 282111,
+            "sha256": "1c614994f36a982b71326d9a94004f0420a48238b699833ff453f02994eb5ac8",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-musllinux_1_2_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+            "bytes": 283047,
+            "sha256": "e4ad46ff01380d0cbf29383321093f096caf17607f11e2d9ba4706b104a11a99",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-manylinux_2_17_x86_64\nTag: cp313-cp313-manylinux2014_x86_64\nTag: cp313-cp313-manylinux_2_28_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp313-cp313-musllinux_1_2_x86_64.whl",
+            "bytes": 282165,
+            "sha256": "555713f7b116eb0cefe809b468a676997ccb136cc8eb7343e49506c99869d579",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-musllinux_1_2_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+            "bytes": 281304,
+            "sha256": "2d1de2f180a3f64bdbed1fa7e140359518391cc67206a6334c0da0fb60f1809a",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp39-cp39-manylinux_2_17_x86_64\nTag: cp39-cp39-manylinux2014_x86_64\nTag: cp39-cp39-manylinux_2_28_x86_64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp39-cp39-musllinux_1_2_x86_64.whl",
+            "bytes": 280326,
+            "sha256": "eef543063deace0485226f81375bef1b2b9f49c33c0e2e6a23e18f0927498926",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp39-cp39-musllinux_1_2_x86_64\n\n"
+          }
+        ],
+        "vm_reports": 10,
+        "release_reports": 10
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "commit": "e97edc225be376559cd67190e4942a7e2a10342d",
+        "wheel_count": 10,
+        "wheels": [
+          {
+            "file": "malbolge-1.1.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+            "bytes": 287401,
+            "sha256": "05c1f9af46155b5bd9ded8aa0a47b60f2aa81d900a4c89af595720f38ec452ec",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp310-cp310-manylinux_2_17_aarch64\nTag: cp310-cp310-manylinux2014_aarch64\nTag: cp310-cp310-manylinux_2_28_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp310-cp310-musllinux_1_2_aarch64.whl",
+            "bytes": 285605,
+            "sha256": "3aefe01f315b6930d9c60ffa2679c14cda12f9eeca6c92d0e2bb8c734675209f",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp310-cp310-musllinux_1_2_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+            "bytes": 288121,
+            "sha256": "74bef1833baef0c0a590e7232cad06edd66065ffbc57ff57ea7f39e2ac56e301",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp311-cp311-manylinux_2_17_aarch64\nTag: cp311-cp311-manylinux2014_aarch64\nTag: cp311-cp311-manylinux_2_28_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp311-cp311-musllinux_1_2_aarch64.whl",
+            "bytes": 286330,
+            "sha256": "266c0bb4254537fa2f891c6770dc27524208565506970e5fa5bc646354f8bbce",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp311-cp311-musllinux_1_2_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+            "bytes": 289014,
+            "sha256": "6d2cdda4ec23523deeed64cdee45431f4eb18d419508e24d4281e645a6c3e08f",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-manylinux_2_17_aarch64\nTag: cp312-cp312-manylinux2014_aarch64\nTag: cp312-cp312-manylinux_2_28_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp312-cp312-musllinux_1_2_aarch64.whl",
+            "bytes": 287334,
+            "sha256": "37fd1509ff90d7d18892cfab15f1ce32444bfba24e7bf648e20140e6ca805314",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-musllinux_1_2_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+            "bytes": 289052,
+            "sha256": "c91e39f368cf129fbed1a8f254f7e176b82291697cc8435034b2b8e6078d27b2",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-manylinux_2_17_aarch64\nTag: cp313-cp313-manylinux2014_aarch64\nTag: cp313-cp313-manylinux_2_28_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp313-cp313-musllinux_1_2_aarch64.whl",
+            "bytes": 287339,
+            "sha256": "0030061dadc21f5d6d4a13a6b0fe2f791db5e6cb29a9b110e935323233b67d8f",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-musllinux_1_2_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+            "bytes": 287276,
+            "sha256": "52c62844f6033892d9a2dc59f4fbc25d76cd0dccdd29cb58149bbaa5572fe8bd",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp39-cp39-manylinux_2_17_aarch64\nTag: cp39-cp39-manylinux2014_aarch64\nTag: cp39-cp39-manylinux_2_28_aarch64\n\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp39-cp39-musllinux_1_2_aarch64.whl",
+            "bytes": 285464,
+            "sha256": "7a009c7a6a1cd37a60a4ddcff8a54d9e7ac339ec2b661398501ca66ecb3a89d4",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp39-cp39-musllinux_1_2_aarch64\n\n"
+          }
+        ],
+        "vm_reports": 10,
+        "release_reports": 10
+      },
+      {
+        "platform": "windows-2022",
+        "commit": "e97edc225be376559cd67190e4942a7e2a10342d",
+        "wheel_count": 5,
+        "wheels": [
+          {
+            "file": "malbolge-1.1.0-cp310-cp310-win_amd64.whl",
+            "bytes": 247218,
+            "sha256": "30ca6eac5b640079ca8ffbdb7d5982a36fb6d0409717c4b0886d993494db0cbb",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp310-cp310-win_amd64\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp311-cp311-win_amd64.whl",
+            "bytes": 247216,
+            "sha256": "33b0f4d8ca4b04b986d807710025d534b6c8d19c589a4a5d7413149e1f33298e",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp311-cp311-win_amd64\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp312-cp312-win_amd64.whl",
+            "bytes": 247266,
+            "sha256": "ee535b6a263702924a4eb63fe19ff34982a29b7f88919328807e191a0f874c46",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-win_amd64\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp313-cp313-win_amd64.whl",
+            "bytes": 247255,
+            "sha256": "e75c2d82ff162ab9b13eb84f7b2ad025e7bd74cc1bfec656620cdcd1b12b4e0a",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-win_amd64\n"
+          },
+          {
+            "file": "malbolge-1.1.0-cp39-cp39-win_amd64.whl",
+            "bytes": 247215,
+            "sha256": "0c1a633c10e7b850a8779c16c9cb2ae2d6e9790d44f3a8723b5953cdc8ebdd84",
+            "wheel_metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp39-cp39-win_amd64\n"
+          }
+        ],
+        "vm_reports": 5,
+        "release_reports": 5
+      }
+    ],
+    "wheel_count": 30,
+    "vm_checks": 30,
+    "release_checks": 30,
+    "configured_wheel_count": 35,
+    "python38_native_and_pure_checks": 4,
+    "linux_arm64_real_jit_cases": 10,
+    "linux_arm64_min_jit_steps": 4096,
+    "macos_arm64_jit": [],
+    "arm64_retry_result": {
+      "job_id": 121698497318,
+      "conclusion": "cancelled",
+      "completed_at": "2026-10-26T16:39:42Z",
+      "runner_assigned": false,
+      "annotation": "The job was not acquired by Runner of type hosted even after multiple attempts",
+      "notice": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times."
+    }
+  },
+  "local_macos_arm64_supplement": {
+    "cases": [
+      {
+        "auto_runtime": {
+          "engine": "native",
+          "input_consumed": 0,
+          "output_count": 14,
+          "registers": {
+            "a": 10,
+            "c": 3466345,
+            "d": 3467342
+          },
+          "requested_engine": "auto",
+          "seconds": 0.017729542,
+          "steps": 735114,
+          "stop_reason": "terminated",
+          "variant": "malbolge20"
+        },
+        "budget_contracts": {
+          "output": {
+            "engine": "python",
+            "input_consumed": 2,
+            "output_count": 1,
+            "registers": {
+              "a": 255,
+              "c": 3,
+              "d": 3
+            },
+            "requested_engine": "auto",
+            "seconds": 0.044374709000000005,
+            "steps": 3,
+            "stop_reason": "output_limit",
+            "variant": "malbolge"
+          },
+          "steps": {
+            "engine": "python",
+            "input_consumed": 0,
+            "output_count": 0,
+            "registers": {
+              "a": 0,
+              "c": 0,
+              "d": 0
+            },
+            "requested_engine": "auto",
+            "seconds": 0.044411333,
+            "steps": 0,
+            "stop_reason": "step_limit",
+            "variant": "malbolge"
+          }
+        },
+        "build_wall_seconds": 3.7552086669020355,
+        "compilations": {
+          "auto": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 1.1333273750000001,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          },
+          "direct": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 1.144320292,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          }
+        },
+        "jit": {
+          "available": true,
+          "stats": {
+            "available": true,
+            "cache_code_bytes": 84600,
+            "cache_entries": 47,
+            "cache_mapped_bytes": 1048576,
+            "compile_cpu_seconds": 9.099999999997999e-05,
+            "compile_wall_seconds": 8.800008799880743e-05,
+            "compiled_blocks": 47,
+            "compiled_bytes": 84600,
+            "enabled": true,
+            "fallback_steps": 1,
+            "guard_failures": 0,
+            "jit_blocks": 64,
+            "jit_steps": 4096
+          },
+          "status": "machine code executed",
+          "thread_write_protection_supported": true
+        },
+        "macho": {
+          "architecture": "arm64",
+          "minimum_os": "26.0",
+          "sdk": "26.5"
+        },
+        "native_binary_sha256": "89f06f6db940191e9db0b0c3035ff9d495f1a49f04a9f658a5dc9f878e0846a3",
+        "native_checks": [
+          "installed import and default auto selection",
+          "Original Malbolge Python byte I/O and EOF contract",
+          "byte input, EOF, exact budgets and invalid instruction parity",
+          "COW pages, detached exports and self-modifying future code",
+          "JIT machine-code execution and self-modification parity"
+        ],
+        "native_status": "passed",
+        "native_verify_wall_seconds": 0.29432245797943324,
+        "original_runtime": {
+          "engine": "python",
+          "input_consumed": 3,
+          "output_count": 3,
+          "registers": {
+            "a": 65,
+            "c": 6,
+            "d": 6
+          },
+          "requested_engine": "auto",
+          "seconds": 0.044844959000000004,
+          "steps": 7,
+          "stop_reason": "terminated",
+          "variant": "malbolge"
+        },
+        "python": "3.9.25",
+        "release_success": true,
+        "release_verify_wall_seconds": 4.524273458053358,
+        "requested_python": "3.9",
+        "required_options": {
+          "expected_version": "1.1.0",
+          "fresh_environment_no_dependencies": true,
+          "jit": true,
+          "native": true,
+          "outside_source_checkout": true
+        },
+        "wheel": {
+          "bytes": 245450,
+          "filename": "malbolge-1.1.0-cp39-cp39-macosx_26_0_arm64.whl",
+          "metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.27.0\nRoot-Is-Purelib: false\nTag: cp39-cp39-macosx_26_0_arm64\n",
+          "sha256": "98921ca1292a7f02302ab15628b4ba65645ed056c17e9e5129d5198558d709aa"
+        }
+      },
+      {
+        "auto_runtime": {
+          "engine": "native",
+          "input_consumed": 0,
+          "output_count": 14,
+          "registers": {
+            "a": 10,
+            "c": 3466345,
+            "d": 3467342
+          },
+          "requested_engine": "auto",
+          "seconds": 0.017880500061437488,
+          "steps": 735114,
+          "stop_reason": "terminated",
+          "variant": "malbolge20"
+        },
+        "budget_contracts": {
+          "output": {
+            "engine": "python",
+            "input_consumed": 2,
+            "output_count": 1,
+            "registers": {
+              "a": 255,
+              "c": 3,
+              "d": 3
+            },
+            "requested_engine": "auto",
+            "seconds": 0.04214229097124189,
+            "steps": 3,
+            "stop_reason": "output_limit",
+            "variant": "malbolge"
+          },
+          "steps": {
+            "engine": "python",
+            "input_consumed": 0,
+            "output_count": 0,
+            "registers": {
+              "a": 0,
+              "c": 0,
+              "d": 0
+            },
+            "requested_engine": "auto",
+            "seconds": 0.04243725002743304,
+            "steps": 0,
+            "stop_reason": "step_limit",
+            "variant": "malbolge"
+          }
+        },
+        "build_wall_seconds": 3.0234219999983907,
+        "compilations": {
+          "auto": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 1.0601624170085415,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          },
+          "direct": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 1.031118292012252,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          }
+        },
+        "jit": {
+          "available": true,
+          "stats": {
+            "available": true,
+            "cache_code_bytes": 84600,
+            "cache_entries": 47,
+            "cache_mapped_bytes": 1048576,
+            "compile_cpu_seconds": 9.799999999995923e-05,
+            "compile_wall_seconds": 9.400013368576765e-05,
+            "compiled_blocks": 47,
+            "compiled_bytes": 84600,
+            "enabled": true,
+            "fallback_steps": 1,
+            "guard_failures": 0,
+            "jit_blocks": 64,
+            "jit_steps": 4096
+          },
+          "status": "machine code executed",
+          "thread_write_protection_supported": true
+        },
+        "macho": {
+          "architecture": "arm64",
+          "minimum_os": "26.0",
+          "sdk": "26.5"
+        },
+        "native_binary_sha256": "050dcb2d7f07ef39ea0f0e5deb7d1d5f703a94bedbced2c1631f766335672123",
+        "native_checks": [
+          "installed import and default auto selection",
+          "Original Malbolge Python byte I/O and EOF contract",
+          "byte input, EOF, exact budgets and invalid instruction parity",
+          "COW pages, detached exports and self-modifying future code",
+          "JIT machine-code execution and self-modification parity"
+        ],
+        "native_status": "passed",
+        "native_verify_wall_seconds": 0.29308395902626216,
+        "original_runtime": {
+          "engine": "python",
+          "input_consumed": 3,
+          "output_count": 3,
+          "registers": {
+            "a": 65,
+            "c": 6,
+            "d": 6
+          },
+          "requested_engine": "auto",
+          "seconds": 0.0422776669729501,
+          "steps": 7,
+          "stop_reason": "terminated",
+          "variant": "malbolge"
+        },
+        "python": "3.10.20",
+        "release_success": true,
+        "release_verify_wall_seconds": 4.181847584084608,
+        "requested_python": "3.10",
+        "required_options": {
+          "expected_version": "1.1.0",
+          "fresh_environment_no_dependencies": true,
+          "jit": true,
+          "native": true,
+          "outside_source_checkout": true
+        },
+        "wheel": {
+          "bytes": 245449,
+          "filename": "malbolge-1.1.0-cp310-cp310-macosx_26_0_arm64.whl",
+          "metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp310-cp310-macosx_26_0_arm64\n",
+          "sha256": "bdfd919d020483978897a0674db7af1bff76112b9f401b8d459a599197aac62b"
+        }
+      },
+      {
+        "auto_runtime": {
+          "engine": "native",
+          "input_consumed": 0,
+          "output_count": 14,
+          "registers": {
+            "a": 10,
+            "c": 3466345,
+            "d": 3467342
+          },
+          "requested_engine": "auto",
+          "seconds": 0.018502958002500236,
+          "steps": 735114,
+          "stop_reason": "terminated",
+          "variant": "malbolge20"
+        },
+        "budget_contracts": {
+          "output": {
+            "engine": "python",
+            "input_consumed": 2,
+            "output_count": 1,
+            "registers": {
+              "a": 255,
+              "c": 3,
+              "d": 3
+            },
+            "requested_engine": "auto",
+            "seconds": 0.03261508303694427,
+            "steps": 3,
+            "stop_reason": "output_limit",
+            "variant": "malbolge"
+          },
+          "steps": {
+            "engine": "python",
+            "input_consumed": 0,
+            "output_count": 0,
+            "registers": {
+              "a": 0,
+              "c": 0,
+              "d": 0
+            },
+            "requested_engine": "auto",
+            "seconds": 0.033009457984007895,
+            "steps": 0,
+            "stop_reason": "step_limit",
+            "variant": "malbolge"
+          }
+        },
+        "build_wall_seconds": 1.520649040932767,
+        "compilations": {
+          "auto": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 0.7681967499665916,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          },
+          "direct": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 0.7450959159759805,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          }
+        },
+        "jit": {
+          "available": true,
+          "stats": {
+            "available": true,
+            "cache_code_bytes": 84600,
+            "cache_entries": 47,
+            "cache_mapped_bytes": 1048576,
+            "compile_cpu_seconds": 9.899999999998799e-05,
+            "compile_wall_seconds": 9.300024248659611e-05,
+            "compiled_blocks": 47,
+            "compiled_bytes": 84600,
+            "enabled": true,
+            "fallback_steps": 1,
+            "guard_failures": 0,
+            "jit_blocks": 64,
+            "jit_steps": 4096
+          },
+          "status": "machine code executed",
+          "thread_write_protection_supported": true
+        },
+        "macho": {
+          "architecture": "arm64",
+          "minimum_os": "26.0",
+          "sdk": "26.5"
+        },
+        "native_binary_sha256": "922d36c88473e3d3b9f929904a7a5381c5382c92b932cf440d13ebb51b9d94d9",
+        "native_checks": [
+          "installed import and default auto selection",
+          "Original Malbolge Python byte I/O and EOF contract",
+          "byte input, EOF, exact budgets and invalid instruction parity",
+          "COW pages, detached exports and self-modifying future code",
+          "JIT machine-code execution and self-modification parity"
+        ],
+        "native_status": "passed",
+        "native_verify_wall_seconds": 0.2710322920465842,
+        "original_runtime": {
+          "engine": "python",
+          "input_consumed": 3,
+          "output_count": 3,
+          "registers": {
+            "a": 65,
+            "c": 6,
+            "d": 6
+          },
+          "requested_engine": "auto",
+          "seconds": 0.03367541602347046,
+          "steps": 7,
+          "stop_reason": "terminated",
+          "variant": "malbolge"
+        },
+        "python": "3.11.15",
+        "release_success": true,
+        "release_verify_wall_seconds": 3.152996166027151,
+        "requested_python": "3.11",
+        "required_options": {
+          "expected_version": "1.1.0",
+          "fresh_environment_no_dependencies": true,
+          "jit": true,
+          "native": true,
+          "outside_source_checkout": true
+        },
+        "wheel": {
+          "bytes": 245450,
+          "filename": "malbolge-1.1.0-cp311-cp311-macosx_26_0_arm64.whl",
+          "metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp311-cp311-macosx_26_0_arm64\n",
+          "sha256": "c40eefd66e48d6da45581111221f79a734f22db42fef42dd58fd89de9fc935e4"
+        }
+      },
+      {
+        "auto_runtime": {
+          "engine": "native",
+          "input_consumed": 0,
+          "output_count": 14,
+          "registers": {
+            "a": 10,
+            "c": 3466345,
+            "d": 3467342
+          },
+          "requested_engine": "auto",
+          "seconds": 0.01757645793259144,
+          "steps": 735114,
+          "stop_reason": "terminated",
+          "variant": "malbolge20"
+        },
+        "budget_contracts": {
+          "output": {
+            "engine": "python",
+            "input_consumed": 2,
+            "output_count": 1,
+            "registers": {
+              "a": 255,
+              "c": 3,
+              "d": 3
+            },
+            "requested_engine": "auto",
+            "seconds": 0.02464241604320705,
+            "steps": 3,
+            "stop_reason": "output_limit",
+            "variant": "malbolge"
+          },
+          "steps": {
+            "engine": "python",
+            "input_consumed": 0,
+            "output_count": 0,
+            "registers": {
+              "a": 0,
+              "c": 0,
+              "d": 0
+            },
+            "requested_engine": "auto",
+            "seconds": 0.02472345798742026,
+            "steps": 0,
+            "stop_reason": "step_limit",
+            "variant": "malbolge"
+          }
+        },
+        "build_wall_seconds": 1.2015055828960612,
+        "compilations": {
+          "auto": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 0.6462192500475794,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          },
+          "direct": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 0.6463639170397073,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          }
+        },
+        "jit": {
+          "available": true,
+          "stats": {
+            "available": true,
+            "cache_code_bytes": 84600,
+            "cache_entries": 47,
+            "cache_mapped_bytes": 1048576,
+            "compile_cpu_seconds": 9.799999999995923e-05,
+            "compile_wall_seconds": 9.100011084228754e-05,
+            "compiled_blocks": 47,
+            "compiled_bytes": 84600,
+            "enabled": true,
+            "fallback_steps": 1,
+            "guard_failures": 0,
+            "jit_blocks": 64,
+            "jit_steps": 4096
+          },
+          "status": "machine code executed",
+          "thread_write_protection_supported": true
+        },
+        "macho": {
+          "architecture": "arm64",
+          "minimum_os": "11.0",
+          "sdk": "27.0"
+        },
+        "native_binary_sha256": "7e20cee8bcc6d14e4e00db249038baea98d2fdfed5b6f05d8bbba165f6adcd46",
+        "native_checks": [
+          "installed import and default auto selection",
+          "Original Malbolge Python byte I/O and EOF contract",
+          "byte input, EOF, exact budgets and invalid instruction parity",
+          "COW pages, detached exports and self-modifying future code",
+          "JIT machine-code execution and self-modification parity"
+        ],
+        "native_status": "passed",
+        "native_verify_wall_seconds": 0.22274516604375094,
+        "original_runtime": {
+          "engine": "python",
+          "input_consumed": 3,
+          "output_count": 3,
+          "registers": {
+            "a": 65,
+            "c": 6,
+            "d": 6
+          },
+          "requested_engine": "auto",
+          "seconds": 0.025274874991737306,
+          "steps": 7,
+          "stop_reason": "terminated",
+          "variant": "malbolge"
+        },
+        "python": "3.12.9",
+        "release_success": true,
+        "release_verify_wall_seconds": 2.7213307910133153,
+        "requested_python": "3.12",
+        "required_options": {
+          "expected_version": "1.1.0",
+          "fresh_environment_no_dependencies": true,
+          "jit": true,
+          "native": true,
+          "outside_source_checkout": true
+        },
+        "wheel": {
+          "bytes": 245484,
+          "filename": "malbolge-1.1.0-cp312-cp312-macosx_11_0_arm64.whl",
+          "metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp312-cp312-macosx_11_0_arm64\n",
+          "sha256": "2e49b66004781e982365302239e7acb471134645d0bef786f77c64103d242d61"
+        }
+      },
+      {
+        "auto_runtime": {
+          "engine": "native",
+          "input_consumed": 0,
+          "output_count": 14,
+          "registers": {
+            "a": 10,
+            "c": 3466345,
+            "d": 3467342
+          },
+          "requested_engine": "auto",
+          "seconds": 0.018510166089981794,
+          "steps": 735114,
+          "stop_reason": "terminated",
+          "variant": "malbolge20"
+        },
+        "budget_contracts": {
+          "output": {
+            "engine": "python",
+            "input_consumed": 2,
+            "output_count": 1,
+            "registers": {
+              "a": 255,
+              "c": 3,
+              "d": 3
+            },
+            "requested_engine": "auto",
+            "seconds": 0.028924583923071623,
+            "steps": 3,
+            "stop_reason": "output_limit",
+            "variant": "malbolge"
+          },
+          "steps": {
+            "engine": "python",
+            "input_consumed": 0,
+            "output_count": 0,
+            "registers": {
+              "a": 0,
+              "c": 0,
+              "d": 0
+            },
+            "requested_engine": "auto",
+            "seconds": 0.029208541964180768,
+            "steps": 0,
+            "stop_reason": "step_limit",
+            "variant": "malbolge"
+          }
+        },
+        "build_wall_seconds": 1.394928416935727,
+        "compilations": {
+          "auto": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 0.7942694160155952,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          },
+          "direct": {
+            "image_bytes": 3466627,
+            "image_sha256": "0af74b95139e570ba3aff95a23d339ec76366544da235120332fffa65957dc3a",
+            "runtime": {
+              "engine": "python",
+              "input_consumed": 0,
+              "output_count": 14,
+              "registers": {
+                "a": 10,
+                "c": 3466345,
+                "d": 3467342
+              },
+              "requested_engine": "python",
+              "seconds": 0.7886358340037987,
+              "steps": 735114,
+              "stop_reason": "terminated",
+              "variant": "malbolge20"
+            }
+          }
+        },
+        "jit": {
+          "available": true,
+          "stats": {
+            "available": true,
+            "cache_code_bytes": 84600,
+            "cache_entries": 47,
+            "cache_mapped_bytes": 1048576,
+            "compile_cpu_seconds": 8.399999999997299e-05,
+            "compile_wall_seconds": 7.800012826919556e-05,
+            "compiled_blocks": 47,
+            "compiled_bytes": 84600,
+            "enabled": true,
+            "fallback_steps": 1,
+            "guard_failures": 0,
+            "jit_blocks": 64,
+            "jit_steps": 4096
+          },
+          "status": "machine code executed",
+          "thread_write_protection_supported": true
+        },
+        "macho": {
+          "architecture": "arm64",
+          "minimum_os": "26.0",
+          "sdk": "27.0"
+        },
+        "native_binary_sha256": "76b47f974d23b2be75f902c3a272f29726e3dd125c72dd1518634a145a57784e",
+        "native_checks": [
+          "installed import and default auto selection",
+          "Original Malbolge Python byte I/O and EOF contract",
+          "byte input, EOF, exact budgets and invalid instruction parity",
+          "COW pages, detached exports and self-modifying future code",
+          "JIT machine-code execution and self-modification parity"
+        ],
+        "native_status": "passed",
+        "native_verify_wall_seconds": 0.2539908750914037,
+        "original_runtime": {
+          "engine": "python",
+          "input_consumed": 3,
+          "output_count": 3,
+          "registers": {
+            "a": 65,
+            "c": 6,
+            "d": 6
+          },
+          "requested_engine": "auto",
+          "seconds": 0.029178750002756715,
+          "steps": 7,
+          "stop_reason": "terminated",
+          "variant": "malbolge"
+        },
+        "python": "3.13.14",
+        "release_success": true,
+        "release_verify_wall_seconds": 3.2448461670428514,
+        "requested_python": "3.13",
+        "required_options": {
+          "expected_version": "1.1.0",
+          "fresh_environment_no_dependencies": true,
+          "jit": true,
+          "native": true,
+          "outside_source_checkout": true
+        },
+        "wheel": {
+          "bytes": 245481,
+          "filename": "malbolge-1.1.0-cp313-cp313-macosx_26_0_arm64.whl",
+          "metadata": "Wheel-Version: 1.0\nGenerator: hatchling 1.32.4\nRoot-Is-Purelib: false\nTag: cp313-cp313-macosx_26_0_arm64\n",
+          "sha256": "20ac2aae6a90c6e5ec56602563e6e91851fcdd0979c20e27f4eb124e90c70c8f"
+        }
+      }
+    ],
+    "compiler_version": "Apple clang version 21.0.0 (clang-2100.3.34.2)",
+    "host": {
+      "mac_ver": "27.0.1",
+      "machine": "arm64",
+      "release": "27.0.0",
+      "system": "Darwin"
+    },
+    "passed_cases": 5,
+    "scope": "supplementary local macOS ARM64 CPython acceptance, not hosted macOS 11 floor proof",
+    "sdist": {
+      "filename": "malbolge-1.1.0.tar.gz",
+      "sha256": "c412c9696fa2444a0d6eab65fd97fd164033fbf713bd2dd69d3bf404bd6d76ab"
+    },
+    "source_comparison": {
+      "malbolge_source_hash_manifest_sha256": "f97c9be61ecc289ff734acdf546605824d58b8a9557914d9ef7e70f82a5c567b",
+      "matched_files": 58,
+      "mismatches": [],
+      "repo_code_files_missing_in_sdist": []
+    },
+    "status": "passed",
+    "verification_helpers_sha256": {
+      "verify_native_install.py": "08993180da10491ad2f49cf3c30c85b6786c4a46fdfa9bb25b83eca348b04623",
+      "verify_release_install.py": "65e53075755ddaea9e8a7102a71dd5c0c0a4835e5a94924641a2f707a73fe0cd"
+    }
+  },
+  "quality_ci": {
+    "run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40355389398",
+    "commit": "5ba394b9d3bc713daba1c9cab6fb380c63df901b",
+    "jobs_passed": 7,
+    "python38": {
+      "passed": 1370,
+      "skipped": 418
+    },
+    "python312_and_313_each": {
+      "passed": 1387,
+      "skipped": 401,
+      "subtests_passed": 3582
+    },
+    "ir_python310_312_313_each": {
+      "passed": 584,
+      "warnings": 1
+    },
+    "portable_backend_execution": {
+      "passed": 2,
+      "subtests_passed": 2
+    }
+  },
+  "scope": [
+    "TestPyPI full flow completed; hosted native matrix is complete only when status says passed",
+    "Local macOS ARM wheels do not replace hosted older-macOS or minimum-OS runtime proof",
+    "Configured release matrix, not every possible environment or gated slow test",
+    "Hosted macOS JIT availability follows the OS write-protection probe; native VM remains usable",
+    "Earlier failed/cancelled CI attempts retained; metadata tool and retiring runner fixes are in Git history"
+  ],
+  "rechecked_at_utc": "2026-10-27T02:22:06Z",
+  "production_pypi_version_at_recheck": "1.0.0"
+}

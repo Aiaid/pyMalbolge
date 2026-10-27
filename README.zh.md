@@ -5,7 +5,7 @@
 **用 Python 写,编译成能跑的 [Malbolge](https://en.wikipedia.org/wiki/Malbolge) 程序。**
 
 pyMalbolge 是一个纯 Python 实现的编译器,把 Python 的一个子集编译到
-[Malbolge20](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/),并附带
+[Malbolge20](https://malbolge20.gitlab.io/index-en.html),并附带
 两个 Malbolge 变体的解释器和一个功能完整的调试器。编译器与 Python 解释器
 不需要 C++、flex、bison 或 Perl 工具。可选 C 扩展加速 Malbolge20 批量执行，
 可选 `ir` extra 提供语义 IR 优化。
@@ -100,6 +100,11 @@ Editable 安装在手动构建本地扩展前使用 Python。匹配的原生 whe
 macOS ARM64 验收；[TestPyPI 记录](docs/notes/testpypi-ci-validation.json)包含
 托管 CPython 3.12 Linux x86-64 构建、上传及安装 wheel 验收。这些证据不代表
 完整平台矩阵已验收，也不代表已正式向 PyPI 发布原生包。
+
+更新的 [2026-10-27 发版验收](docs/notes/release-1.1.0-acceptance.json)记录了以
+1.1.0 为基础的 TestPyPI 开发版本：源码、可移植及 Linux 原生分发文件已上传，
+九组远端安装核对了精确包身份、编译输出与执行契约。原生平台覆盖和仍待运行的
+托管用例在该回执中分别记录。
 
 ### 当前默认行为
 
@@ -213,9 +218,9 @@ MG ── mg2mc ──► 有序 LAL ── mc2mb ──► 内存映像 ──�
 | `py2c` | **我们自己写的。** Python AST → Nagoya C 子集。把一切降级为三地址式,绕开下游 C 编译器的若干缺陷,并注入 `zzmul` / `zzdiv` / `zzmod` 库例程,因为该 C 子集没有 `*`、`/` 和 `%`。 |
 | `py2mg` | **我们自己写的。** Python AST → 直接生成 `.mg`,跳过 C 这一层。复用了已验证的代码生成原语,但替换了栈帧策略:按函数分配临时量、真正的递归环检测,以及只保护跨调用存活的那些临时量。 |
 | 语义 IR | 可选 Python AST → 类型化语义 IR → 经校验的具名 pass → 显式目标 AST 适配器。O3 考虑适用的已验收 profile；`--backend=ir` 显式选择。 |
-| `c2mg` | `nagoya-highlevel`(C 子集 → 伪指令)的纯 Python 移植,连 bug 一起复现,以保证输出与参考实现逐字节一致。 |
-| `mg2mc` | `nagoya-ternary`(伪指令 → LAL)的纯 Python 移植。 |
-| `mc2mb` | `nagoya-lowass`(LAL → Malbolge20)的纯 Python 移植,取代了原来两阶段的 Perl + C++ 实现。填充是确定性的,而不是以时间作种子。 |
+| `c2mg` | 冻结的旧版 `nagoya-highlevel`(C 子集 → 伪指令)的纯 Python 移植，为受控一致性夹具保留参考行为。 |
+| `mg2mc` | 冻结的旧版 `nagoya-ternary`(伪指令 → LAL)的纯 Python 移植。 |
+| `mc2mb` | 冻结的旧版 `nagoya-lowass`(LAL → Malbolge20)的纯 Python 移植，取代其两阶段 Perl + C++ 实现。本移植使用确定性填充。 |
 
 参考移植夹具在受控风格和填充方式下逐字节比对。优化前端与结构化传递还通过
 独立执行核对精确输出、输入消耗、错误与终止。优化可以改变映像字节与步数，
@@ -223,9 +228,15 @@ MG ── mg2mc ──► 有序 LAL ── mc2mb ──► 内存映像 ──�
 
 ### 与 Nagoya 工具链的对比
 
-|  | Nagoya 工具链 | pyMalbolge |
+上游仍在维护。**2026-10-26** 核对时，官方主页链接到合并后的
+[Malbolge20 creator 仓库](https://gitlab.com/malbolge20/malbolge20_creator)，
+主分支版本为 [`2b42f481`](https://gitlab.com/malbolge20/malbolge20_creator/-/commit/2b42f4817afecca6b4c4f7374e21a399b6488e31)
+（2026-10-06）。当前管线包含 `mbcc` 驱动、Python `parse_mc2.py`、显式种子
+控制和地址搜索缓存。下文的旧版参考夹具与历史计时不代表这个版本。
+
+|  | 当前上游工具链（2026-10-26 核对） | pyMalbolge |
 |---|---|---|
-| 实现 | C++ / flex / bison / Perl | 纯 Python |
+| 实现 | C++ / flex / bison 加 Python；Perl 保留用于旧版对比 | 纯 Python 编译器；可选原生运行时 |
 | 获取方式 | 本地从源码构建 | `uv pip install malbolge` 或源码副本 |
 | 源语言 | C 子集 | Python 子集(C 子集这条路径作为其中一个后端保留) |
 | `*` `/` `%` | C 子集里没有 | 常量折叠,或生成为库例程 |
@@ -236,14 +247,20 @@ MG ── mg2mc ──► 有序 LAL ── mc2mb ──► 内存映像 ──�
 | 文本输出 | 每个字符一次 `putchar` | `print()` 支持运行时无符号整数与静态字符串，按需注入十进制辅助函数 |
 | 十进制输入 | 手写字符解析 | 模块与函数内 `int(input([字面量提示语]))`，有明确的无符号范围与错误语义 |
 | 诊断 | 解析器报错 | 带行号的 `CompileError`,附源码摘录 |
-| 内联双重递归(`f(n-1) + f(n-2)`) | 从 fib(4) 起就编译错误 | 两个后端上都正确 |
-| 输出确定性 | `srand(time(NULL))` 填充 —— 每次编译刻意都不一样 | 逐字节可复现 |
+| 内联双重递归(`f(n-1) + f(n-2)`) | 特定 Fibonacci 复现已提交至 [issue 1](https://gitlab.com/malbolge20/malbolge20_creator/-/work_items/1)，见下文 | 在 C/direct 后端上测试 |
+| 输出确定性 | `mbcc --seed N` 固定 ternary 和初始化器种子；未指定种子时填充仍随机 | 默认确定性填充 |
 | 后端 | 一个 | C/direct 与可选语义 IR；O3 选择较小的适用候选 |
 | 运行时 | 参考 C 解释器 | 两个变体的 Python 解释器、可选原生 Malbolge20 VM、显式 JIT 与调试器 |
-| 上游最后一次提交 | 2021 | 处于活跃维护 |
+| 维护情况 | 活跃的合并仓库；版本见上文 | 处于活跃维护 |
 
-混淆在上游是一项设计目标 —— 伪指令层*本就应该*每次生成不同的东西。用它换来确定性,
-才使得可复现构建和逐字节一致性测试成为可能。受控移植路径保留参考行为；
+在上述上游版本，我们的内联 `fib(4)` 复现输出原始字节 `02`，预期为 `03`；
+把两个递归调用拆为单独赋值后输出 `03`。内联 `fib(10)` 输出 `10`，预期为
+`37`（均为十六进制）。这些是特定源码的复现，不表示从 4 起的所有输入均有
+问题，也未定位根因。[issue 1](https://gitlab.com/malbolge20/malbolge20_creator/-/work_items/1)
+包含源码与命令。[issue 2](https://gitlab.com/malbolge20/malbolge20_creator/-/work_items/2)
+另行记录 ternary 输出诊断后仍返回成功的情况。
+
+上游同时支持随机生成和固定种子。受控移植一致性路径在匹配设置下比较参考行为；
 优化路径按程序语义与机器不变量验收，而不要求字节一致。
 
 ## 性能
@@ -260,7 +277,7 @@ O3 按最终映像体积选择，并使用结构化目标传递。
 一致性与独立执行契约；[基准指南](benchmarks/README.zh.md)分别衡量冷编译、
 MB 字节数与执行，包含固定同一参考 VM 的产物比较。
 
-[原生 VM 验收](docs/notes/native-vm-validation.json)记录了 macOS ARM64 /
+**2026-10-10** 的[原生 VM 验收](docs/notes/native-vm-validation.json)记录了 macOS ARM64 /
 CPython 3.12.9 上每引擎五次全新进程采样。同映像 CPU 耗时中位数为：
 
 | 同映像 | Python CPU ms | 原生 CPU ms | 参考 C CPU ms |
@@ -340,7 +357,8 @@ Python 示例经纯 Python `direct` 后端编译耗时 **103.43 s**，产物为
 
 ### 历史基线
 
-以下为 M 系列 Mac、CPython 3.9 上的历史实测。`fib(6)` 一行使用原先的固定输入
+以下为 **2026-08-01** 已记录的 M 系列 Mac、CPython 3.9 历史实测。
+`fib(6)` 一行使用原先的固定输入
 递归源码，不包含当前 `examples/fib.py` 的运行时十进制读取与输出逻辑：
 
 | 源码 | `.mb` 体积(`c`) | `.mb` 体积(`direct`) | 编译 | 运行 | 步数 |
@@ -349,48 +367,49 @@ Python 示例经纯 Python `direct` 后端编译耗时 **103.43 s**，产物为
 | `for i in range(3): putchar(65+i)` | 27.3 MB | 11.9 MB | 5.7 s | 9.5 s | 3.0 M |
 | 固定输入递归 `fib(6)`（历史） | 110.5 MB | 56.8 MB | 28.2 s | 53.8 s | — |
 
-**输出体积。** 直连后端对直线代码没有帮助 —— 两个 `hello` 构建相差不到 1 KB ——
-但对任何带控制流或函数调用的代码,体积大致减半。体积由调用点和循环决定,而不是由
-输入的数值大小决定:典型情况是约 91 KB 的引导代码,加上每个 `putchar` 调用点几百 KB。
+**这些夹具的输出体积。** 两个 `hello` 构建相差不到 1 KB；直连生成让循环与
+递归示例的体积大致减半。这些观察不能预测任意程序的体积。
 
-**编译**耗时由最后的汇编阶段主导,它的速度大约是**每 MB 输出 0.5 s**,并且基本与
+**历史编译**耗时由最后的汇编阶段主导,速度大约是**每 MB 输出 0.5 s**,并且基本与
 输出体积成线性关系。一开始并非如此:`mc2mb` 里的地址搜索在递归时没有做记忆化,使得
 汇编呈超线性、约 40 s/MB,把几 MB 的程序变成了要跑几分钟的构建。把这个搜索按
 `(d, pos, depth)` 做缓存后,**快了约 100 倍,且输出逐字节一致**。
 
-**执行**在 CPython 下大约是**每秒 240,000–320,000 条指令**,这是端到端实测,包含启动
+**历史执行**在 CPython 下大约是**每秒 240,000–320,000 条指令**,这是端到端实测,包含启动
 和解析 `.mb` 的时间。调试器还要再慢 2–2.4 倍,因为回退单步需要记录执行历史。
 墙钟时间随递归深度呈超线性增长,尽管 `.mb` 体积并非
 如此 —— 深递归会触及更多地址空间,而稀疏内存是随用随惰性物化的。
 
-实际上:小程序没问题,任何带真正递归的程序都是对耐心的考验。两者都在预期之中。
+这些观察早于当前的编译器策略、紧凑内存与原生运行时。各自适用范围的计量见上方
+带日期的记录。
 
 ### 与参考工具链的历史对比
 
-把同一个 `print("Hello, world!")` —— 相同的 C 输入、相同的 `.mg` 与 `.mc` 中间产物
-—— 分别过名古屋的工具和本项目的移植:
+以下计量已于 **2026-08-01** 记录，使用为一致性测试保留的冻结旧版
+参考工具，尚未针对当前上游重跑。同一个 `print("Hello, world!")` 使用相同的
+C 输入与 `.mg` / `.mc` 中间产物：
 
-| 阶段 | 名古屋(C++ / bison / Perl) | pyMalbolge(纯 Python) |
+| 阶段 | 冻结旧版参考(C++ / bison / Perl) | 历史 pyMalbolge(纯 Python) |
 |---|---|---|
 | C 子集 → `.mg` | 0.028 s | <0.001 s |
 | `.mg` → `.mc` | 0.030 s | 0.003 s |
 | `.mc` → `.mb` | 3.49 s | 1.72 s |
 | **合计** | **3.55 s** | **1.72 s** |
 
-Python 移植端到端**快了约 2 倍**,但这不是关于 Python 快慢的结论。整条管线由汇编阶段
-主导,而它内层的地址搜索在这里做了记忆化,上游没有 —— 正是这一处改动让该阶段从
-约 40 s/MB 降到 0.5 s/MB。其余阶段都快到语言差距根本显现不出来。
+在这个历史个例中，Python 移植的总耗时约为一半。它缓存了冻结旧版参考工具会
+重复执行的地址搜索。当前上游也已缓存这一搜索；这些数字不能给出相对当前上游的
+速度排名。
 
-两条工具链产出的字节数**完全相同,均为 3,467,473 字节**。其中约 69% 的字节不一样,
-而它们全都是 padding:程序永远不会执行到的单元,上游用 `srand(time(NULL))` 填充,
-本移植则确定性地填充。两个二进制行为完全一致,且各自都能在对方项目的解释器上正确运行。
+两个历史产物均为 **3,467,473 字节**，其中约 69% 的字节不同，归因于旧版随机
+填充与本移植的确定性填充。在该次检查中，两者都在两个解释器上输出预期结果。
+相同产物体积不等于字节一致，也不是一般性的等价证明。
 
-参考实现真正占据压倒性优势的地方是执行。在同一个 `.mb` 上:
+同一个 `.mb` 的历史执行耗时为：
 
 | 解释器 | 耗时 |
 |---|---|
-| 名古屋参考实现(C) | 0.16 s |
-| pyMalbolge(CPython) | 3.07 s |
+| 冻结旧版参考(C) | 0.16 s |
+| 历史 pyMalbolge(CPython) | 3.07 s |
 
 这个历史 **19 倍**差距比较的是参考 C 与旧 Python 路径，没有包含本项目原生
 扩展。当前 Malbolge20 批量执行优先使用已安装的原生 VM；复现 Python 测量时
@@ -537,15 +556,14 @@ Szewczyk 的 **MalbolgeLISP** —— 一个约 350 MB 的 LISP 解释器 —— 
 图灵完备性、SAT 辅助合成三进制位级运算,以及代码分配判定过程的论文,并在 2013 年
 提出了 **Malbolge20**:一个 20-trit 的变体,更大的字长和地址空间让真正的编译器成为
 可能。他们的工具链(MIT 许可)是一个三阶段的下降过程 —— 一个 C 子集编译到一种伪指令
-语言,再降级到 LAL 低级汇编器,最后汇编成 Malbolge20。值得注意的是,伪指令这一层
-把*混淆当作一个特性*:同样的输入,每次编译都应当产生不同的输出。
+语言,再降级到 LAL 低级汇编器,最后汇编成 Malbolge20。伪指令层支持随机混淆；
+当前合并工具链也提供固定种子以便可复现生成。
 
-**本项目补上了什么。** Nagoya 那套栈是 C++/flex/bison/Perl 写的,需要本地构建;最后
-一次提交停在 2021 年。pyMalbolge 用纯 Python 重新实现了全部三个阶段,与原版逐字节
-比对验证,并在其上放了一个 Python 前端 —— 包括上游 C 子集所没有的 `*`、`//` 和 `%`,
+**本项目补上了什么。** pyMalbolge 用纯 Python 移植了三个旧版编译阶段，使用冻结
+参考工具核对受控夹具，并在其上放了一个 Python 前端 —— 包括上游 C 子集所没有的 `*`、`//` 和 `%`,
 外加 `for` 循环、链式比较、短路布尔运算和带行号的诊断。直连后端则完全绕开了 C 这一层。
-输出被做成确定性的而非混淆的,这正是可复现构建和逐字节一致性测试得以成立的前提。
-除此之外,它还是一个持续维护的、面向两个变体的现代运行时,并配有一个真正的调试器。
+默认使用确定性填充。优化编译保留程序的可观察行为，无需与参考产物字节一致。
+除此之外,它还是一个持续维护的、面向两个变体的运行时,并配有调试器。
 
 ## 文档
 
@@ -606,7 +624,7 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 
 - [x] Malbolge20 变体支持(20 trits,稀疏内存)
 - [x] 调试器(CLI + TUI,带回退单步)
-- [x] 完整 Nagoya 工具链的纯 Python 移植,逐字节一致
+- [x] 旧版 Nagoya 工具链的纯 Python 移植，附受控一致性夹具
 - [x] Python 前端,以及一个 `py → .mg` 直连后端
 - [x] 无符号十进制输入输出、基本 print f-string、平坦 tuple 交换与简单关键字调用
 - [x] 语义 IR、经校验的具名 pass、O3 自动选择与结构化目标传递
@@ -626,8 +644,9 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 
 **Malbolge20 与 Nagoya 工具链**(MIT)
 
-- [项目主页](https://www.trs.cm.is.nagoya-u.ac.jp/projects/Malbolge/) —— 论文、在线汇编器和解释器
-- [工具链源码](https://git.trs.css.i.nagoya-u.ac.jp/malbolge) —— `highlevel`(C 子集 → `.mg`)、`ternary`(`.mg` → LAL)、`lowass`(LAL → Malbolge20),以及参考解释器。此处镜像在 `ref/` 下,仅用于一致性测试。
+- [官方项目主页](https://malbolge20.gitlab.io/index-en.html) —— 论文、工具与当前源码链接
+- [官方合并工具链](https://gitlab.com/malbolge20/malbolge20_creator) —— `highlevel`(C 子集 → `.mg`)、`ternary`(`.mg` → LAL)、`lowass`(LAL → Malbolge20)，以及参考解释器
+- [旧版大学仓库](https://git.trs.css.i.nagoya-u.ac.jp/malbolge) —— 本移植 `ref/` 一致性夹具所用的冻结源码，与当前合并上游不同
 - Kato et al. (2013), *Malbolge with 20trits word length and its programming support tool*, IEICE —— 提出 Malbolge20
 - Kanbe et al. (2016), *An intermediate language for a compiler generating highly obfuscated Malbolge codes*, IEICE SS2016 —— `.mg` 这一层
 - Sakanashi et al. (2017), *A compiler that translates to Malbolge from a C-language subset containing recursive calls*, IEICE SS2017-18 —— C 前端

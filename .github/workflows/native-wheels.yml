@@ -8,12 +8,23 @@ on:
       - 'scripts/hatch_native.py'
       - 'scripts/build_native_vm.py'
       - 'scripts/verify_native_install.py'
+      - 'scripts/verify_release_install.py'
       - 'test/test_native_packaging.py'
       - 'pyproject.toml'
       - '.github/workflows/native-wheels.yml'
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      macos_arm64_only:
+        description: Retry only the macOS ARM64 wheel group
+        type: boolean
+        default: false
+      macos_arm64_runner:
+        description: Supported Apple Silicon runner image
+        type: choice
+        default: macos-15
+        options: [macos-15, macos-26]
 
 # Build and retain reviewable artifacts; this workflow never publishes to PyPI.
 permissions:
@@ -44,10 +55,13 @@ jobs:
             platform: linux
             arch: aarch64
             jit: --require-jit
-          - runner: macos-14
+          - runner: ${{ inputs.macos_arm64_runner || 'macos-15' }}
             platform: macos
             arch: arm64
-            jit: --require-jit
+            # Hosted macOS can lack thread-local JIT write protection. The
+            # helper checks the OS probe and explicit unavailable rejection;
+            # if available, real machine-code execution is still mandatory.
+            jit: ''
           - runner: macos-15-intel
             platform: macos
             arch: x86_64
@@ -67,7 +81,20 @@ jobs:
           python-version: '3.12'
       - name: Prepare persistent smoke reports
         run: mkdir -p wheel-provenance
+      - name: Read the candidate version from source metadata
+        id: release
+        run: |
+          uv run --no-project --python 3.12 python - <<'PY'
+          import os, re, tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf8'))['project']['version']
+          if not isinstance(version, str) or not re.fullmatch(r'[0-9][A-Za-z0-9.!+_-]*', version):
+              raise SystemExit('Invalid source release version')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf8') as output:
+              output.write('version=' + version + '\n')
+          PY
       - name: Build, repair and test installed wheels
+        if: ${{ !inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64') }}
         env:
           # PR: one interpreter per OS (both libc variants on Linux).
           # Dispatch/tag: 3.9-3.13, 35 wheels across the same five jobs.
@@ -75,7 +102,9 @@ jobs:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BUILD_FRONTEND: uv
           # Required mode must fail a C build rather than produce a pure wheel.
-          CIBW_ENVIRONMENT: MALBOLGE_NATIVE_BUILD=required
+          CIBW_ENVIRONMENT: >-
+            MALBOLGE_NATIVE_BUILD=required
+            MALBOLGE_EXPECTED_VERSION="${{ steps.release.outputs.version }}"
           CIBW_ENVIRONMENT_PASS_LINUX: GITHUB_SHA GITHUB_RUN_ID GITHUB_RUN_ATTEMPT
           # Preserve Linux reports via a dedicated explicit host bind. Avoid
           # depending on /project copy-out or the default full-host mount.
@@ -89,7 +118,22 @@ jobs:
             uv run --no-project --no-python-downloads --python python python
             "{project}/scripts/verify_native_install.py" --require-native
             ${{ matrix.jit }} --forbid-source-root "{project}"
-            --report-dir "{project}/wheel-provenance"
+            --report-dir "{project}/wheel-provenance" &&
+            uv run --no-project --no-python-downloads --python python python
+            "{project}/scripts/verify_release_install.py" --require-native
+            --expected-version "$MALBOLGE_EXPECTED_VERSION"
+            --forbid-source-root "{project}"
+            --report "{project}/wheel-provenance/release-$CIBUILDWHEEL_BUILD_IDENTIFIER.json"
+          CIBW_TEST_COMMAND_WINDOWS: >-
+            uv run --no-project --no-python-downloads --python python python
+            "{project}/scripts/verify_native_install.py" --require-native
+            ${{ matrix.jit }} --forbid-source-root "{project}"
+            --report-dir "{project}/wheel-provenance" &&
+            uv run --no-project --no-python-downloads --python python python
+            "{project}/scripts/verify_release_install.py" --require-native
+            --expected-version "%MALBOLGE_EXPECTED_VERSION%"
+            --forbid-source-root "{project}"
+            --report "{project}/wheel-provenance/release-%CIBUILDWHEEL_BUILD_IDENTIFIER%.json"
           # Linux copies /project into each container; changes there are not
           # returned. The explicit bind preserves reports even when a smoke
           # failure prevents cibuildwheel's final /output copy-out step.
@@ -97,9 +141,15 @@ jobs:
             uv run --no-project --no-python-downloads --python python python
             "{project}/scripts/verify_native_install.py" --require-native
             ${{ matrix.jit }} --forbid-source-root "{project}"
-            --report-dir "/native-provenance"
+            --report-dir "/native-provenance" &&
+            uv run --no-project --no-python-downloads --python python python
+            "{project}/scripts/verify_release_install.py" --require-native
+            --expected-version "$MALBOLGE_EXPECTED_VERSION"
+            --forbid-source-root "{project}"
+            --report "/native-provenance/release-$CIBUILDWHEEL_BUILD_IDENTIFIER.json"
         run: uvx --python 3.12 cibuildwheel==4.3.0 --platform '${{ matrix.platform }}' --output-dir wheelhouse
       - name: Record wheel hashes and tags
+        if: ${{ !inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64') }}
         run: |
           uv run --no-project --python 3.12 python - <<'PY'
           import hashlib, json, os
@@ -122,6 +172,7 @@ jobs:
               'host_uv': '0.11.25', 'wheels': wheels}, indent=2) + '\n')
           PY
       - name: Retain wheels
+        if: ${{ !inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64') }}
         uses: actions/upload-artifact@v6.0.0
         with:
           name: native-wheels-${{ matrix.runner }}
@@ -129,7 +180,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Retain installed smoke provenance (including failures)
-        if: always()
+        if: ${{ always() && (!inputs.macos_arm64_only || (matrix.platform == 'macos' && matrix.arch == 'arm64')) }}
         uses: actions/upload-artifact@v6.0.0
         with:
           name: native-provenance-${{ matrix.runner }}
@@ -138,6 +189,7 @@ jobs:
           retention-days: 14
 
   python38-compatibility:
+    if: ${{ !inputs.macos_arm64_only }}
     # cibuildwheel 4 intentionally excludes EOL Python 3.8. This separate
     # source build checks the declared floor; its linux wheel is NOT manylinux.
     name: CPython 3.8 source-wheel compatibility
@@ -154,6 +206,18 @@ jobs:
         with:
           version: '0.11.25'
           python-version: '3.8'
+      - name: Read the candidate version from source metadata
+        id: release
+        run: |
+          uv run --no-project --python 3.12 python - <<'PY'
+          import os, re, tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf8'))['project']['version']
+          if not isinstance(version, str) or not re.fullmatch(r'[0-9][A-Za-z0-9.!+_-]*', version):
+              raise SystemExit('Invalid source release version')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf8') as output:
+              output.write('version=' + version + '\n')
+          PY
       - name: Verify build-policy failures and fallback contracts
         run: >-
           uv run --no-project --python 3.8 --with pytest --with hatchling
@@ -174,6 +238,17 @@ jobs:
           "$GITHUB_WORKSPACE/scripts/verify_native_install.py"
           --require-native --expect-no-jit --forbid-source-root "$GITHUB_WORKSPACE"
           --report "$GITHUB_WORKSPACE/wheel-provenance/cp38-linux-compatibility.json"
+      - name: Verify the installed Python 3.8 release behavior
+        working-directory: ${{ runner.temp }}
+        env:
+          MALBOLGE_EXPECTED_VERSION: ${{ steps.release.outputs.version }}
+        run: >-
+          uv run --no-project --no-python-downloads
+          --python "$RUNNER_TEMP/native-wheel38/bin/python" python
+          "$GITHUB_WORKSPACE/scripts/verify_release_install.py"
+          --require-native --expected-version "$MALBOLGE_EXPECTED_VERSION"
+          --forbid-source-root "$GITHUB_WORKSPACE"
+          --report "$GITHUB_WORKSPACE/wheel-provenance/release-cp38-linux-compatibility.json"
       - name: Build and install a deliberately pure fallback wheel
         env:
           MALBOLGE_NATIVE_BUILD: disabled
@@ -189,6 +264,17 @@ jobs:
           "$GITHUB_WORKSPACE/scripts/verify_native_install.py"
           --require-pure --expect-no-jit --forbid-source-root "$GITHUB_WORKSPACE"
           --report "$GITHUB_WORKSPACE/wheel-provenance/cp38-pure-fallback.json"
+      - name: Verify the installed Python 3.8 pure release behavior
+        working-directory: ${{ runner.temp }}
+        env:
+          MALBOLGE_EXPECTED_VERSION: ${{ steps.release.outputs.version }}
+        run: >-
+          uv run --no-project --no-python-downloads
+          --python "$RUNNER_TEMP/pure-wheel38/bin/python" python
+          "$GITHUB_WORKSPACE/scripts/verify_release_install.py"
+          --require-pure --expected-version "$MALBOLGE_EXPECTED_VERSION"
+          --forbid-source-root "$GITHUB_WORKSPACE"
+          --report "$GITHUB_WORKSPACE/wheel-provenance/release-cp38-pure-fallback.json"
       - name: Retain compatibility artifact and provenance
         if: always()
         uses: actions/upload-artifact@v6.0.0
