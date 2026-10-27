@@ -106,6 +106,10 @@ macOS ARM64 验收；[TestPyPI 记录](docs/notes/testpypi-ci-validation.json)�
 九组远端安装核对了精确包身份、编译输出与执行契约。原生平台覆盖和仍待运行的
 托管用例在该回执中分别记录。
 
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 已提供可移植 wheel 与源码归档。
+[正式发布回执](docs/notes/pypi-1.1.0-publication.json)记录无缓存安装及编译器、IR、TUI 检查。
+原生执行可通过源码构建启用。
+
 ### 当前默认行为
 
 | 操作 | 默认 | 显式控制 |

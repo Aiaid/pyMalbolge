@@ -1,11 +1,12 @@
-# 1.1.0 release preparation
+# 1.1.0 release
 
 > **English** | [中文](release-1.1.0.zh.md)
 >
-> Status: local candidate preparation, 2026-10-26. Not uploaded to production
-> PyPI. The production version checked on this date remains 1.0.0.
+> Status: published to production PyPI on 2026-10-27 as a portable wheel and
+> source archive. The source commit is `0176888` on the default `master` branch.
+> [Publication and fresh-install receipt](pypi-1.1.0-publication.json).
 
-This candidate packages the development since 1.0.0 together with updated
+This release packages the development since 1.0.0 together with updated
 distribution metadata. Its version is declared in `pyproject.toml` and
 `malbolge.__version__`; the PyPI description is the concise
 [package introduction](pypi-description.md), rather than the longer source
@@ -52,6 +53,19 @@ their own source archive.
 The separately configured TestPyPI workflow is a test-site path. Neither its
 past success nor preparation of these local artifacts publishes this release.
 Production upload, Git tags and the Wiki edits are separate actions.
+
+## Production publication, 2026-10-27
+
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) contains the portable
+`py3-none-any` wheel and source archive built from the merged mainline commit.
+Both public file hashes and the description match the inspected local artifacts.
+A fresh no-cache installation from production PyPI passed O3, Direct and IR
+compilation/execution, byte I/O and execution-budget checks. The TUI extra
+passed headless startup, step and step-back checks with Textual 8.2.8.
+The mainline quality workflow passed all seven jobs and Pages build/deploy passed.
+The [publication receipt](pypi-1.1.0-publication.json) records exact artifacts
+and source identity. Native acceleration is available through source builds;
+the incomplete hosted native-wheel matrix is recorded separately.
 
 ## Test-site execution, 2026-10-27
 

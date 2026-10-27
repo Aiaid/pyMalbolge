@@ -7,7 +7,8 @@
 > 2026-10-10。扩展后的 1.1.0 TestPyPI 上传及九个远程安装用例于
 > 2026-10-27 全部通过。30 个托管原生 wheel 与 5 个补充本地 macOS ARM64
 > wheel 已通过；托管 macOS ARM64 重试因容量不足、未分配到 runner 而结束。
-> 正式 PyPI 发布属于独立步骤。
+> 正式 PyPI 1.1.0 已发布可移植 wheel 与源码归档，见
+> [发布回执](../notes/pypi-1.1.0-publication.json)。
 
 ## 安装行为
 
@@ -197,7 +198,7 @@ JIT 步。剩余 macOS ARM64 组排队超过十分钟后，在提交 `b7b36ed` �
 
 [1.1.0 验收记录](../notes/release-1.1.0-acceptance.json)保存九个 TestPyPI 用例、
 30 个托管 wheel、五个本地 wheel 及仍待完成的托管 macOS ARM64 范围。
-原版原生引擎、一般 JIT 发射器及 PyPI 分发属于独立 roadmap 项。
+原版原生引擎、一般 JIT 发射器及向 PyPI 分发预构建原生 wheel 属于独立 roadmap 项。
 
 pip 可能缓存纯回退 wheel，之后已有编译器仍继续复用。已有 wheel 的
 安装不会调用 build hook，改变构建模式也不会重建；需要原生时应明确从

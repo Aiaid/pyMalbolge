@@ -8,7 +8,8 @@
 > nine remote installation cases passed on 2026-10-27. Thirty hosted native
 > wheels and five supplementary local macOS ARM64 wheels passed; hosted macOS
 > ARM64 retry ended without acquiring a runner because of hosted capacity.
-> Production PyPI publication remains a separate step.
+> Production PyPI 1.1.0 was published as a portable wheel and source archive;
+> see the [publication receipt](../notes/pypi-1.1.0-publication.json).
 
 ## Installation behavior
 
@@ -230,7 +231,7 @@ acceptance there; older OS and minimum-OS runtime acceptance remain unverified.
 The [1.1.0 acceptance receipt](../notes/release-1.1.0-acceptance.json) records
 the nine TestPyPI cases, 30 hosted wheels, five local wheels and pending hosted
 macOS ARM64 scope. Original native support, general JIT emitters and
-distribution to PyPI remain separate roadmap items.
+prebuilt native-wheel distribution to PyPI remain separate roadmap items.
 
 pip can cache a pure fallback wheel and reuse it after a compiler becomes
 available. Installing a selected wheel never runs a build hook, so changing

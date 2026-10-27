@@ -1,7 +1,7 @@
 {
   "date": "2026-10-27",
   "status": "testpypi_passed_hosted_macos_arm64_unacquired",
-  "production_upload_performed": false,
+  "production_upload_performed": true,
   "testpypi": {
     "run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40355946022",
     "commit": "f781b45a96515f5e856319edbe84da5b07446e3b",
@@ -1232,5 +1232,6 @@
     "Earlier failed/cancelled CI attempts retained; metadata tool and retiring runner fixes are in Git history"
   ],
   "rechecked_at_utc": "2026-10-27T02:22:06Z",
-  "production_pypi_version_at_recheck": "1.0.0"
+  "production_pypi_version_at_recheck": "1.0.0",
+  "production_publication_receipt": "pypi-1.1.0-publication.json"
 }

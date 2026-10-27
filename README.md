@@ -118,6 +118,11 @@ native distributions were uploaded, then nine remote installations verified
 exact package identity, compiler output and runtime contracts. Native platform
 coverage and any pending hosted cases are recorded separately in that receipt.
 
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) is now available as a
+portable wheel and source archive. The [production publication receipt](docs/notes/pypi-1.1.0-publication.json)
+records no-cache installation and compiler/IR/TUI checks. Native execution
+can be enabled through a source build.
+
 ### Current defaults
 
 | Operation | Default | Explicit control |
