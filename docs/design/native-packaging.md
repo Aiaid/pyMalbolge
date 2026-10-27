@@ -7,7 +7,8 @@
 > trial below are dated 2026-10-10. The expanded 1.1.0 TestPyPI upload and all
 > nine remote installation cases passed on 2026-10-27. Thirty hosted native
 > wheels and five supplementary local macOS ARM64 wheels passed; hosted macOS
-> ARM64 remains queued. Production PyPI publication remains a separate step.
+> ARM64 retry ended without acquiring a runner because of hosted capacity.
+> Production PyPI publication remains a separate step.
 
 ## Installation behavior
 
@@ -212,8 +213,11 @@ checked; the Python 3.8 native/pure compatibility checks also passed. The ten
 Linux ARM64 cases each executed at least 4,096 actual JIT steps. The remaining
 macOS ARM64 group stayed queued for over ten minutes. A
 [targeted macOS ARM64 retry](https://github.com/Aiaid/pyMalbolge/actions/runs/40358838205)
-at `b7b36ed` selects `macos-26` and remains queued. Full 35-wheel hosted native
-acceptance is still pending.
+at `b7b36ed` selected `macos-26`. Rechecked on 2026-10-27, GitHub cancelled
+that job without assigning a runner: "The job was not acquired by Runner of
+type hosted even after multiple attempts", with an ARM64 capacity notice.
+No code tests ran for that group. Full 35-wheel hosted native acceptance
+remains incomplete; 30 hosted wheels passed.
 
 Supplementary local macOS 27.0.1 ARM64 checks passed for all five CPython
 versions, 3.9–3.13. Each wheel was built from a pinned 1.1.0 sdist, installed into

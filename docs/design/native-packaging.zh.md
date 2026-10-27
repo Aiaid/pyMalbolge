@@ -6,7 +6,8 @@
 > 下文本地安装检查及单个平台的托管 Linux TestPyPI 试运行记录日期为
 > 2026-10-10。扩展后的 1.1.0 TestPyPI 上传及九个远程安装用例于
 > 2026-10-27 全部通过。30 个托管原生 wheel 与 5 个补充本地 macOS ARM64
-> wheel 已通过；托管 macOS ARM64 仍在排队。正式 PyPI 发布属于独立步骤。
+> wheel 已通过；托管 macOS ARM64 重试因容量不足、未分配到 runner 而结束。
+> 正式 PyPI 发布属于独立步骤。
 
 ## 安装行为
 
@@ -183,7 +184,9 @@ wheel。30 份产物指纹、30 份 VM 报告及 30 份发布报告均已复核�
 原生/纯包兼容检查也通过。十个 Linux ARM64 用例各实际执行至少 4,096 个
 JIT 步。剩余 macOS ARM64 组排队超过十分钟后，在提交 `b7b36ed` 以
 `macos-26` 启动[定向 ARM64 重试](https://github.com/Aiaid/pyMalbolge/actions/runs/40358838205)，
-当前仍在排队。完整 35 个托管原生 wheel 的验收仍待完成。
+2026-10-27 复查确认，该作业未分配到 runner，GitHub 多次尝试后取消，
+并给出 ARM64 容量不足的说明；该组未运行代码测试。
+完整 35 个托管原生 wheel 的验收仍未完成，已通过的托管 wheel 为 30 个。
 
 补充本地 macOS 27.0.1 ARM64 检查中，CPython 3.9–3.13 五个版本全部通过。
 各 wheel 均从固定指纹的 1.1.0 sdist 构建，在全新环境安装并通过两个 helper，

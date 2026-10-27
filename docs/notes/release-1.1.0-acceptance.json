@@ -1,6 +1,6 @@
 {
   "date": "2026-10-27",
-  "status": "testpypi_passed_hosted_macos_arm64_pending",
+  "status": "testpypi_passed_hosted_macos_arm64_unacquired",
   "production_upload_performed": false,
   "testpypi": {
     "run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40355946022",
@@ -152,7 +152,7 @@
   },
   "native_matrix": {
     "coverage_run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40356927572",
-    "status": "30_passed_5_queued",
+    "status": "30_passed_5_not_run_runner_capacity",
     "arm64_retry_run": "https://github.com/Aiaid/pyMalbolge/actions/runs/40358838205",
     "groups": [
       {
@@ -379,7 +379,15 @@
     "python38_native_and_pure_checks": 4,
     "linux_arm64_real_jit_cases": 10,
     "linux_arm64_min_jit_steps": 4096,
-    "macos_arm64_jit": []
+    "macos_arm64_jit": [],
+    "arm64_retry_result": {
+      "job_id": 121698497318,
+      "conclusion": "cancelled",
+      "completed_at": "2026-10-26T16:39:42Z",
+      "runner_assigned": false,
+      "annotation": "The job was not acquired by Runner of type hosted even after multiple attempts",
+      "notice": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times."
+    }
   },
   "local_macos_arm64_supplement": {
     "cases": [
@@ -1222,5 +1230,7 @@
     "Configured release matrix, not every possible environment or gated slow test",
     "Hosted macOS JIT availability follows the OS write-protection probe; native VM remains usable",
     "Earlier failed/cancelled CI attempts retained; metadata tool and retiring runner fixes are in Git history"
-  ]
+  ],
+  "rechecked_at_utc": "2026-10-27T02:22:06Z",
+  "production_pypi_version_at_recheck": "1.0.0"
 }
