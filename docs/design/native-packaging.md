@@ -12,6 +12,13 @@
 > wheel and source archive (32 files); Apple Silicon wheels remain TODO. See
 > the [publication receipt](../notes/pypi-1.1.0-publication.json).
 
+The separate [1.2 rc1 TestPyPI receipt](../notes/release-1.2.0-testpypi.json)
+records three artifacts, nine remote installation groups and seven quality-CI
+jobs passing at `a466170` on 2026-11-10. Its Linux CPython 3.12 native coverage
+must not be confused with the 30 published **1.1.0** wheels. A new same-commit
+native matrix is being prepared for the next 1.2 candidate; configuration is
+not acceptance. See the [1.2 release gates](../notes/release-1.2.0.md).
+
 ## Installation behavior
 
 The project keeps Hatchling. Source installs call `scripts/hatch_native.py`
@@ -131,16 +138,39 @@ tags and artifact hashes. Compiler command/version receipts are currently saved 
 developer builder; successful hook builds do not archive that receipt in CI
 JSON. Build failures include backend diagnostics.
 
-## TestPyPI trial pipeline
+## Next candidate: configured, not yet accepted
+
+The 1.2 rc2 working configuration reuses `native-wheels.yml` from the TestPyPI
+workflow. It requires one source commit and stamped version across 35 native
+wheels, one portable wheel and one sdist, then validates the complete bundle
+before the test-site upload. The post-upload plan adds native ARM64, Intel
+macOS and Windows installations to the earlier portable groups, for 13 remote
+groups, plus a download/hash check of all 37 files. The macOS ARM64 build sets
+deployment target 15.0 and uses macOS 15; a declared target is not itself proof
+of minimum-OS execution. The existing native/JIT capability guards still apply.
+
+These are workflow requirements in the candidate checkout, not completed
+results. Any failed/missing group or mismatched source/artifact identity blocks
+the full-bundle claim. The workflow targets TestPyPI only; production upload
+remains separate. The recorded rc1 run below used the earlier configuration.
+
+## TestPyPI trial pipeline: recorded rc1 configuration
 
 `.github/workflows/testpypi.yml` runs manually or on the
-`codex/testpypi-native-ci` branch. It stamps matching distribution and module
-versions with a unique `1.1.0.dev<run-id-and-attempt>` version in the disposable
+`codex/testpypi-native-ci` and `codex/release-1-2-0-testpypi` branches. It stamps
+matching distribution and module versions with a unique
+`<base-version>.dev<run-id-and-attempt>` in the disposable
 CI checkout. It builds and tests one required-native CPython 3.12 manylinux
 x86-64 wheel, then builds a `py3-none-any` wheel and an sdist with native
 compilation disabled. All three distributions pass metadata checks, have their
 SHA-256 hashes recorded, and are uploaded to TestPyPI. The stable repository
 version stays unchanged.
+
+The version helper preserves canonical alpha/beta/rc suffixes, for example
+`1.2.0rc1.dev42754363710001`. The following nine-group, three-artifact layout
+describes that accepted rc1 run. The next candidate's expanded workflow must
+produce its own same-commit artifact and installation receipts before it can
+replace this acceptance evidence.
 
 Nine remote installation jobs cover the following configurations:
 

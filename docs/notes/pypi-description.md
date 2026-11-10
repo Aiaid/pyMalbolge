@@ -16,7 +16,8 @@ it does not compile arbitrary Python programs.
 
 ## Install
 
-Requires Python 3.8 or newer:
+Requires Python 3.8 or newer for the base package. These commands install from
+**production PyPI**, even when this description is displayed on TestPyPI:
 
 ```sh
 uv venv
@@ -26,6 +27,21 @@ uv pip install 'malbolge[tui]'
 uv pip install 'malbolge[ir]'  # Python 3.10+
 ```
 
+For a **TestPyPI candidate**, use a separate environment and replace
+`<exact-test-version>` with the version shown on that release's page:
+
+```sh
+uv venv
+uv pip install --index-url https://test.pypi.org/simple/ --no-deps 'malbolge==<exact-test-version>'
+uv run --no-project python -c "import malbolge; print(malbolge.__version__)"
+```
+
+The base package has no runtime dependencies, so `--no-deps` is intentional.
+For TUI or IR testing, install `textual>=0.40.0` or `xdsl==0.69.0` separately
+from production PyPI; xDSL requires Python 3.10+. Keep the project pinned to the
+test version rather than asking a mixed index to select it. A test-site upload
+is not a production release.
+
 A pure Python wheel runs without a C compiler. When building from source,
 the default build attempts the native extension and falls back to Python if
 compilation is unavailable. `MALBOLGE_NATIVE_BUILD=disabled` disables native
@@ -33,6 +49,14 @@ compilation; `required` makes compilation failure fatal. Importing or running
 the installed package never launches a compiler.
 Editable installs skip native compilation; build the extension manually if
 native execution is needed in a source checkout.
+
+Native wheel availability depends on the particular release, OS, architecture
+and CPython ABI; check that release's **Download files** list. A portable wheel
+does not establish native/JIT support on that platform. Malbolge20 batch runs
+default to native when the extension loads, otherwise Python. Original
+Malbolge and debugger execution remain Python. ARM64 JIT is an explicit,
+platform-gated experiment and is never selected automatically. See the
+[release and platform evidence](https://github.com/Aiaid/pyMalbolge/blob/master/docs/current-status.md).
 
 ## Compile and run
 
@@ -45,8 +69,8 @@ print("Hello, world!")
 From the environment where the package is installed:
 
 ```sh
-uv run python -m malbolge compile hello.py --no-cache -o hello.mb
-uv run python -m malbolge --variant=malbolge20 hello.mb --engine=python --input '' --max-steps 5000000 --max-output 64
+uv run --no-project python -m malbolge compile hello.py --no-cache -o hello.mb
+uv run --no-project python -m malbolge --variant=malbolge20 hello.mb --engine=python --input '' --max-steps 5000000 --max-output 64
 # Hello, world!
 ```
 
@@ -65,6 +89,10 @@ Malbolge20 uses 20-trit words and is **not backward compatible** with original
 not compile Python or execute Malbolge20 programs.
 
 ## Documentation and attribution
+
+The package description is embedded when each distribution is built. Source
+documentation on `master` can describe newer work; use the release's version,
+files and dated acceptance records when reproducing an installed package.
 
 - [Source and detailed usage](https://github.com/Aiaid/pyMalbolge)
 - [Python subset specification](https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md)

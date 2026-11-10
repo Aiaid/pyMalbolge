@@ -12,7 +12,12 @@
 > Whole-program compilation now defaults to [O3 auto](compiler-optimization.md);
 > direct is the required candidate and `--backend=direct` locks it. Current
 > subset semantics are in the [specification](../specs/python-subset-spec.md).
-> Target-interface integration awaits [combined acceptance](../notes/compiler-optimization-validation.json).
+> Target-interface integration passed local [combined acceptance](../notes/compiler-optimization-validation.json).
+> As checked on 2026-11-10, `and`/`or` and chained comparisons are lazy;
+> decimal I/O, tuple normalization and basic print f-strings are implemented.
+> Shared name/scope/definite-assignment analysis now lives in
+> `source_analysis.py`, also used by the semantic frontend. The v0 trade-offs
+> and method locations below remain historical, not current implementation guidance.
 
 ## 1. Motivation
 
@@ -234,11 +239,12 @@ required to match.
   defaults without changing py2c/c2mg/mg2mc/mc2mb. The 2026-10-10 O3 integration
   replaces those defaults with auto selection; see the dated note above.
 
-## 8. Open Issues / Future Work
+## 8. Historical v0 open issues
 
 - **`and`/`or` short-circuiting**: v0 is non-short-circuiting; semantics diverge from Python in
   scenarios with side-effecting operands (see §4). v1 could materialize short-circuiting via
-  nested `SWITCH`.
+  nested `SWITCH`. This v0 item is now resolved; the current implementation
+  preserves lazy operand-value semantics as documented in the subset spec.
 - **Tightening the protection set further**: currently a recursive function protects "all
   non-static locals"; a liveness analysis restricted to "only locals live across calls" could
   further shrink recursive-function size (temps are already precise; locals are still

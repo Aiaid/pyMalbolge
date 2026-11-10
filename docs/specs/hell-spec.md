@@ -8,6 +8,11 @@
 > It serves as the implementation reference for pyMalbolge's Python HeLL assembler.
 > Compiled: 2026-07-20; LMAO version: v0.6.0 (commit 3ea747e).
 
+The Python HeLL assembler remains [shelved](../design/hell-assembler-design.md).
+This is an upstream reference, not an implemented pyMalbolge input format;
+the proposed `asm` command is not available. Optional HeLL fixtures remain
+in the repository but are excluded from the 1.2 candidate's source archive.
+
 ---
 
 ## I. Lexical Analysis (from `lmao.l`)

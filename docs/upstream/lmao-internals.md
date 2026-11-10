@@ -5,6 +5,9 @@
 > Module-by-module analysis of roughly 4500 lines of effective C code in `ref/LMAO/src/`, serving as the algorithmic reference for the Python port.
 > Compiled on: 2026-07-20. `file:line` references in this document all point into `ref/LMAO/src/`.
 
+The proposed Python port is [shelved](../design/hell-assembler-design.md).
+Algorithms below describe upstream LMAO, not a shipped pyMalbolge assembler.
+
 ## 0. Prerequisites: Malbolge semantics and dependent constants (malbolge.h/malbolge.c)
 
 - Memory has 59049 = 3^10 cells, 10-trit values in [0, C2]. Constants C0=0, C1=29524, C2=59048, C21=59047, C20=59046.

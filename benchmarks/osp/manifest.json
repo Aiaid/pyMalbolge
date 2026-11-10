@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "description": "Public fixed OSP acceptance inputs; hashes use UTF-8 LF source. CPython byte helpers are specified in README. Not a general correctness proof or performance score.",
+  "programs": [
+    {
+      "id": "literal_output",
+      "path": "../programs/literal_output.py",
+      "tier": "smoke",
+      "description": "Existing public literal-output baseline.",
+      "source_sha256": "9c183125a9fb94ac77f14266ed5be122587ddd0851cadc97c945f095f9786c78",
+      "workloads": [
+        {
+          "id": "tiny",
+          "stdin_hex": "",
+          "stdout_hex": "48690a",
+          "expected_input_consumed": 0,
+          "max_steps": 5000000,
+          "timeout_seconds": 30
+        }
+      ]
+    },
+    {
+      "id": "folded_arithmetic",
+      "path": "../programs/folded_arithmetic.py",
+      "tier": "smoke",
+      "description": "Existing public constant-folding baseline.",
+      "source_sha256": "ae9c71260214fdbb8a2f4235799de4ac0a94577dc85f2c81a0856260408307c5",
+      "workloads": [
+        {
+          "id": "tiny",
+          "stdin_hex": "",
+          "stdout_hex": "34320a",
+          "expected_input_consumed": 0,
+          "max_steps": 5000000,
+          "timeout_seconds": 30
+        }
+      ]
+    },
+    {
+      "id": "byte_echo",
+      "path": "programs/byte_echo.py",
+      "tier": "smoke",
+      "description": "Byte input/output, including NUL and 0xff.",
+      "source_sha256": "cf533b713d16a4e362050eb03fda71bda9f840666a076d7975e9db7ecb6faddf",
+      "workloads": [
+        {
+          "id": "nul_high",
+          "stdin_hex": "00ff",
+          "stdout_hex": "00ff",
+          "expected_input_consumed": 2,
+          "max_steps": 30000000,
+          "timeout_seconds": 120
+        },
+        {
+          "id": "ascii",
+          "stdin_hex": "415a",
+          "stdout_hex": "415a",
+          "expected_input_consumed": 2,
+          "max_steps": 30000000,
+          "timeout_seconds": 120
+        }
+      ]
+    },
+    {
+      "id": "byte_loop",
+      "path": "programs/byte_loop.py",
+      "tier": "standard",
+      "description": "Bounded runtime-input loop.",
+      "source_sha256": "90e835bbcc23e8fc0d6c9261e9749cc0955e125abb45ef6b1174dc0b24cd5f06",
+      "workloads": [
+        {
+          "id": "zero",
+          "stdin_hex": "30",
+          "stdout_hex": "",
+          "expected_input_consumed": 1,
+          "max_steps": 30000000,
+          "timeout_seconds": 120
+        },
+        {
+          "id": "three",
+          "stdin_hex": "33",
+          "stdout_hex": "414243",
+          "expected_input_consumed": 1,
+          "max_steps": 30000000,
+          "timeout_seconds": 120
+        }
+      ]
+    },
+    {
+      "id": "short_circuit",
+      "path": "programs/short_circuit.py",
+      "tier": "standard",
+      "description": "Lazy boolean evaluation: equal output but different input consumption.",
+      "source_sha256": "ead82d902f8f054dc2d7cb1400c5bab8a3c22add744a2eb0e4684494fc19aaaf",
+      "workloads": [
+        {
+          "id": "lazy",
+          "stdin_hex": "005a",
+          "stdout_hex": "41",
+          "expected_input_consumed": 1,
+          "max_steps": 30000000,
+          "timeout_seconds": 120
+        },
+        {
+          "id": "eager",
+          "stdin_hex": "0142",
+          "stdout_hex": "41",
+          "expected_input_consumed": 2,
+          "max_steps": 30000000,
+          "timeout_seconds": 120
+        }
+      ]
+    },
+    {
+      "id": "recursive_byte",
+      "path": "programs/recursive_byte.py",
+      "tier": "stress",
+      "description": "Inline double recursion without decimal helpers; opt-in.",
+      "source_sha256": "bef8faffb99ffff60ff888567e9f93b05cc600d9602cd15f57c1a3ed97097795",
+      "workloads": [
+        {
+          "id": "base",
+          "stdin_hex": "31",
+          "stdout_hex": "01",
+          "expected_input_consumed": 1,
+          "max_steps": 200000000,
+          "timeout_seconds": 300
+        },
+        {
+          "id": "four",
+          "stdin_hex": "34",
+          "stdout_hex": "03",
+          "expected_input_consumed": 1,
+          "max_steps": 200000000,
+          "timeout_seconds": 300
+        }
+      ]
+    }
+  ]
+}

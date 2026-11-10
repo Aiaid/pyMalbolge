@@ -1,5 +1,14 @@
 # Diagnostics for the .mb size-optimization investigation
 
+> Historical investigation snapshot (2026-07). Terms such as "shipped compiler"
+> below refer to that investigation's baseline and image layout, not the latest
+> index release. On 2026-11-10, fresh O3 auto/Direct/IR builds of `d1_fails.py`,
+> `d2_passes.py` and `fib3_in_loop.py` from the hash-verified published 1.1.0
+> Linux native package matched their source output and terminated: nine checks.
+> See `historical_i7_recheck` in the [release review](../../docs/notes/release-1.2.0-validation.json).
+> This neither erases the original evidence nor proves every layout safe;
+> historical pinned addresses and low-level transforms have a separate scope.
+
 Instruments, not tests. `pytest` collects nothing in this directory; the
 tests that drive these modules are in `test/test_opt_counterexamples.py`.
 
@@ -32,9 +41,11 @@ operands a write consumed — `crz` clobbers A with its own result).
 
 ## Why the transforms live here and not in the compiler
 
-Both transforms are wrong. Neither belongs in `malbolge/compiler/`, and the
-shipped `mc2mb` must stay byte-exact against the reference toolchain — that
-equivalence is what several other test modules assert. So `optpatch` applies
+Neither transform was accepted into `malbolge/compiler/`: option one was
+falsified, while option two's reported falsification was retracted without
+establishing correctness. These diagnostics preserve a controlled baseline
+for the reference-conformance assertions; that is not a requirement for all
+future optimized images to remain byte-identical. So `optpatch` applies
 them from outside: option one rewrites the `.mc`, and option two re-executes a
 source-rewritten copy of `mc2mb`. `malbolge/compiler/mc2mb.py` is never
 modified and nothing here runs unless a diagnostic calls it.

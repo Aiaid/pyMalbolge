@@ -91,7 +91,9 @@ uv pip install malbolge          # compiler + interpreters + CLI debugger
 uv pip install 'malbolge[tui]'    # adds the TUI debugger (textual)
 ```
 
-Requires Python 3.8+.
+Requires Python 3.8+ for the base package; optional IR requires Python 3.10+.
+These commands use production PyPI. To test a prerelease from TestPyPI, follow
+the [isolated, exact-version installation instructions](docs/notes/release-1.2.0.md#install-the-recorded-testpypi-candidate).
 
 This README describes the current source checkout; an index release can lag
 behind it. For the current checkout and its optional IR support:
@@ -109,17 +111,15 @@ try native with Python fallback, require native, or build pure Python.
 Imports and execution never build the extension. See
 [native packaging](docs/design/native-packaging.md).
 
-The 2026-10-10 [packaging receipt](docs/notes/native-packaging-validation.json)
-records local macOS ARM64 checks; the [TestPyPI receipt](docs/notes/testpypi-ci-validation.json)
-records a hosted CPython 3.12 Linux x86-64 build, upload and installed-wheel
-check. These do not establish acceptance of the full platform matrix or a
-production PyPI native release.
+### Release status (2026-11-10)
 
-The newer [2026-10-27 release acceptance](docs/notes/release-1.1.0-acceptance.json)
-records a 1.1.0-based TestPyPI development release: source, portable and Linux
-native distributions were uploaded, then nine remote installations verified
-exact package identity, compiler output and runtime contracts. Native platform
-coverage and any pending hosted cases are recorded separately in that receipt.
+**1.2 is in preparation; production PyPI remains at 1.1.0.** The recorded
+[1.2 TestPyPI candidate](docs/notes/release-1.2.0.md) at `a466170` passed nine
+remote installation groups and seven quality-CI jobs. Portable packages passed
+on Linux, Windows and both macOS architectures; native acceptance in that run
+is limited to Linux x86-64 CPython 3.12, including a source rebuild. Its
+[receipt](docs/notes/release-1.2.0-testpypi.json) does not certify later candidates
+or a complete 1.2 native matrix.
 
 [PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) provides 30 native wheels
 for CPython 3.9–3.13 on Linux x86-64/AArch64 (glibc and musl), Windows AMD64 and
@@ -128,6 +128,12 @@ Intel macOS, plus a portable wheel and source archive. The
 exact public hashes and installed-package acceptance. Apple Silicon native
 wheels remain pending deployment-target compatibility and hosted acceptance;
 the portable wheel and optional source build remain available there.
+
+The [2026-10-10 packaging checks](docs/notes/native-packaging-validation.json)
+and [1.1 TestPyPI/native acceptance](docs/notes/release-1.1.0-acceptance.json)
+remain historical evidence. Check each release's files and receipts rather than
+inferring native support from a portable-wheel installation. Updating this
+README does not update metadata already embedded in published distributions.
 
 ### Current defaults
 
@@ -719,10 +725,18 @@ it; counts are dated acceptance evidence and must not be added together.
 
 [CI configuration](.github/workflows/qos.yml) covers the base suite on Python
 3.8/3.12/3.13, optional IR on 3.10/3.12/3.13 and a separate portable semantic
-job. Each base job provisions the pinned C reference before running tests;
+execution job for a fixed C/Direct fixture. Despite its `semantic-differential`
+job name, that job is not a semantic-IR or randomized-input sweep. Each base
+job provisions the pinned C reference before running tests;
 local or historical receipts do not establish the latest hosted result.
 Native wheel CI and the completed TestPyPI trial have separate scope and
 receipts in [native packaging](docs/design/native-packaging.md).
+
+For fixed input experiments against an installed artifact, use the
+[public experiment entry point](benchmarks/osp/README.md). It separates byte
+I/O/control/recursion inputs, historical layout reproducers and the existing
+decimal corpus, and records exact package/input/image identities. Oracle-only
+or single-host results do not establish a complete release-platform matrix.
 
 ## Roadmap
 
@@ -733,8 +747,9 @@ receipts in [native packaging](docs/design/native-packaging.md).
 - [x] Unsigned decimal input/output, basic print f-strings, flat tuple swaps and simple keyword calls
 - [x] Semantic IR with verified named passes, O3 automatic selection and structured target handoff
 - [x] Native-first Malbolge20 batches, Python fallback and explicit guarded ARM64 JIT
-- [x] Native source-wheel hook, wheel CI configuration and one hosted TestPyPI installation check
-- [x] Publish 30 accepted Linux, Windows AMD64 and Intel macOS native wheels to PyPI
+- [x] Native source-wheel hook and TestPyPI exact-version remote installation checks
+- [x] Publish 30 accepted 1.1.0 Linux, Windows AMD64 and Intel macOS native wheels to PyPI
+- [ ] Complete the new 1.2 candidate's exact-artifact native matrix and release gates
 - [ ] Complete Apple Silicon deployment-target compatibility and hosted wheel acceptance
 - [ ] Compiler v2: signed integers, general runtime objects/strings and arrays via `IND_OPR`
 - [ ] Malbolge Unshackled support (3-adic integers, variable rotation width, Unicode I/O)

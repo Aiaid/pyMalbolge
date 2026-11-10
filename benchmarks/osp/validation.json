@@ -1,0 +1,203 @@
+{
+  "date_utc": "2026-11-10",
+  "installed_candidate_runs": [
+    {
+      "all_runtime_contracts_passed": true,
+      "compile_samples": 9,
+      "inputs_unchanged": true,
+      "label": "native_smoke",
+      "machine": "x86_64",
+      "native_available": true,
+      "package_fingerprint_sha256": "52c92ab02a2cc131369ec1d3b9b2c754660529c04460484a6be67ffa0f770696",
+      "package_unchanged": true,
+      "python": "3.12.14",
+      "repeat_image_identity": null,
+      "report_sha256": "e0eb13eda371f1446cb5176b811e64276c3403ac4249f1c5f93564084c8645a1",
+      "runner_sha256": "aba4e6d293b862753f1ce4c56378709b6e33444bbd3f186e9b292010fffd92d6",
+      "runtime_samples": 24,
+      "selection": {
+        "backends": [
+          "auto",
+          "direct",
+          "ir"
+        ],
+        "cases": null,
+        "engines": [
+          "python",
+          "native"
+        ],
+        "eof": "sentinel",
+        "opt_level": 3,
+        "repeats": 1,
+        "suite": "smoke",
+        "target_pipeline": "structured"
+      },
+      "status": "passed",
+      "system": "Linux",
+      "version": "1.2.0rc1",
+      "versions": {
+        "malbolge": "1.2.0rc1",
+        "textual": "8.2.8",
+        "xdsl": "0.69.0"
+      }
+    },
+    {
+      "all_runtime_contracts_passed": true,
+      "compile_samples": 9,
+      "inputs_unchanged": true,
+      "label": "native_extended",
+      "machine": "x86_64",
+      "native_available": true,
+      "package_fingerprint_sha256": "52c92ab02a2cc131369ec1d3b9b2c754660529c04460484a6be67ffa0f770696",
+      "package_unchanged": true,
+      "python": "3.12.14",
+      "repeat_image_identity": null,
+      "report_sha256": "01ac2a0bc08aa71d70e45a7a0e0a29cf99210cee40ff3f8b6914e22498c39da2",
+      "runner_sha256": "6684ebf9b6f7a310a2e54a3517adef1fb10ce2af96c5c03914f642ee7067f9f6",
+      "runtime_samples": 18,
+      "selection": {
+        "backends": [
+          "auto",
+          "direct",
+          "ir"
+        ],
+        "cases": [
+          "byte_loop",
+          "short_circuit",
+          "recursive_byte"
+        ],
+        "engines": [
+          "native"
+        ],
+        "eof": "sentinel",
+        "opt_level": 3,
+        "repeats": 1,
+        "suite": "smoke",
+        "target_pipeline": "structured"
+      },
+      "status": "passed",
+      "system": "Linux",
+      "version": "1.2.0rc1",
+      "versions": {
+        "malbolge": "1.2.0rc1",
+        "textual": "8.2.8",
+        "xdsl": "0.69.0"
+      }
+    },
+    {
+      "all_runtime_contracts_passed": true,
+      "compile_samples": 6,
+      "inputs_unchanged": true,
+      "label": "pure_smoke",
+      "machine": "x86_64",
+      "native_available": false,
+      "package_fingerprint_sha256": "127e5ed5dda76a5516e477ae62fee0bdd9035ef11228f7974274113d4b42488d",
+      "package_unchanged": true,
+      "python": "3.12.14",
+      "repeat_image_identity": null,
+      "report_sha256": "ffe7be5935c2b62bcd4bd5356f6545ec0410532869b42687e72a858af0fce58d",
+      "runner_sha256": "6684ebf9b6f7a310a2e54a3517adef1fb10ce2af96c5c03914f642ee7067f9f6",
+      "runtime_samples": 8,
+      "selection": {
+        "backends": [
+          "auto",
+          "direct"
+        ],
+        "cases": null,
+        "engines": [
+          "python"
+        ],
+        "eof": "sentinel",
+        "opt_level": 3,
+        "repeats": 1,
+        "suite": "smoke",
+        "target_pipeline": "structured"
+      },
+      "status": "passed",
+      "system": "Linux",
+      "version": "1.2.0rc1",
+      "versions": {
+        "malbolge": "1.2.0rc1",
+        "textual": "8.2.8",
+        "xdsl": "0.69.0"
+      }
+    },
+    {
+      "all_runtime_contracts_passed": true,
+      "compile_samples": 6,
+      "inputs_unchanged": true,
+      "label": "repeated_literal",
+      "machine": "x86_64",
+      "native_available": true,
+      "package_fingerprint_sha256": "52c92ab02a2cc131369ec1d3b9b2c754660529c04460484a6be67ffa0f770696",
+      "package_unchanged": true,
+      "python": "3.12.14",
+      "repeat_image_identity": true,
+      "report_sha256": "ceec4bd9e999157b69c4dcc046c53123dbfc20bcfa9f28b9d74c5064790df031",
+      "runner_sha256": "6684ebf9b6f7a310a2e54a3517adef1fb10ce2af96c5c03914f642ee7067f9f6",
+      "runtime_samples": 12,
+      "selection": {
+        "backends": [
+          "auto",
+          "direct",
+          "ir"
+        ],
+        "cases": [
+          "literal_output"
+        ],
+        "engines": [
+          "python",
+          "native"
+        ],
+        "eof": "sentinel",
+        "opt_level": 3,
+        "repeats": 2,
+        "suite": "smoke",
+        "target_pipeline": "structured"
+      },
+      "status": "passed",
+      "system": "Linux",
+      "version": "1.2.0rc1",
+      "versions": {
+        "malbolge": "1.2.0rc1",
+        "textual": "8.2.8",
+        "xdsl": "0.69.0"
+      }
+    }
+  ],
+  "limitations": [
+    "The 1.2.0rc1 wheels were existing local QA artifacts; later TestPyPI or final artifacts require their own exact-version runs.",
+    "Source input hashes normalize CRLF to LF; raw hashes remain in each full report.",
+    "The first native smoke precedes a reporting-only change from vacuous true to null for single-repetition image identity; subsequent extended/pure/repeat runs use the final runner behavior.",
+    "No target execution of the historical-layout manifest or the existing 32-workload decimal/performance corpus was performed in this controller QA pass.",
+    "No independent C reference VM run, Windows/macOS/musl/ARM64 execution, minimum-OS verification or performance advantage is established.",
+    "Full generated receipts are local run outputs, not bundled historical research. Reproduce using README commands and preserve the new report directory for the evaluated artifact."
+  ],
+  "oracle_only": [
+    {
+      "manifest_sha256": "0cf6f7e9d5fb53113b036305cefc6803f740c9553bd5963537afebc9aefd0044",
+      "report_sha256": "d0408593b0e194d9e05efd243f2aa234e4eb51e4084920c290ceb0cdea2743a3",
+      "status": "passed",
+      "workloads": 10
+    },
+    {
+      "manifest_sha256": "05b91da63adf199f15709e28b794a556fc21fa171709be8740bde220638bccc5",
+      "report_sha256": "3a618a1fce435aacdc402fd3d19413fbf8ce90d23e604fb3531e53a171411d3e",
+      "status": "passed",
+      "workloads": 3
+    },
+    {
+      "manifest_sha256": "685b3363dc69632399c4d6fadaa83bd28ecb3a3eaeaaf60340e214a1f0ceafd7",
+      "report_sha256": "ccca63bee35ed25d88af0764a831d2046d2c2a7522ae3038f3e91a10ab2ea624",
+      "status": "passed",
+      "workloads": 32
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Controller/input validation and isolated local candidate-wheel execution on Linux x86_64 only. This is not a frozen-release, TestPyPI, or multi-platform acceptance report.",
+  "status": "local_runner_qa_passed",
+  "tests": {
+    "command": "uv run --no-sync pytest test/test_osp_experiments.py test/test_benchmark_pipeline.py -q",
+    "passed": 16
+  }
+}

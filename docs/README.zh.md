@@ -15,12 +15,15 @@
 [当前实现与发行边界](current-status.zh.md)集中区分源码与发行状态、仅支持 Original
 的浏览器、后端差异，以及仍属实验或尚未实现的方向（2026-11-10 核对）。
 
+安装候选包的固定输入检查见[公开实验 runner 与 manifest](../benchmarks/osp/README.zh.md)。
+本地实验验收不代替后续发行包或各平台矩阵的验收。
+
 ## specs/ — 语言规格
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
 | [mg-spec.zh.md](specs/mg-spec.zh.md) | ✅ | `.mg` 伪指令语言规格(逆向自 `ternary`,含实验验证) |
-| [hell-spec.zh.md](specs/hell-spec.zh.md) | ✅ | HeLL 语言规格(逆向自 LMAO v0.6.0) |
+| [hell-spec.zh.md](specs/hell-spec.zh.md) | 📌 上游参考；移植搁置 | HeLL 语言规格（LMAO v0.6.0），并非已提供的 pyMalbolge 编译输入 |
 | [python-subset-spec.zh.md](specs/python-subset-spec.zh.md) | ✅ | **规范性规格**:接受的 Python 子集 v1——按 AST 节点的接受白名单、与 CPython 的分歧(D1–D19)、诊断契约、审计附录 |
 
 ## design/ — 设计与路线
@@ -55,11 +58,13 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
-| [release-1.2.0.zh.md](notes/release-1.2.0.zh.md) | 本地候选，未发布 | 1.2.0rc1 分发声明、源码包边界、共享源码分析与验收门槛 |
+| [release-1.2.0.zh.md](notes/release-1.2.0.zh.md) | rc1 TestPyPI 已验收；下个候选待验 | 测试站精确版本安装、许可声明、源码包边界及原生/发行门槛；正式 1.2 尚未发布 |
+| [release-1.2.0-testpypi.json](notes/release-1.2.0-testpypi.json) | ✅ rc1 历史验收 | 提交 a466170：三个上传产物、九组远端安装、七个质量 CI 作业；不覆盖后续候选或完整原生矩阵 |
+| [release-1.2.0-validation.json](notes/release-1.2.0-validation.json) | 📌 更早的本地候选 | rc1 上传前的分发内容检查、本地测试和安装包验收 |
 | [release-1.1.0.zh.md](notes/release-1.1.0.zh.md) | ✅ 2026-10-27 已发布 | 相对 PyPI 1.0.0 的变化、30 个原生 wheel 加通用/源码分发与安装包验收 |
 | [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ 32 个公开文件已复核 | 源码身份、精确产物/哈希、30 个原生下载逐一复核、初次无缓存编译器/IR/TUI 检查及主分支 CI/Pages |
 | [release-1.1.0-acceptance.json](notes/release-1.1.0-acceptance.json) | ✅ TestPyPI 远端验收；平台范围单列 | 构建/公开文件哈希、九组远端安装、产品 CI 与各平台原生/JIT 证据 |
-| [pypi-description.zh.md](notes/pypi-description.zh.md) | ✅ 已发布 1.1.0 元数据 | pyproject.toml 使用的简洁安装包介绍；英文版嵌入分发元数据 |
+| [pypi-description.zh.md](notes/pypi-description.zh.md) | 当前构建模板的中文对照 | pyproject.toml 嵌入英文介绍；区分正式/测试站安装与平台范围，修改需新产物才生效 |
 | [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ 本地 CI 矩阵验收 | 干净源码 Python 3.8/3.12/3.13 基础套件、可选 IR 和语义对照；固定独立参考准备及 AST/CLI/测试可移植性修复 |
 | [web-demo-deployment.json](notes/web-demo-deployment.json) | ✅ 公开 Pages 部署已核验 | 公网实际运行 Hello、部署版本/wheel 身份、构建部署成功及独立全量 CI 失败 |
 | [web-demo-validation.json](notes/web-demo-validation.json) | ✅ 本地 Chromium 验收 | 浏览器纯 Python wheel 构建修复、新鲜度/vendor 回归、Pyodide worker 协议与真实浏览器调试操作；托管证据另见上行 |
@@ -79,7 +84,7 @@
 | [perf-baseline.zh.md](notes/perf-baseline.zh.md) | 📌 | QoS 修复前性能剖析基线；运行时表示/热点描述已由紧凑周期内存与 python-qos-validation.json 取代 |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | QoS 修复前的 2026-10-08 共享测量数据：普通 Python Fibonacci、direct 编译、优化 C 参考解释器执行、CPython 对照及项目 Python CLI 的资源受限停止；双语解读见主 README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | 历史十一组反例；由 python-qos-validation.json 结案，原证据保留 |
-| [python-qos-validation.json](notes/python-qos-validation.json) | 📌 2026-10-08 验收 | 最终本地验收、原生/便携 VM 证据、新旧产物、有界运行/存储、缓存与汇编测量；已配置云端 CI，尚未运行 |
+| [python-qos-validation.json](notes/python-qos-validation.json) | 📌 2026-10-08 验收 | 当时的本地证据与尚待运行 CI 状态；后续托管 CI 见发行回执 |
 
 另有研究笔记(发现清单、设计方案 `mb-dialect-plan`、全方向 `roadmap`、
 名古屋数组解剖、生态全景调研等)保存在一个私有的配套仓库中,不属于

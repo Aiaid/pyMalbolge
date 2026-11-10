@@ -119,13 +119,18 @@ Historical test snapshot (2026-09-01): 592 pass / 8 skip. Re-run the relevant te
 (`uv run --no-sync python -m unittest discover -v test/`) but takes ~24 min,
 and `test_py2c_diagnostics.py` needs pytest importable either way.
 
-Latest local QoS acceptance (2026-10-08): full suite 710 passed / 14 skipped
+Historical local QoS acceptance (2026-10-08): full suite 710 passed / 14 skipped
 plus 532 subtests; subsequent focused checks and portable VM execution are
 recorded in `docs/notes/python-qos-validation.json`. CI runs the base suite on
 Python 3.8/3.12/3.13 and optional IR checks on 3.10/3.12/3.13. The full base
 suite needs clang and the explicitly fetched reference source; fetch verifies
 both upstream source and license hashes without disabling TLS checks. The
 older test counts above remain historical timing evidence.
+
+For the 1.2 preparation, use `docs/notes/release-1.2.0.md` and its dated JSON
+receipts. The rc1 TestPyPI checks cover `a466170`, not later candidates. Pure
+platform installation, native wheel acceptance and ARM64 JIT execution are
+separate claims. Do not report a configured matrix as passed.
 
 ### Build package
 ```bash

@@ -153,7 +153,8 @@ def atomic_write(path, payload):
             output.write(payload)
             output.flush()
             os.fsync(output.fileno())
-            os.fchmod(output.fileno(), mode)
+        # chmod by path after closing also works on Windows, which has no fchmod.
+        os.chmod(str(temporary), mode)
         os.replace(str(temporary), str(path))
         temporary = None
     finally:

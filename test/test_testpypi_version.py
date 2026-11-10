@@ -39,6 +39,14 @@ class TestTestPyPIVersion(unittest.TestCase):
                 code = helper.main(["--pyproject", str(self.project)] + list(args))
         return code, stdout.getvalue(), stderr.getvalue()
 
+    def test_stamping_does_not_require_unix_fchmod(self):
+        with mock.patch.object(helper.os, "fchmod", create=True,
+                               side_effect=AttributeError("unavailable on Windows")):
+            code, stdout, stderr = self.invoke("--run-id", "42", "--attempt", "1")
+        self.assertEqual((code, stderr), (0, ""))
+        self.assertEqual(json.loads(stdout)["test_version"], "1.1.0.dev42001")
+        self.assertEqual(self.module.read_text(), '__version__ = "1.1.0.dev42001"\n')
+
     def test_stamp_is_unique_across_runs_and_retries(self):
         pairs = ((1, 1), (1, 999), (2, 1), (2, 2), (100000000000, 999))
         versions = [helper.development_version(str(run), str(attempt), "1.1.0")["test_version"]

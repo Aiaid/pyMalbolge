@@ -501,7 +501,7 @@ def assert_wheel_integrity(path, *, native):
         assert_distribution_notices(archive.read, prefix, archive.read(metadata_name))
         record_name = next(name for name in names if name.endswith(".dist-info/RECORD"))
         records = list(csv.reader(io.StringIO(archive.read(record_name).decode("utf8"))))
-        assert {row[0] for row in records} == set(names)
+        assert {row[0] for row in records} == {info.filename for info in archive.infolist() if not info.is_dir()}
         for name, digest, size in records:
             if name == record_name:
                 assert digest == size == ""
@@ -592,3 +592,36 @@ if sys.argv[2] == 'required':
         # -I removes cwd/PYTHONPATH influence, so checkout extensions cannot help.
         command([uv, "run", "--no-project", "--no-sync", "--python", sys.executable,
                  "python", "-I", "-c", probe, str(installed), mode], cwd=tmp_path, env=env)
+
+
+@pytest.mark.parametrize("unrecorded_file", [False, True])
+def test_wheel_record_ignores_only_zip_directories(tmp_path, unrecorded_file):
+    import csv
+    import io
+    prefix = "malbolge-1.2.0rc2.dist-info/"
+    payload = {"malbolge/__init__.py": b"", prefix + "WHEEL":
+               b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n"}
+    names = ("LICENSE", "THIRD_PARTY_NOTICES.md", *NAGOYA_LICENSE_HASHES)
+    payload[prefix + "METADATA"] = ("License-Expression: MIT\n" +
+        "".join("License-File: " + name + "\n" for name in names)).encode()
+    for name in names:
+        payload[prefix + "licenses/" + name] = (ROOT / name).read_bytes()
+    record = io.StringIO(); writer = csv.writer(record)
+    for name, data in payload.items():
+        digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
+        writer.writerow([name, "sha256=" + digest, len(data)])
+    writer.writerow([prefix + "RECORD", "", ""])
+    payload[prefix + "RECORD"] = record.getvalue().encode()
+    wheel = tmp_path / "malbolge-1.2.0rc2-py3-none-any.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr("malbolge/", b"")
+        archive.writestr(prefix, b"")
+        for name, data in payload.items():
+            archive.writestr(name, data)
+        if unrecorded_file:
+            archive.writestr("malbolge/unrecorded.txt", b"not covered by RECORD")
+    if unrecorded_file:
+        with pytest.raises(AssertionError):
+            assert_wheel_integrity(wheel, native=False)
+    else:
+        assert_wheel_integrity(wheel, native=False)

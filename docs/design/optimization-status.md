@@ -88,9 +88,10 @@ selection does not establish a universal compile-time or runtime optimum.
 
 - [Native engine selection](../notes/native-engine-selection-validation.json):
   current auto/native/Python behavior and compatibility contracts.
-- [Native packaging](native-packaging.md) and [TestPyPI receipt](../notes/testpypi-ci-validation.json):
-  local macOS ARM64 and one hosted Linux x86-64 installed-artifact acceptance;
-  the full configured platform matrix remains pending.
+- [Native packaging](native-packaging.md): the [1.1.0 publication](../notes/pypi-1.1.0-publication.json)
+  covers 30 accepted native wheels. The [1.2 rc1 TestPyPI receipt](../notes/release-1.2.0-testpypi.json)
+  separately covers nine remote installation groups, with native checks only
+  on Linux x86-64 CPython 3.12. The next candidate's full matrix is not yet accepted.
 - [Python QoS validation](../notes/python-qos-validation.json): language/runtime
   contracts, compact storage, real target execution, cache and package checks.
 - [Semantic pass validation](../notes/semantic-pass-validation.json): accepted

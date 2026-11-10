@@ -8,11 +8,11 @@
 > accepted native wheels were built at `e97edc2`. Apple Silicon remains TODO.
 > [Publication and fresh-install receipt](pypi-1.1.0-publication.json).
 
-This release packages the development since 1.0.0 together with updated
-distribution metadata. Its version is declared in `pyproject.toml` and
-`malbolge.__version__`; the PyPI description is the concise
-[package introduction](pypi-description.md), rather than the longer source
-README with historical benchmarks.
+This historical release packages the development since 1.0.0. Its artifact
+metadata and `malbolge.__version__` record 1.1.0; the source checkout has since
+advanced. The concise [package introduction](pypi-description.md) is the
+current build template, not an immutable copy of the description embedded in
+1.1.0. Use the published files and receipt to reproduce that release.
 
 ## Changes since the published 1.0.0 wheel
 

@@ -82,7 +82,8 @@ uv pip install malbolge          # 编译器 + 解释器 + CLI 调试器
 uv pip install 'malbolge[tui]'    # 追加 TUI 调试器(textual)
 ```
 
-需要 Python 3.8+。
+基础包需要 Python 3.8+；可选 IR 需要 Python 3.10+。以上命令使用正式 PyPI。
+测试 TestPyPI 预发布版本时，请按[隔离环境与精确版本安装说明](docs/notes/release-1.2.0.zh.md#安装已记录的-testpypi-候选)操作。
 
 本 README 描述当前源码副本；包索引中的发布版本可能滞后。使用当前源码及
 可选 IR 功能：
@@ -98,15 +99,13 @@ Editable 安装在手动构建本地扩展前使用 Python。匹配的原生 whe
 允许 Python 回退、强制原生、或纯 Python 构建。导入与执行不会构建扩展。
 详见[原生打包](docs/design/native-packaging.zh.md)。
 
-2026-10-10 的[打包记录](docs/notes/native-packaging-validation.json)包含本地
-macOS ARM64 验收；[TestPyPI 记录](docs/notes/testpypi-ci-validation.json)包含
-托管 CPython 3.12 Linux x86-64 构建、上传及安装 wheel 验收。这些证据不代表
-完整平台矩阵已验收，也不代表已正式向 PyPI 发布原生包。
+### 发行状态（2026-11-10）
 
-更新的 [2026-10-27 发版验收](docs/notes/release-1.1.0-acceptance.json)记录了以
-1.1.0 为基础的 TestPyPI 开发版本：源码、可移植及 Linux 原生分发文件已上传，
-九组远端安装核对了精确包身份、编译输出与执行契约。原生平台覆盖和仍待运行的
-托管用例在该回执中分别记录。
+**1.2 正在准备，正式 PyPI 仍为 1.1.0。** 提交 `a466170` 的
+[1.2 TestPyPI 候选](docs/notes/release-1.2.0.zh.md)已通过九组远端安装和七个质量
+CI 作业：便携包覆盖 Linux、Windows 和两种 macOS 架构；该轮原生验收仅覆盖
+Linux x86-64 CPython 3.12，包括源码重建。[回执](docs/notes/release-1.2.0-testpypi.json)
+不能证明后续候选或完整 1.2 原生矩阵已经通过。
 
 [PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 已提供 30 个原生 wheel，
 覆盖 CPython 3.9–3.13 的 Linux x86-64/AArch64（glibc 与 musl）、Windows AMD64
@@ -114,6 +113,11 @@ macOS ARM64 验收；[TestPyPI 记录](docs/notes/testpypi-ci-validation.json)�
 [正式发布回执](docs/notes/pypi-1.1.0-publication.json)记录精确公开哈希与安装包验收。
 Apple Silicon 原生 wheel 仍待最低系统版本兼容性及托管验收；该平台可继续使用
 可移植 wheel 或可选源码构建。
+
+[2026-10-10 打包检查](docs/notes/native-packaging-validation.json)和
+[1.1 TestPyPI/原生验收](docs/notes/release-1.1.0-acceptance.json)保留为历史证据。
+以各发行版的文件和回执为准，不从便携 wheel 安装推断原生支持。修改本 README
+不会更新已经嵌入已发布分发文件的元数据。
 
 ### 当前默认行为
 
@@ -628,10 +632,15 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 维护的原生工作。后续定向测试与其重叠；这些是带日期的验收证据，不能累加。
 
 [CI 配置](.github/workflows/qos.yml)覆盖 Python 3.8/3.12/3.13 基础套件、
-3.10/3.12/3.13 可选 IR 和独立的便携语义作业。每个基础作业先准备固定 C 参考
+3.10/3.12/3.13 可选 IR 和独立的固定 C/Direct 夹具执行作业。后者虽然名为
+`semantic-differential`，并非语义 IR 或随机输入扫描。每个基础作业先准备固定 C 参考
 源码再运行测试；本地或历史验收记录不代表最新托管结果。
 原生 wheel CI 与已完成的 TestPyPI 试运行具有独立范围，记录见
 [原生打包](docs/design/native-packaging.zh.md)。
+
+针对安装产物的固定输入实验见[公开实验入口](benchmarks/osp/README.zh.md)：
+字节 I/O/控制流/递归、历史布局案例与既有十进制语料分开，记录精确包、输入及
+映像身份。仅 oracle 或单机通过不等于完整发行平台矩阵通过。
 
 ## 路线图
 
@@ -642,8 +651,9 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 - [x] 无符号十进制输入输出、基本 print f-string、平坦 tuple 交换与简单关键字调用
 - [x] 语义 IR、经校验的具名 pass、O3 自动选择与结构化目标传递
 - [x] Malbolge20 批量执行优先原生、Python 回退与显式带守卫 ARM64 JIT
-- [x] 原生源码 wheel hook、wheel CI 配置及一次托管 TestPyPI 安装验收
-- [x] 向 PyPI 发布 30 个已验收的 Linux、Windows AMD64 与 Intel macOS 原生 wheel
+- [x] 原生源码 wheel hook 与 TestPyPI 精确版本远端安装验收
+- [x] 向 PyPI 发布 30 个已验收的 1.1.0 Linux、Windows AMD64 与 Intel macOS 原生 wheel
+- [ ] 完成新 1.2 候选精确产物的原生矩阵及发行门槛
 - [ ] 完成 Apple Silicon 最低系统版本兼容性与托管 wheel 验收
 - [ ] 编译器 v2：有符号整数、一般运行时对象/字符串，以及通过 `IND_OPR` 支持数组
 - [ ] Malbolge Unshackled 支持(3-adic 整数、可变旋转宽度、Unicode I/O)

@@ -79,8 +79,10 @@ uv run --no-sync python -m malbolge compile program.py --backend=ir \
 
 - [原生引擎选择](../notes/native-engine-selection-validation.json)：当前
   auto/native/Python 行为与兼容契约。
-- [原生打包](native-packaging.zh.md)与 [TestPyPI 记录](../notes/testpypi-ci-validation.json)：
-  本地 macOS ARM64 与一次托管 Linux x86-64 安装包验收；完整配置矩阵待验收。
+- [原生打包](native-packaging.zh.md)：[1.1.0 发布](../notes/pypi-1.1.0-publication.json)
+  包含 30 个已验收原生 wheel。[1.2 rc1 TestPyPI 回执](../notes/release-1.2.0-testpypi.json)
+  单列九组远端安装，原生检查仅限 Linux x86-64 CPython 3.12；下个候选的完整矩阵
+  尚未验收。
 - [Python QoS 验收](../notes/python-qos-validation.json)：语言/运行时契约、
   紧凑存储、实际目标执行、缓存与打包。
 - [语义 pass 验收](../notes/semantic-pass-validation.json)：已验收源变换及

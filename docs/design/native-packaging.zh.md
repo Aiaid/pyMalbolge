@@ -11,6 +11,12 @@
 > 共 32 个文件；Apple Silicon wheel 仍为待办。见
 > [发布回执](../notes/pypi-1.1.0-publication.json)。
 
+独立的 [1.2 rc1 TestPyPI 回执](../notes/release-1.2.0-testpypi.json)记录提交
+`a466170` 在 2026-11-10 通过三个产物、九组远端安装及七个质量 CI 作业。
+该轮 Linux CPython 3.12 原生覆盖不能与已发布的 30 个 **1.1.0** 原生 wheel
+混为一谈。下个 1.2 候选正在准备同提交原生矩阵，工作流配置不等于验收通过。
+见 [1.2 发行门槛](../notes/release-1.2.0.zh.md)。
+
 ## 安装行为
 
 项目保留 Hatchling。源码安装在 PEP 517 wheel 构建时调用
@@ -115,14 +121,32 @@ Malbolge 字节 I/O 和 CLI 预算退出码。它拒绝副本导入，记录已�
 目前由开发构建器保存，成功 hook 构建不把该记录归档进 CI JSON；构建
 失败会输出 backend 诊断。
 
-## TestPyPI 试发布管线
+## 下个候选：已配置，尚未验收
+
+1.2 rc2 工作区配置由 TestPyPI 工作流复用 `native-wheels.yml`，要求 35 个原生
+wheel、一个便携 wheel 和一个 sdist 具有相同源码提交和临时版本，先校验完整
+产物包，再上传测试站。上传后的计划在原有便携组外增加 ARM64、Intel macOS 和
+Windows 原生安装，共 13 组远端安装，并下载核对全部 37 个文件的哈希。
+macOS ARM64 构建设置 deployment target 15.0 并使用 macOS 15；声明 target
+本身不证明最低系统执行通过。原有 native/JIT 能力守卫保持有效。
+
+这些是候选工作区的工作流要求，不是已完成结果。任何缺失/失败组或源码/产物
+身份不一致都会阻止“完整产物包通过”的结论。工作流仅面向 TestPyPI，正式上传
+单独处理。下方已记录的 rc1 运行使用较早的配置。
+
+## TestPyPI 试发布管线：已记录的 rc1 配置
 
 `.github/workflows/testpypi.yml` 可手动触发，也在
-`codex/testpypi-native-ci` 分支推送时运行。它仅在临时 CI 副本中将分发和
-模块版本同步写为唯一的 `1.1.0.dev<run-id-and-attempt>` 开发版本，构建并
+`codex/testpypi-native-ci` 和 `codex/release-1-2-0-testpypi` 分支推送时运行。
+它仅在临时 CI 副本中将分发和模块版本同步写为唯一的
+`<base-version>.dev<run-id-and-attempt>` 开发版本，构建并
 测试一个 required 原生 CPython 3.12 manylinux x86-64 wheel，随后关闭原生
 编译，构建 `py3-none-any` wheel 和 sdist。三份分发产物都通过元数据检查、
 记录 SHA-256 指纹并上传 TestPyPI。仓库的稳定版本号保持不变。
+
+版本脚本保留规范的 alpha/beta/rc 后缀，例如 `1.2.0rc1.dev42754363710001`。
+下列九组安装、三个产物的配置描述已经通过的 rc1 运行；下个候选扩展后的工作流
+须提供自身同提交产物和安装回执，不能直接继承这份验收结论。
 
 九个远程安装 job 覆盖以下配置：
 

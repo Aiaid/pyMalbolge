@@ -3,8 +3,8 @@
 > **English** | [中文](current-status.zh.md)
 >
 > Documentation checkpoint: 2026-11-10. Implementation statements describe the
-> source checkout, based on `2abc44d` plus the shared-source-analysis
-> extraction included with this checkpoint. Release and benchmark claims keep their own dated provenance.
+> source checkout, including shared-source-analysis extraction in `0321a26`.
+> Release and benchmark claims keep their own dated provenance.
 > This is not a new full-suite, platform or performance acceptance report.
 
 ## Implemented
@@ -36,9 +36,14 @@
 
 ## Published versus experimental
 
-The working checkout is now preparing **1.2.0rc1**, an unpublished maintenance
-candidate. Its [release notes](notes/release-1.2.0.md) and fresh validation are
-separate from the published 1.1.0 receipt.
+**1.2 is in release preparation, not published to production PyPI.** The first
+[TestPyPI candidate](https://test.pypi.org/project/malbolge/1.2.0rc1.dev42754363710001/)
+passed nine remote installation groups and seven quality-CI jobs at commit
+`a466170`. This covers portable installations on Linux, Windows and both macOS
+architectures, plus Linux CPython 3.12 native-wheel/source-build checks. It is
+not acceptance of a complete native OS/ABI matrix or of later candidate bytes.
+See the [1.2 release notes](notes/release-1.2.0.md) and
+[dated TestPyPI receipt](notes/release-1.2.0-testpypi.json).
 
 [PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) was published on
 2026-10-27 with **30 native wheels, one portable wheel and one sdist**. The

@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-10",
+  "status": "testpypi_build_publish_and_nine_remote_install_groups_passed",
+  "version": "1.2.0rc1.dev42754363710001",
+  "checkout_version": "1.2.0rc1",
+  "source": {
+    "commit": "a466170a0a640e1d9dca6c407fb5971c83ab8acd",
+    "branch": "codex/release-1-2-0-testpypi",
+    "url": "https://github.com/Aiaid/pyMalbolge/commit/a466170a0a640e1d9dca6c407fb5971c83ab8acd",
+    "master_unchanged": "0321a2620d818ba1de0d0b78bf2364a08bc6325a"
+  },
+  "testpypi": {
+    "project_url": "https://test.pypi.org/project/malbolge/1.2.0rc1.dev42754363710001/",
+    "run_id": 42754363710,
+    "run_url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710",
+    "run_attempt": 1,
+    "jobs": [
+      {
+        "id": 129625170217,
+        "name": "Build native, portable and source distributions",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625170217"
+      },
+      {
+        "id": 129625483896,
+        "name": "Publish the three distributions to TestPyPI",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625483896"
+      },
+      {
+        "id": 129625595006,
+        "name": "Remote install (linux-arm64-pure)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595006"
+      },
+      {
+        "id": 129625595011,
+        "name": "Remote install (macos-arm64-pure)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595011"
+      },
+      {
+        "id": 129625595014,
+        "name": "Remote install (linux-py312-native)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595014"
+      },
+      {
+        "id": 129625595023,
+        "name": "Remote install (linux-py310-ir)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595023"
+      },
+      {
+        "id": 129625595034,
+        "name": "Remote install (linux-py38-pure)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595034"
+      },
+      {
+        "id": 129625595043,
+        "name": "Remote install (macos-intel-pure)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595043"
+      },
+      {
+        "id": 129625595052,
+        "name": "Remote install (linux-py313-pure)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595052"
+      },
+      {
+        "id": 129625595098,
+        "name": "Remote install (windows-pure)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595098"
+      },
+      {
+        "id": 129625595209,
+        "name": "Remote install (linux-source-native)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710/job/129625595209"
+      }
+    ],
+    "build_provenance": {
+      "artifacts": [
+        {
+          "bytes": 289049,
+          "file": "malbolge-1.2.0rc1.dev42754363710001-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "c60c42f0ff0d45787a16b751a8596ead44c2ee9b6f3f13ca09501a8048a74771"
+        },
+        {
+          "bytes": 238680,
+          "file": "malbolge-1.2.0rc1.dev42754363710001-py3-none-any.whl",
+          "sha256": "142e62ab135af971840681a091c4cdb73a7ea5f2952d32f4ab13b02b229b0457"
+        },
+        {
+          "bytes": 1166498,
+          "file": "malbolge-1.2.0rc1.dev42754363710001.tar.gz",
+          "sha256": "28a351e0c30b99627bd572dc0e7f22e5a953a7d705d0db37b4bf21b447074ed2"
+        }
+      ],
+      "commit": "a466170a0a640e1d9dca6c407fb5971c83ab8acd",
+      "helpers": {
+        "verify_native_install.py": "08993180da10491ad2f49cf3c30c85b6786c4a46fdfa9bb25b83eca348b04623",
+        "verify_release_install.py": "65e53075755ddaea9e8a7102a71dd5c0c0a4835e5a94924641a2f707a73fe0cd"
+      },
+      "run_attempt": "1",
+      "run_id": "42754363710",
+      "version": "1.2.0rc1.dev42754363710001"
+    }
+  },
+  "quality_ci": {
+    "run_id": 42754363544,
+    "run_url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544",
+    "jobs": [
+      {
+        "id": 129625260318,
+        "name": "ir-foundation (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544/job/129625260318"
+      },
+      {
+        "id": 129625260563,
+        "name": "ir-foundation (3.10)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544/job/129625260563"
+      },
+      {
+        "id": 129625260583,
+        "name": "regression (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544/job/129625260583"
+      },
+      {
+        "id": 129625260625,
+        "name": "regression (3.8)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544/job/129625260625"
+      },
+      {
+        "id": 129625260691,
+        "name": "semantic-differential",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544/job/129625260691"
+      },
+      {
+        "id": 129625260708,
+        "name": "ir-foundation (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544/job/129625260708"
+      },
+      {
+        "id": 129625260733,
+        "name": "regression (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42754363544/job/129625260733"
+      }
+    ],
+    "test_summaries": [
+      {
+        "name": "regression38",
+        "id": 129625260625,
+        "summary": [
+          "2026-11-10T04:13:46.0614253Z 1382 passed, 421 skipped in 50.76s"
+        ]
+      },
+      {
+        "name": "regression312",
+        "id": 129625260733,
+        "summary": [
+          "2026-11-10T04:13:35.8310300Z 1401 passed, 402 skipped, 3591 subtests passed in 41.89s"
+        ]
+      },
+      {
+        "name": "regression313",
+        "id": 129625260583,
+        "summary": [
+          "2026-11-10T04:13:51.4743748Z 1401 passed, 402 skipped, 3591 subtests passed in 55.03s"
+        ]
+      },
+      {
+        "name": "ir310",
+        "id": 129625260563,
+        "summary": [
+          "2026-11-10T04:13:31.0647467Z 596 passed, 1 warning in 37.60s"
+        ]
+      },
+      {
+        "name": "ir312",
+        "id": 129625260318,
+        "summary": [
+          "2026-11-10T04:13:25.4481025Z 596 passed, 1 warning in 30.41s"
+        ]
+      },
+      {
+        "name": "ir313",
+        "id": 129625260708,
+        "summary": [
+          "2026-11-10T04:13:20.9775149Z 596 passed, 1 warning in 26.10s"
+        ]
+      },
+      {
+        "name": "semantic-differential",
+        "id": 129625260691,
+        "summary": [
+          "2026-11-10T04:16:23.1587819Z 2 passed, 2 subtests passed in 209.98s (0:03:29)"
+        ]
+      }
+    ]
+  },
+  "post_upload_validation": {
+    "downloaded_artifacts": 3,
+    "sha256_matches_ci_build_provenance": true,
+    "verbatim_third_party_notices": true,
+    "wheel_file_record_hashes": true,
+    "sdist_excludes_private_research_and_optional_hell_fixtures": true,
+    "notes": "Wheel RECORD verification covers files; auditwheel ZIP directory entries do not require RECORD rows."
+  },
+  "production": {
+    "upload_performed": false,
+    "latest_pypi_version_observed": "1.1.0",
+    "test_version_absent_from_production": true
+  },
+  "scope": {
+    "verified": "TestPyPI distribution upload and nine remote installation groups, plus seven quality-CI jobs on the candidate commit.",
+    "remaining": [
+      "Final production version/commit and its exact artifact acceptance remain separate.",
+      "Native wheel OS/ABI matrix beyond the tested Linux CPython 3.12 wheel remains incomplete.",
+      "macOS ARM64 acceptance here uses the pure wheel, not an Apple Silicon native wheel or minimum-OS/JIT validation.",
+      "ARM64 JIT remains unvalidated by this test-site run.",
+      "No production PyPI publication or master merge was authorized or performed."
+    ]
+  }
+}

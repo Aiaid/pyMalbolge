@@ -111,3 +111,23 @@ def test_report_creates_parent_for_success_and_failure(
             "VerificationError" if outcome == "version_mismatch" else "PackageNotFoundError")
         expected_message = "version mismatch" if outcome == "version_mismatch" else "malbolge"
         assert expected_message in report["error"]
+
+
+def test_unexpected_failure_still_records_workflow_identity(helper, monkeypatch, tmp_path):
+    values = {"GITHUB_SHA": "a" * 40, "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "2",
+              "CIBUILDWHEEL_BUILD_IDENTIFIER": "cp312-manylinux_x86_64"}
+    for name, value in values.items():
+        monkeypatch.setenv(name, value)
+    def fail(args):
+        raise OSError("simulated runtime filesystem failure")
+    monkeypatch.setattr(helper, "verify", fail)
+    destination = tmp_path / "report.json"
+    with pytest.raises(SystemExit) as stopped:
+        helper.main(["--expected-version", "1.2.0rc2", "--forbid-source-root", str(tmp_path),
+                     "--report", str(destination)])
+    assert stopped.value.code == 1
+    report = json.loads(destination.read_text())
+    assert not report["success"] and report["error_type"] == "OSError"
+    assert report["source_commit"] == "a" * 40
+    assert report["workflow_run"] == "123" and report["workflow_attempt"] == "2"
+    assert report["build_identifier"] == "cp312-manylinux_x86_64"

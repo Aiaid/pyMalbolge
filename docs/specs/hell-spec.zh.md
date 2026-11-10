@@ -8,6 +8,10 @@
 > 作为 pyMalbolge 的 Python 版 HeLL 汇编器的实现依据。
 > 整理日期:2026-07-20;LMAO 版本:v0.6.0(commit 3ea747e)。
 
+Python HeLL 汇编器仍[处于搁置状态](../design/hell-assembler-design.zh.md)。
+本文是上游参考，并非已经实现的 pyMalbolge 输入格式；计划中的 `asm` 命令不可用。
+可选 HeLL 夹具保留在仓库中，但不纳入 1.2 候选的源码分发包。
+
 ---
 
 ## 一、词法(来自 `lmao.l`)

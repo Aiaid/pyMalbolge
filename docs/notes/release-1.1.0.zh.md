@@ -8,9 +8,9 @@
 > Apple Silicon 仍为待办。
 > [发布与无缓存安装回执](pypi-1.1.0-publication.json)。
 
-本版本汇总 1.0.0 之后的开发，并更新分发元数据。版本同时声明于
-`pyproject.toml` 和 `malbolge.__version__`；PyPI 描述采用简洁的
-[安装包介绍](pypi-description.zh.md)，不再直接展示带历史基准的长篇源码 README。
+这个历史版本汇总 1.0.0 之后的开发；其产物元数据和 `malbolge.__version__`
+记录为 1.1.0，而源码工作区已继续演进。简洁的[安装包介绍](pypi-description.zh.md)
+是当前构建模板，不是 1.1.0 内嵌描述的不可变副本。复现旧版应使用其已发布文件和回执。
 
 ## 相对已发布 1.0.0 wheel 的变化
 

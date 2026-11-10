@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-10",
+  "status": "local_documentation_checks_passed",
+  "scope": "Public documentation and distribution-description review during 1.2 preparation. Not final artifact, full-suite, native-matrix or production-publication acceptance.",
+  "base_commit": "0321a2620d818ba1de0d0b78bf2364a08bc6325a",
+  "source_state": "Uncommitted 1.2 preparation; concurrent release and experiment changes are not frozen by this receipt.",
+  "public_metadata_observed": {
+    "production": {
+      "url": "https://pypi.org/pypi/malbolge/json",
+      "version": "1.1.0",
+      "files": 32
+    },
+    "testpypi": {
+      "url": "https://test.pypi.org/pypi/malbolge/1.2.0rc1.dev42754363710001/json",
+      "version": "1.2.0rc1.dev42754363710001",
+      "files": 3
+    },
+    "existing_description_sha256": "9c7c39264c2062cb46b2ea0607833fdd370c34533fa44543fc4fe5f5a0c04792",
+    "existing_descriptions_equal": true,
+    "github_about_verified": true,
+    "note": "Metadata was read through public JSON endpoints. This is not a visual browser-layout acceptance. Existing uploaded metadata was not changed."
+  },
+  "next_description": {
+    "path": "docs/notes/pypi-description.md",
+    "sha256": "54800581e3f2c4653b3caa05175097231a517409837477d16f76360cfd49f3da",
+    "new_distribution_required": true
+  },
+  "local_links": {
+    "markdown_files": 73,
+    "local_links": 492,
+    "external_links": 54,
+    "missing_files": [],
+    "suspect_anchors": []
+  },
+  "package_links": [
+    {
+      "url": "https://github.com/Aiaid/pyMalbolge",
+      "status": 200,
+      "final_url": "https://github.com/Aiaid/pyMalbolge"
+    },
+    {
+      "url": "https://github.com/Aiaid/pyMalbolge/issues",
+      "status": 200,
+      "final_url": "https://github.com/Aiaid/pyMalbolge/issues"
+    },
+    {
+      "url": "https://github.com/Aiaid/pyMalbolge/tree/master/docs",
+      "status": 200,
+      "final_url": "https://github.com/Aiaid/pyMalbolge/tree/master/docs"
+    },
+    {
+      "url": "https://github.com/Aiaid/pyMalbolge/blob/master/docs/current-status.md",
+      "status": 200,
+      "final_url": "https://github.com/Aiaid/pyMalbolge/blob/master/docs/current-status.md"
+    },
+    {
+      "url": "https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md",
+      "status": 200,
+      "final_url": "https://github.com/Aiaid/pyMalbolge/blob/master/docs/specs/python-subset-spec.md"
+    },
+    {
+      "url": "https://aiaid.github.io/pyMalbolge/",
+      "status": 200,
+      "final_url": "https://aiaid.github.io/pyMalbolge/"
+    },
+    {
+      "url": "https://malbolge20.gitlab.io/index-en.html",
+      "status": 200,
+      "final_url": "https://malbolge20.gitlab.io/index-en.html"
+    },
+    {
+      "url": "https://gitlab.com/malbolge20/malbolge20_creator",
+      "status": 200,
+      "final_url": "https://gitlab.com/malbolge20/malbolge20_creator"
+    },
+    {
+      "url": "https://github.com/Avantgarde95/pyMalbolge",
+      "status": 200,
+      "final_url": "https://github.com/Avantgarde95/pyMalbolge"
+    }
+  ],
+  "preview_wheel": {
+    "filename": "malbolge-1.2.0rc2-py3-none-any.whl",
+    "sha256": "6b6fad0faa7bd63e4a0c6d0a7c9709b5b83b64cd15ea63045bbd098c36e8ebb3",
+    "purpose": "Disposable documentation preview only; not a release artifact",
+    "twine_check_strict": "passed",
+    "description_bytes_match": true,
+    "version_matches_module_and_project": true,
+    "license_file_count": 6
+  },
+  "installed_examples": [
+    {
+      "distribution": "TestPyPI 1.2.0rc1.dev42754363710001",
+      "outside_checkout": true,
+      "no_cache_install": true,
+      "exact_version_check": "passed",
+      "documented_compile_and_python_run": "Hello, world!\n"
+    },
+    {
+      "distribution": "local preview 1.2.0rc2 portable wheel",
+      "outside_checkout": true,
+      "exact_version_check": "passed",
+      "documented_compile_and_python_run": "Hello, world!\n"
+    }
+  ],
+  "focused_tests": {
+    "command": "uv run --no-sync pytest -q test/test_web_build.py test/test_web_stage.py",
+    "passed": 35,
+    "duration_seconds": 2.67
+  },
+  "diff_check": "passed",
+  "reviewed_changes": {
+    "AGENTS.md": "af095b4467d47512d7ead3a8fd04200915106264f003aef0912e74fb9668e1a0",
+    "README.md": "bad4d2a116f1820f9cc5afebc3c93c15d8eaf8ba07db5b573b1cb168da995cb9",
+    "README.zh.md": "eb806da45317fe9f72a4224e30e15804e352e3dc9e20d76adf9ba746343b919a",
+    "benchmarks/README.md": "fe33ff9bfd15cb2526edeaad3c4612cf5fd44333e33d9c6ad8980066500f58c1",
+    "benchmarks/README.zh.md": "a44d1706594cb26cdd802824ea2656760985f968b1f52d6377e194a9b3346cbc",
+    "docs/README.md": "8bae6fb28050f082b75aafe66bdaa600a0ddb63fcbd708a32b1be8d7b69aa109",
+    "docs/README.zh.md": "bf43602a8f5f23e469b2d98ba7be4a8a800f16cb6551371f3291ca389a84e1d7",
+    "docs/current-status.md": "60cc5b9c227e15ef0bb0ad502e04c919b94b019ddff0577b1dd2ee65ba6f7e31",
+    "docs/current-status.zh.md": "bf4d23debe8fb271fcd576ee17679870deb320496f8e5cd0de642f1f62d2e474",
+    "docs/design/native-packaging.md": "67cfeca1280a55a3da0d83a526f306f5a3c44363829f1675b8a33426b0372d85",
+    "docs/design/native-packaging.zh.md": "a311ed96390ed9a3f65fe62eae51d5213e70572b1cc164e296c0c10aa4933fee",
+    "docs/design/optimization-status.md": "055fb6663e81d6a53793b1a5eacac06fc81451b97acabb69a0308f244327b4d9",
+    "docs/design/optimization-status.zh.md": "d51b24779e7498285cb07d09006634f0f4c5b1cede12a94eb0be0030e0bf04b0",
+    "docs/design/py2mg-backend.md": "de868de37c5eaea04bba378ed25d36e0347ab128ad437131994d2c658943dd95",
+    "docs/design/py2mg-backend.zh.md": "99bfa245252ae64203a24ae5e663fd2b73e57658a7b7c6be02f5b639a6aca446",
+    "docs/notes/pypi-description.md": "54800581e3f2c4653b3caa05175097231a517409837477d16f76360cfd49f3da",
+    "docs/notes/pypi-description.zh.md": "b7e267391bcd9c0a2776f90606ea6d2139de737d22f3eafd3aeed131f362bc3e",
+    "docs/notes/release-1.1.0.md": "49c074a37c1fd3af417c55f846bebe6179305ece7ad33eee2d845ff90f113f17",
+    "docs/notes/release-1.1.0.zh.md": "378aa4c277d25b91ba89d7a7806d499d52b71b978747bfcdf40964c4a3968212",
+    "docs/notes/release-1.2.0.md": "791da7cc9ab10b1e8cbb950107f58127662be413aed89a06a2bab849df080494",
+    "docs/notes/release-1.2.0.zh.md": "77f9c5412a024743d2d0aed199aa84dffa10c785d79610bcdba9a9187eb10cb3",
+    "docs/specs/hell-spec.md": "0b7d6658a4a8fb642e25f8549ed45316596fbbdc39d1a15eae1d551ae501b05c",
+    "docs/specs/hell-spec.zh.md": "299ad4cba3dda20f1f14f01dd36b27038aef838d7f9e5dfe673fc6bb6bdf51b9",
+    "docs/upstream/lmao-internals.md": "afc292bc4f0ac0259b0e61c30fd7c4a064d96971b65edb3581b01853f64adad3",
+    "docs/upstream/lmao-internals.zh.md": "5c3014a422f4c582d24d7ed80ad1e07a5fd8ae2048b3d386e6ed9b6f64a5ebbe",
+    "test/diagnostics/README.md": "dd2c915dfa7f36ea4fb1f5cf2c2e1f2670b5afd4045e3f0ce9e47805a2e6a2ab",
+    "test/fixtures/opt/README.md": "0dcc77b721d564d9c33baaff8b0c94fb4f755f6e02c56e6eb581c89e1a7f85a4",
+    "web/README.md": "cbf09132640cd148fbae2f508134be8250117c6f44b59d2b79a0e62fbe260d8d"
+  },
+  "remaining": [
+    "Final same-commit artifacts must rebuild and embed the edited description.",
+    "The next TestPyPI upload, native matrix and installed input experiments require their own receipts.",
+    "Production PyPI was not uploaded; the existing 1.1.0 and rc1 descriptions remain historical."
+  ]
+}

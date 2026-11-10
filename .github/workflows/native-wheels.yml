@@ -9,11 +9,26 @@ on:
       - 'scripts/build_native_vm.py'
       - 'scripts/verify_native_install.py'
       - 'scripts/verify_release_install.py'
+      - 'scripts/verify_release_artifacts.py'
+      - 'scripts/verify_release_bundle.py'
+      - 'test/test_release_artifacts.py'
+      - 'test/test_release_bundle.py'
       - 'test/test_native_packaging.py'
       - 'pyproject.toml'
       - '.github/workflows/native-wheels.yml'
   push:
     tags: ['v*']
+  workflow_call:
+    inputs:
+      testpypi:
+        description: Stamp a uniform temporary TestPyPI version in every build job
+        type: boolean
+        default: false
+    outputs:
+      version:
+        value: ${{ jobs.aggregate.outputs.version }}
+      artifact_name:
+        value: ${{ jobs.aggregate.outputs.artifact_name }}
   workflow_dispatch:
     inputs:
       macos_arm64_only:
@@ -81,6 +96,9 @@ jobs:
           python-version: '3.12'
       - name: Prepare persistent smoke reports
         run: mkdir -p wheel-provenance
+      - name: Stamp temporary TestPyPI version consistently across jobs
+        if: inputs.testpypi
+        run: uv run --no-project --python 3.12 python scripts/prepare_testpypi_version.py
       - name: Read the candidate version from source metadata
         id: release
         run: |
@@ -90,6 +108,12 @@ jobs:
           version = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf8'))['project']['version']
           if not isinstance(version, str) or not re.fullmatch(r'[0-9][A-Za-z0-9.!+_-]*', version):
               raise SystemExit('Invalid source release version')
+          module = Path('malbolge/__init__.py').read_text(encoding='utf8')
+          match = re.search(r'^__version__\s*=\s*[\'\"]([^\'\"]+)', module, re.M)
+          if not match or match[1] != version:
+              raise SystemExit('Project and module versions differ')
+          if os.environ.get('GITHUB_REF_TYPE') == 'tag' and os.environ['GITHUB_REF_NAME'] != 'v' + version:
+              raise SystemExit('Tag must equal v plus the exact package version')
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf8') as output:
               output.write('version=' + version + '\n')
           PY
@@ -102,9 +126,12 @@ jobs:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BUILD_FRONTEND: uv
           # Required mode must fail a C build rather than produce a pure wheel.
+          # ARM64 is deliberately advertised/tested only on macOS 15+.
+          # Intel retains cibuildwheel defaults; no W^X/JIT policy is relaxed.
           CIBW_ENVIRONMENT: >-
             MALBOLGE_NATIVE_BUILD=required
             MALBOLGE_EXPECTED_VERSION="${{ steps.release.outputs.version }}"
+            ${{ matrix.platform == 'macos' && matrix.arch == 'arm64' && 'MACOSX_DEPLOYMENT_TARGET=15.0' || '' }}
           CIBW_ENVIRONMENT_PASS_LINUX: GITHUB_SHA GITHUB_RUN_ID GITHUB_RUN_ATTEMPT
           # Preserve Linux reports via a dedicated explicit host bind. Avoid
           # depending on /project copy-out or the default full-host mount.
@@ -206,6 +233,9 @@ jobs:
         with:
           version: '0.11.25'
           python-version: '3.8'
+      - name: Stamp temporary TestPyPI version consistently across jobs
+        if: inputs.testpypi
+        run: uv run --no-project --python 3.12 python scripts/prepare_testpypi_version.py
       - name: Read the candidate version from source metadata
         id: release
         run: |
@@ -215,6 +245,12 @@ jobs:
           version = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf8'))['project']['version']
           if not isinstance(version, str) or not re.fullmatch(r'[0-9][A-Za-z0-9.!+_-]*', version):
               raise SystemExit('Invalid source release version')
+          module = Path('malbolge/__init__.py').read_text(encoding='utf8')
+          match = re.search(r'^__version__\s*=\s*[\'\"]([^\'\"]+)', module, re.M)
+          if not match or match[1] != version:
+              raise SystemExit('Project and module versions differ')
+          if os.environ.get('GITHUB_REF_TYPE') == 'tag' and os.environ['GITHUB_REF_NAME'] != 'v' + version:
+              raise SystemExit('Tag must equal v plus the exact package version')
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf8') as output:
               output.write('version=' + version + '\n')
           PY
@@ -283,5 +319,141 @@ jobs:
           path: |
             wheelhouse-compat/*.whl
             wheel-provenance/*.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  aggregate:
+    name: Validate matrix and retain exact review bundle
+    needs: [wheels, python38-compatibility]
+    if: ${{ !cancelled() && needs.wheels.result == 'success' && (needs.python38-compatibility.result == 'success' || inputs.macos_arm64_only) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      artifact_name: ${{ steps.bundle.outputs.artifact_name }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+      - name: Stamp the same temporary TestPyPI version
+        if: inputs.testpypi
+        run: uv run --no-project --python 3.12 python scripts/prepare_testpypi_version.py
+      - name: Read version and select acceptance scope
+        id: release
+        env:
+          MATRIX_MODE: ${{ inputs.macos_arm64_only && 'macos-arm64-only' || github.event_name == 'pull_request' && 'smoke' || 'full' }}
+        run: |
+          uv run --no-project --python 3.12 python - <<'PY'
+          import os, re, tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path('pyproject.toml').read_text())['project']['version']
+          module = Path('malbolge/__init__.py').read_text()
+          assert re.search(r'^__version__\s*=\s*[\'\"]' + re.escape(version) + r'[\'\"]', module, re.M)
+          if os.environ.get('GITHUB_REF_TYPE') == 'tag':
+              assert os.environ['GITHUB_REF_NAME'] == 'v' + version, 'Tag/version mismatch'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('version=' + version + '\nmode=' + os.environ['MATRIX_MODE'] + '\n')
+          PY
+      - uses: actions/download-artifact@v6.0.0
+        with:
+          pattern: native-*
+          path: native-inputs
+          merge-multiple: false
+      - name: Validate coverage, installed hashes, tags, licenses and macOS binary floors
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          MODE: ${{ steps.release.outputs.mode }}
+        run: >-
+          uv run --no-project --python 3.12 python scripts/verify_release_artifacts.py
+          --artifacts-dir native-inputs --expected-version "$VERSION"
+          --expected-commit "$GITHUB_SHA" --expected-run-id "$GITHUB_RUN_ID"
+          --expected-attempt "$GITHUB_RUN_ATTEMPT" --mode "$MODE"
+          --report release-bundle/native-report.json
+      - name: Build portable wheel and sdist from the identical checkout
+        if: steps.release.outputs.mode == 'full'
+        env:
+          MALBOLGE_NATIVE_BUILD: disabled
+        run: |
+          mkdir -p release-bundle/dist
+          uv build --python 3.12 --out-dir portable-build
+          cp portable-build/*.whl portable-build/*.tar.gz release-bundle/dist/
+          find native-inputs -type f -name '*.whl' -exec cp '{}' release-bundle/dist/ \;
+          uvx --python 3.12 twine==7.0.0 check release-bundle/dist/*
+      - name: Accept the exact portable and source artifacts in isolated environments
+        if: steps.release.outputs.mode == 'full'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          MALBOLGE_NATIVE_BUILD: required
+        run: |
+          uv venv --python 3.8 "$RUNNER_TEMP/bundle-pure"
+          uv pip install --python "$RUNNER_TEMP/bundle-pure/bin/python" --no-deps release-bundle/dist/*-py3-none-any.whl
+          uv venv --python 3.12 "$RUNNER_TEMP/bundle-sdist"
+          uv pip install --python "$RUNNER_TEMP/bundle-sdist/bin/python" --no-deps release-bundle/dist/*.tar.gz
+          cd "$RUNNER_TEMP"
+          for mode in pure sdist; do
+            if [ "$mode" = pure ]; then contract=pure; else contract=native; fi
+            uv run --no-project --no-python-downloads --python "$RUNNER_TEMP/bundle-$mode/bin/python" python \
+              "$GITHUB_WORKSPACE/scripts/verify_release_install.py" --require-$contract \
+              --expected-version "$VERSION" --forbid-source-root "$GITHUB_WORKSPACE" \
+              --report "$GITHUB_WORKSPACE/release-bundle/$mode-acceptance.json"
+          done
+      - name: Seal full bundle and retained verification helpers
+        id: bundle
+        if: steps.release.outputs.mode == 'full'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          uv run --no-project --python 3.12 python scripts/verify_release_bundle.py --create \
+            --bundle-dir release-bundle --expected-version "$VERSION" --expected-commit "$GITHUB_SHA" \
+            --expected-run-id "$GITHUB_RUN_ID" --expected-attempt "$GITHUB_RUN_ATTEMPT"
+          uv run --no-project --python 3.12 python - <<'PY'
+          import hashlib, json, os, shutil
+          from pathlib import Path
+          root = Path('release-bundle')
+          manifest = json.loads((root / 'release-manifest.json').read_text())
+          helper = root / 'verification-helper'
+          helper.mkdir()
+          hashes = {}
+          for name in ('verify_native_install.py', 'verify_release_install.py'):
+              shutil.copyfile(Path('scripts') / name, helper / name)
+              hashes[name] = hashlib.sha256((helper / name).read_bytes()).hexdigest()
+          shutil.copyfile('scripts/osp_experiments.py', helper / 'osp_experiments.py')
+          shutil.copytree('benchmarks/osp', helper / 'benchmarks' / 'osp',
+                          ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+          shutil.copytree('benchmarks/programs', helper / 'benchmarks' / 'programs',
+                          ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+          for path in sorted(helper.rglob('*')):
+              if path.is_file():
+                  hashes[path.relative_to(helper).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+          provenance = {'commit': manifest['source_commit'], 'run_id': manifest['workflow_run'],
+                        'run_attempt': manifest['workflow_attempt'], 'version': manifest['version'],
+                        'artifacts': manifest['artifacts'], 'helpers': hashes}
+          (helper / 'provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+          (helper / 'requirements.txt').write_text('malbolge==' + manifest['version'] + ' ' +
+              ' '.join('--hash=sha256:' + a['sha256'] for a in manifest['artifacts']) + '\n')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('artifact_name=release-bundle-' + manifest['version'] + '-' + manifest['source_commit'] + '\n')
+          PY
+      - name: Retain the complete review bundle (never uploads to a package index)
+        if: steps.release.outputs.mode == 'full'
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: ${{ steps.bundle.outputs.artifact_name }}
+          path: release-bundle/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain matrix acceptance report, including failures and partial runs
+        if: always()
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: matrix-acceptance-${{ github.run_attempt }}
+          path: release-bundle/native-report.json
           if-no-files-found: warn
           retention-days: 14

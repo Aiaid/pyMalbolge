@@ -18,12 +18,16 @@ The [current implementation and release boundaries](current-status.md) summarize
 source versus release status, the Original-only browser, backend differences
 and work that remains experimental or unimplemented (checked 2026-11-10).
 
+For fixed-input checks of an installed candidate, start with the
+[public experiment runner and manifests](../benchmarks/osp/README.md).
+Its local validation is separate from any later release or platform matrix.
+
 ## specs/ — language specifications
 
 | Document | Status | Contents |
 |---|---|---|
 | [mg-spec.md](specs/mg-spec.md) | ✅ | `.mg` pseudo-instruction language spec (reverse-engineered from `ternary`, with experimental verification) |
-| [hell-spec.md](specs/hell-spec.md) | ✅ | HeLL language spec (reverse-engineered from LMAO v0.6.0) |
+| [hell-spec.md](specs/hell-spec.md) | 📌 upstream reference; port shelved | HeLL language spec (LMAO v0.6.0), not a shipped pyMalbolge compiler input |
 | [python-subset-spec.md](specs/python-subset-spec.md) | ✅ | **Normative spec** for the accepted Python subset v1: per-AST-node acceptance whitelist, CPython divergences (D1–D19), diagnostic contract, audit appendix |
 
 ## design/ — designs and route decisions
@@ -58,11 +62,13 @@ and work that remains experimental or unimplemented (checked 2026-11-10).
 
 | Document | Status | Contents |
 |---|---|---|
-| [release-1.2.0.md](notes/release-1.2.0.md) | local candidate, not published | 1.2.0rc1 distribution notices, archive boundaries, shared source analysis and validation gates |
+| [release-1.2.0.md](notes/release-1.2.0.md) | rc1 TestPyPI accepted; next candidate pending | Exact test-version installation, notices, archive boundaries and remaining native/release gates; no production 1.2 publication |
+| [release-1.2.0-testpypi.json](notes/release-1.2.0-testpypi.json) | ✅ dated rc1 acceptance | Commit a466170: three uploaded artifacts, nine remote install groups and seven quality-CI jobs; later candidate and full native matrix excluded |
+| [release-1.2.0-validation.json](notes/release-1.2.0-validation.json) | 📌 earlier local candidate | Distribution-content review, local suite and installed-package checks before the recorded rc1 upload |
 | [release-1.1.0.md](notes/release-1.1.0.md) | ✅ published 2026-10-27 | Changes since PyPI 1.0.0, 30 native wheels plus portable/source distributions and installed-package acceptance |
 | [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ 32 public files verified | Source provenance, exact public artifacts/hashes, all 30 native downloads verified, initial no-cache compiler/IR/TUI smoke and mainline CI/Pages |
 | [release-1.1.0-acceptance.json](notes/release-1.1.0-acceptance.json) | ✅ TestPyPI remote acceptance; platform scope explicit | Build/public-file hashes, nine remote installations, product CI and per-platform native/JIT evidence |
-| [pypi-description.md](notes/pypi-description.md) | ✅ published 1.1.0 metadata | Concise package introduction used by pyproject.toml; English text is embedded in distribution metadata |
+| [pypi-description.md](notes/pypi-description.md) | current build template | English index description embedded by pyproject.toml; production/TestPyPI install distinction and platform boundaries; edits require new artifacts |
 | [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ local CI matrix acceptance | Clean-source Python 3.8/3.12/3.13 base suites, optional IR and semantic differential; pinned independent reference setup and AST/CLI/test portability repairs |
 | [web-demo-deployment.json](notes/web-demo-deployment.json) | ✅ public Pages deployment verified | Actual public Hello execution, deployed revision/wheel identity, successful build/deploy and separate full-CI failures |
 | [web-demo-validation.json](notes/web-demo-validation.json) | ✅ local Chromium acceptance | Portable browser-wheel build fix, freshness/vendor regression checks, Pyodide worker protocol and actual browser debugging controls; hosted evidence is recorded separately above |
@@ -82,7 +88,7 @@ and work that remains experimental or unimplemented (checked 2026-11-10).
 | [perf-baseline.md](notes/perf-baseline.md) | 📌 | Pre-QoS profiling baseline; its runtime representation/hotspot description is superseded by compact periodic memory and python-qos-validation.json |
 | [fib-input-performance.json](notes/fib-input-performance.json) | 📌 | Pre-QoS 2026-10-08 shared measurement data: ordinary-Python Fibonacci, direct compilation, optimized C reference execution, CPython comparison, and a resource-bounded project Python CLI stop; bilingual interpretation is in the main README |
 | [python-qos-audit.json](notes/python-qos-audit.json) | 📌 | Historical 11-group counterexamples; resolved by python-qos-validation.json, original evidence retained |
-| [python-qos-validation.json](notes/python-qos-validation.json) | 📌 2026-10-08 acceptance | Final local acceptance, native/portable VM evidence, fresh and retained artifacts, bounded runtime/storage, cache and assembly measurements; hosted CI is configured but not run |
+| [python-qos-validation.json](notes/python-qos-validation.json) | 📌 2026-10-08 acceptance | Local evidence and then-pending CI status at that snapshot; later hosted CI is recorded in release receipts |
 
 Further research notes (the findings log, the `mb-dialect-plan` design, the
 all-directions `roadmap`, the Nagoya array dissection, the ecosystem survey)

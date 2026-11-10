@@ -11,6 +11,7 @@ import argparse
 import hashlib
 from importlib import metadata
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -76,6 +77,15 @@ def execute_image(directory, image, engine="python"):
     return stats
 
 
+def workflow_identity():
+    return {
+        "source_commit": os.environ.get("GITHUB_SHA"),
+        "workflow_run": os.environ.get("GITHUB_RUN_ID"),
+        "workflow_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "build_identifier": os.environ.get("CIBUILDWHEEL_BUILD_IDENTIFIER"),
+    }
+
+
 def verify(args):
     import malbolge
     from malbolge import native
@@ -98,6 +108,7 @@ def verify(args):
         "forbid_source_root": str(Path(args.forbid_source_root).resolve()),
         "native_available": available, "require_ir": args.require_ir,
         "compilations": {},
+        **workflow_identity(),
     }
     with tempfile.TemporaryDirectory(prefix="malbolge-installed-") as temporary:
         directory = Path(temporary)
@@ -171,9 +182,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         report = verify(args)
-    except (VerificationError, subprocess.TimeoutExpired, ImportError) as error:
+    except Exception as error:
         report = {"success": False, "error": str(error), "error_type": type(error).__name__,
-                  "expected_version": args.expected_version, "python": sys.version}
+                  "expected_version": args.expected_version, "python": sys.version,
+                  **workflow_identity()}
         write_report(args.report, report)
         parser.exit(1, "installed release verification failed: {}\n".format(error))
     write_report(args.report, report)

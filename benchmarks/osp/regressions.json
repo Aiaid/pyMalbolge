@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "description": "Opt-in public historical source reproductions. Outcomes on a release must be measured afresh; fixture comments are historical, not current verdicts.",
+  "programs": [
+    {
+      "id": "layout_d1",
+      "path": "../../test/fixtures/opt/d1_fails.py",
+      "tier": "stress",
+      "description": "Historical layout reproducer; assert source semantics, not its old failure.",
+      "source_sha256": "433cca036d1390debe650bc60c37ec390e4466e15e103319eb0ff18998adde7d",
+      "workloads": [
+        {
+          "id": "expected_space",
+          "stdin_hex": "",
+          "stdout_hex": "20",
+          "expected_input_consumed": 0,
+          "max_steps": 400000000,
+          "timeout_seconds": 600
+        }
+      ]
+    },
+    {
+      "id": "layout_d2",
+      "path": "../../test/fixtures/opt/d2_passes.py",
+      "tier": "stress",
+      "description": "Passing sibling control of the historical layout reproducer.",
+      "source_sha256": "e4ac7fd2a602ce2a1e90ea6f244b3add87b2938fd18f43e8a334ba6e949ccf07",
+      "workloads": [
+        {
+          "id": "expected_at",
+          "stdin_hex": "",
+          "stdout_hex": "40",
+          "expected_input_consumed": 0,
+          "max_steps": 400000000,
+          "timeout_seconds": 600
+        }
+      ]
+    },
+    {
+      "id": "layout_fib3_loop",
+      "path": "../../test/fixtures/opt/fib3_in_loop.py",
+      "tier": "stress",
+      "description": "Historical recursion/loop layout reproducer; expected normal output is 2.",
+      "source_sha256": "9654ee9bb996fb9b76ad8bbb055d91f0695369704db11dc936b4f5147ae2ee6c",
+      "workloads": [
+        {
+          "id": "expected_two",
+          "stdin_hex": "",
+          "stdout_hex": "32",
+          "expected_input_consumed": 0,
+          "max_steps": 400000000,
+          "timeout_seconds": 600
+        }
+      ]
+    }
+  ]
+}

@@ -7,6 +7,12 @@ inputs for the Python → C/MG → MC → Malbolge20 → VM pipeline. They use n
 `int(input())` and `print()` calls and run unchanged under CPython. They are a
 small test library, not a general Python conformance suite or a speed claim.
 
+For exact installed-artifact experiments, also see [the OSP entry point](osp/README.md).
+Its separate byte/control/recursion manifest and historical reproductions do
+not change the 12-program/32-workload corpus described here. That runner can
+also execute this corpus while recording explicit backend/engine selection,
+source/output contracts and package/image hashes.
+
 From the repository root, start with either a quick lowering check or the tiny
 VM baseline:
 

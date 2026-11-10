@@ -8,6 +8,7 @@ on:
 # This workflow publishes only to the separate test site.
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: testpypi-native-${{ github.ref }}
@@ -15,118 +16,13 @@ concurrency:
 
 jobs:
   build:
-    name: Build native, portable and source distributions
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
-        with:
-          version: '0.11.25'
-          python-version: '3.12'
-          enable-cache: false
-      - name: Stamp matching temporary distribution and module versions
-        id: version
-        run: uv run --no-project --python 3.12 python scripts/prepare_testpypi_version.py
-      - run: mkdir -p wheel-provenance verification-helper
-      - name: Build, repair and test the Linux native wheel
-        env:
-          CIBW_BUILD_FRONTEND: uv
-          CIBW_ENVIRONMENT: MALBOLGE_NATIVE_BUILD=required
-          CIBW_ENVIRONMENT_PASS_LINUX: GITHUB_SHA GITHUB_RUN_ID GITHUB_RUN_ATTEMPT
-          CIBW_CONTAINER_ENGINE: >-
-            docker; disable_host_mount: true;
-            create_args: --volume=${{ github.workspace }}/wheel-provenance:/native-provenance
-          CIBW_TEST_REQUIRES: uv==0.11.25
-          CIBW_TEST_COMMAND: >-
-            uv run --no-project --no-python-downloads --python python python
-            "{project}/scripts/verify_native_install.py" --require-native
-            --expect-no-jit --forbid-source-root "{project}"
-            --report-dir "/native-provenance"
-        run: >-
-          uvx --python 3.12 cibuildwheel==4.3.0
-          --only cp312-manylinux_x86_64 --output-dir wheelhouse
-      - name: Build portable wheel and source archive
-        env:
-          MALBOLGE_NATIVE_BUILD: disabled
-        run: uv build --python 3.12 --out-dir wheelhouse
-      - name: Check distribution metadata
-        run: uvx --python 3.12 twine==7.0.0 check wheelhouse/*
-      - name: Record artifact and verification-helper identity
-        env:
-          TEST_PYPI_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          uv run --no-project --python 3.12 python - <<'PY'
-          import hashlib, json, os, shutil, tarfile, zipfile
-          from email.parser import BytesParser
-          from pathlib import Path
-          version = os.environ['TEST_PYPI_VERSION']
-          paths = sorted(list(Path('wheelhouse').glob('*.whl')) +
-                         list(Path('wheelhouse').glob('*.tar.gz')))
-          assert len(paths) == 3, 'Expected one native wheel, one pure wheel and one sdist'
-          artifacts = []
-          for path in paths:
-              if path.suffix == '.whl':
-                  with zipfile.ZipFile(path) as archive:
-                      name = next(n for n in archive.namelist() if n.endswith('.dist-info/METADATA'))
-                      data = archive.read(name)
-              else:
-                  with tarfile.open(path) as archive:
-                      name = next(n for n in archive.getnames() if n.endswith('/PKG-INFO'))
-                      data = archive.extractfile(name).read()
-              metadata = BytesParser().parsebytes(data)
-              assert metadata['Name'] == 'malbolge' and metadata['Version'] == version
-              artifacts.append({'file':path.name, 'bytes':path.stat().st_size,
-                                'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
-          assert sum(a['file'].endswith('-py3-none-any.whl') for a in artifacts) == 1
-          assert sum(a['file'].endswith('.tar.gz') for a in artifacts) == 1
-          helpers = {}
-          for name in ('verify_native_install.py', 'verify_release_install.py'):
-              target = Path('verification-helper') / name
-              shutil.copyfile(Path('scripts') / name, target)
-              helpers[name] = hashlib.sha256(target.read_bytes()).hexdigest()
-          provenance = {'commit':os.environ['GITHUB_SHA'], 'run_id':os.environ['GITHUB_RUN_ID'],
-                        'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'], 'version':version,
-                        'artifacts':artifacts, 'helpers':helpers}
-          text = json.dumps(provenance, indent=2, sort_keys=True) + '\n'
-          Path('verification-helper/provenance.json').write_text(text)
-          Path('wheel-provenance/artifacts.json').write_text(text)
-          hashes = ' '.join('--hash=sha256:' + a['sha256'] for a in artifacts)
-          Path('verification-helper/requirements.txt').write_text('malbolge==' + version + ' ' + hashes + '\n')
-          print(text)
-          PY
-      - name: Retain test-site distributions
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: testpypi-distributions-${{ steps.version.outputs.version }}
-          path: wheelhouse/*
-          if-no-files-found: error
-          retention-days: 14
-      - name: Retain pinned verification helpers
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: testpypi-verification-helper-${{ steps.version.outputs.version }}
-          path: verification-helper/*
-          if-no-files-found: error
-          retention-days: 14
-      - name: Retain build provenance
-        if: always()
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: testpypi-build-provenance-${{ github.run_attempt }}
-          path: wheel-provenance/*.json
-          if-no-files-found: warn
-          retention-days: 14
+    name: Build and accept the complete candidate matrix
+    uses: ./.github/workflows/native-wheels.yml
+    with:
+      testpypi: true
 
   publish:
-    name: Publish the three distributions to TestPyPI
+    name: Publish the 37 accepted distributions to TestPyPI
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -134,8 +30,8 @@ jobs:
       # Only the upload action receives the existing test-site token.
       - uses: actions/download-artifact@v6.0.0
         with:
-          name: testpypi-distributions-${{ needs.build.outputs.version }}
-          path: dist
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: release-bundle
       - name: Require the configured TestPyPI credential
         env:
           TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
@@ -149,7 +45,7 @@ jobs:
           user: __token__
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
-          packages-dir: dist/
+          packages-dir: release-bundle/dist/
           attestations: false
           verbose: false
 
@@ -164,12 +60,16 @@ jobs:
         include:
           - {label: linux-py38-pure, runner: ubuntu-24.04, python: '3.8', mode: pure, ir: false, source: false}
           - {label: linux-py310-ir, runner: ubuntu-24.04, python: '3.10', mode: pure, ir: true, source: false}
-          - {label: linux-py312-native, runner: ubuntu-24.04, python: '3.12', mode: native, ir: false, source: false}
+          - {label: linux-py312-native, runner: ubuntu-24.04, python: '3.12', mode: native, ir: true, source: false}
           - {label: linux-py313-pure, runner: ubuntu-24.04, python: '3.13', mode: pure, ir: false, source: false}
           - {label: linux-arm64-pure, runner: ubuntu-24.04-arm, python: '3.12', mode: pure, ir: false, source: false}
           - {label: macos-arm64-pure, runner: macos-15, python: '3.12', mode: pure, ir: false, source: false}
           - {label: macos-intel-pure, runner: macos-15-intel, python: '3.12', mode: pure, ir: false, source: false}
           - {label: windows-pure, runner: windows-2022, python: '3.12', mode: pure, ir: false, source: false}
+          - {label: linux-arm64-native, runner: ubuntu-24.04-arm, python: '3.12', mode: native, ir: false, source: false, jit: require}
+          - {label: macos-arm64-native, runner: macos-15, python: '3.12', mode: native, ir: false, source: false, jit: probe}
+          - {label: macos-intel-native, runner: macos-15-intel, python: '3.12', mode: native, ir: false, source: false}
+          - {label: windows-native, runner: windows-2022, python: '3.12', mode: native, ir: false, source: false}
           - {label: linux-source-native, runner: ubuntu-24.04, python: '3.12', mode: native, ir: false, source: true}
     env:
       TEST_PYPI_VERSION: ${{ needs.build.outputs.version }}
@@ -182,8 +82,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6.0.0
         with:
-          name: testpypi-verification-helper-${{ needs.build.outputs.version }}
-          path: verification-helper
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: release-bundle
       - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
         with:
           version: '0.11.25'
@@ -195,7 +95,7 @@ jobs:
           uv run --no-project --python '${{ matrix.python }}' python - <<'PY'
           import hashlib, json, os
           from pathlib import Path
-          root = Path(os.environ['GITHUB_WORKSPACE']) / 'verification-helper'
+          root = Path(os.environ['GITHUB_WORKSPACE']) / 'release-bundle/verification-helper'
           provenance = json.loads((root / 'provenance.json').read_text())
           assert provenance['commit'] == os.environ['GITHUB_SHA']
           assert provenance['run_id'] == os.environ['GITHUB_RUN_ID']
@@ -218,16 +118,35 @@ jobs:
         working-directory: ${{ runner.temp }}
         env:
           TEST_SOURCE: ${{ matrix.source }}
+          TEST_MODE: ${{ matrix.mode }}
           MALBOLGE_NATIVE_BUILD: required
         run: |
           uv run --no-project --python '${{ matrix.python }}' python - <<'PY'
-          import os, subprocess, time
+          import json, os, subprocess, time, urllib.request
           from pathlib import Path
-          requirement = Path(os.environ['GITHUB_WORKSPACE']) / 'verification-helper/requirements.txt'
+          requirement = Path(os.environ['GITHUB_WORKSPACE']) / 'release-bundle/verification-helper/requirements.txt'
           command = ['uv', 'pip', 'install', '--python', os.environ['INSTALL_PYTHON'],
                      '--index-url', 'https://test.pypi.org/simple/', '--no-deps',
                      '--require-hashes', '-r', str(requirement)]
           source = os.environ['TEST_SOURCE'] == 'true'
+          if os.environ['TEST_MODE'] == 'pure':
+              root = requirement.parent
+              provenance = json.loads((root / 'provenance.json').read_text())
+              portable = next(a for a in provenance['artifacts'] if a['file'].endswith('-py3-none-any.whl'))
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen('https://test.pypi.org/pypi/malbolge/' + provenance['version'] + '/json', timeout=20) as response:
+                          public = json.load(response)
+                      item = next(x for x in public['urls'] if x['filename'] == portable['file'])
+                      assert item['digests']['sha256'] == portable['sha256']
+                      break
+                  except (OSError, StopIteration):
+                      if attempt == 3:
+                          raise
+                      time.sleep(2 * (attempt + 1))
+              requirement = Path(os.environ['RUNNER_TEMP']) / 'portable-requirements.txt'
+              requirement.write_text('malbolge @ ' + item['url'] + ' --hash=sha256:' + portable['sha256'] + '\n')
+              command[-1] = str(requirement)
           command += (['--no-binary', 'malbolge', '--no-build-isolation'] if source
                       else ['--only-binary', ':all:'])
           for attempt in range(4):
@@ -248,7 +167,7 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: >-
           uv run --no-project --no-python-downloads --python "$INSTALL_PYTHON" python
-          "$GITHUB_WORKSPACE/verification-helper/verify_release_install.py"
+          "$GITHUB_WORKSPACE/release-bundle/verification-helper/verify_release_install.py"
           --expected-version "$TEST_PYPI_VERSION" --require-${{ matrix.mode }}
           ${{ matrix.ir && '--require-ir' || '' }}
           --forbid-source-root "$GITHUB_WORKSPACE"
@@ -257,15 +176,88 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: >-
           uv run --no-project --no-python-downloads --python "$INSTALL_PYTHON" python
-          "$GITHUB_WORKSPACE/verification-helper/verify_native_install.py"
-          --require-${{ matrix.mode }} --expect-no-jit
+          "$GITHUB_WORKSPACE/release-bundle/verification-helper/verify_native_install.py"
+          --require-${{ matrix.mode }}
+          ${{ matrix.jit == 'require' && '--require-jit' || matrix.jit != 'probe' && '--expect-no-jit' || '' }}
           --forbid-source-root "$GITHUB_WORKSPACE"
           --report "$GITHUB_WORKSPACE/testpypi-install-provenance/vm.json"
+      - name: Check fixed byte inputs, consumption and bounded recursion
+        working-directory: ${{ runner.temp }}
+        run: >-
+          uv run --no-project --no-python-downloads --python "$INSTALL_PYTHON" python
+          "$GITHUB_WORKSPACE/release-bundle/verification-helper/osp_experiments.py"
+          --manifest "$GITHUB_WORKSPACE/release-bundle/verification-helper/benchmarks/osp/manifest.json"
+          --mode run --cases byte_echo short_circuit
+          ${{ matrix.mode == 'native' && 'recursive_byte' || '' }}
+          --python "$INSTALL_PYTHON" --expected-version "$TEST_PYPI_VERSION"
+          --forbid-source-root "$GITHUB_WORKSPACE"
+          --backends auto direct ${{ matrix.ir && 'ir' || '' }}
+          --engines ${{ matrix.mode == 'native' && 'native' || 'python' }}
+          --output-dir "$GITHUB_WORKSPACE/testpypi-install-provenance/osp"
       - name: Retain remote installation provenance
         if: always()
         uses: actions/upload-artifact@v6.0.0
         with:
           name: testpypi-install-${{ matrix.label }}-${{ github.run_attempt }}
-          path: testpypi-install-provenance/*.json
+          path: |
+            testpypi-install-provenance/*.json
+            testpypi-install-provenance/osp/*.json
           if-no-files-found: warn
+          retention-days: 14
+
+  verify-public-files:
+    name: Verify every published TestPyPI file hash
+    needs: [build, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v6.0.0
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: release-bundle
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+          enable-cache: false
+      - name: Match public bytes to the accepted manifest
+        env:
+          EXPECTED_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          uv run --no-project --python 3.12 python - <<'PYCODE'
+          import hashlib, json, os, time, urllib.request
+          from pathlib import Path
+          manifest = json.loads(Path('release-bundle/release-manifest.json').read_text())
+          assert manifest['version'] == os.environ['EXPECTED_VERSION']
+          assert manifest['source_commit'] == os.environ['GITHUB_SHA']
+          assert str(manifest['workflow_run']) == os.environ['GITHUB_RUN_ID']
+          expected = {a['file']: a for a in manifest['artifacts']}
+          assert len(expected) == 37
+          for attempt in range(4):
+              try:
+                  with urllib.request.urlopen('https://test.pypi.org/pypi/malbolge/' + manifest['version'] + '/json', timeout=30) as response:
+                      public = json.load(response)
+                  assert {x['filename'] for x in public['urls']} == set(expected)
+                  break
+              except (OSError, AssertionError):
+                  if attempt == 3:
+                      raise
+                  time.sleep(3 * (attempt + 1))
+          verified = []
+          for item in public['urls']:
+              record = expected[item['filename']]
+              assert item['digests']['sha256'] == record['sha256'] and item['size'] == record['bytes']
+              with urllib.request.urlopen(item['url'], timeout=30) as response:
+                  payload = response.read()
+              assert hashlib.sha256(payload).hexdigest() == record['sha256'] and len(payload) == record['bytes']
+              verified.append(dict(record, url=item['url']))
+          Path('published-artifacts.json').write_text(json.dumps({'version': manifest['version'],
+              'source_commit': manifest['source_commit'], 'status': 'passed', 'artifacts': verified}, indent=2) + '\n')
+          print('Verified all', len(verified), 'TestPyPI file hashes against the accepted build')
+          PYCODE
+      - uses: actions/upload-artifact@v6.0.0
+        with:
+          name: testpypi-public-hashes-${{ github.run_attempt }}
+          path: published-artifacts.json
+          if-no-files-found: error
           retention-days: 14

@@ -70,7 +70,8 @@ an origin. No COOP/COEP headers are required — this build uses no
 `SharedArrayBuffer` and no threads.
 
 `build.mjs` rebuilds the wheel through `uv build --wheel` when package code,
-build scripts, `pyproject.toml`, either README or `LICENSE` is newer than the
+build scripts, `pyproject.toml`, either README, `LICENSE` or the English package
+description (`docs/notes/pypi-description.md`) is newer than the
 portable wheel in `dist/`. It forces `MALBOLGE_NATIVE_BUILD=disabled` for this
 child build: Pyodide needs a `py3-none-any` wheel, even if the host can build
 native extensions or the calling shell requests them. A successful build
@@ -158,7 +159,8 @@ chunks so the queued `stop` gets a turn. See `makeYielder()` in `worker.js` for
 why it is a `MessageChannel` ping with a `setTimeout` every eighth yield rather
 than either alone.
 
-Measured (Node, same wheel, this machine): 170–180k steps/s, boot ~1.15 s,
+Historical local measurement (Node, the original browser prototype wheel;
+not a 1.2 measurement): 170–180k steps/s, boot ~1.15 s,
 snapshot 29 KB at `mem_count=288`. A stop sent 1.2 s into `99bottles.mal` lands
 at ~245,000 steps — 1.8% of the program — about 30 ms after the message.
 

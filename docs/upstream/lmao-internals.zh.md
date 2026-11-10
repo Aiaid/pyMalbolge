@@ -5,6 +5,9 @@
 > 依据 `ref/LMAO/src/` 约 4500 行有效 C 代码逐模块分析,作为 Python 移植的算法参考。
 > 整理日期:2026-07-20。文中 `文件:行号` 均指 `ref/LMAO/src/` 下的文件。
 
+计划中的 Python 移植仍[处于搁置状态](../design/hell-assembler-design.zh.md)。
+下文描述上游 LMAO 算法，不代表 pyMalbolge 已提供该汇编器。
+
 ## 0. 预备:Malbolge 语义与依赖常量(malbolge.h/malbolge.c)
 
 - 内存 59049 = 3^10 格,10-trit 值 [0, C2]。常量 C0=0, C1=29524, C2=59048, C21=59047, C20=59046。

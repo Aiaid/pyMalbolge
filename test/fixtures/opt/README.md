@@ -1,5 +1,14 @@
 # Counterexamples for the size-optimization investigation
 
+> Historical fixture notes (2026-07). "Shipped compiler", failure names and
+> sizes below describe the old investigation baseline. They are not a current
+> failure claim about production 1.1.0 or the 1.2 candidate. The
+> [2026-11-10 recheck](../../../docs/notes/release-1.2.0-validation.json), under
+> `historical_i7_recheck`, compiled `d1_fails.py`, `d2_passes.py` and
+> `fib3_in_loop.py` through O3 auto/Direct/IR from the published 1.1.0 Linux
+> native package; all nine runs matched their source oracle and terminated.
+> That bounded evidence is not a proof of every layout or historical image.
+
 Programs that pin down the findings in §I. Some break the layout transforms in
 `test/diagnostics/optpatch.py`; some break the *shipped* compiler; one is kept
 precisely because it breaks nothing.
