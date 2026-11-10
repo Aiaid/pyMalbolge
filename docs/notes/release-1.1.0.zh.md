@@ -2,8 +2,10 @@
 
 > [English](release-1.1.0.md) | **中文**
 >
-> 状态：2026-10-27 已向正式 PyPI 发布可移植 wheel 和源码归档。
-> 对应默认主分支 `master` 的源码提交为 `0176888`。
+> 状态：2026-10-27 正式 PyPI 1.1.0 已提供 30 个原生 wheel、一个可移植
+> wheel 和一个源码归档，共 32 个文件。最初可移植/源码产物对应默认主分支
+> `master` 提交 `0176888`；已验收原生 wheel 构建于 `e97edc2`。
+> Apple Silicon 仍为待办。
 > [发布与无缓存安装回执](pypi-1.1.0-publication.json)。
 
 本版本汇总 1.0.0 之后的开发，并更新分发元数据。版本同时声明于
@@ -40,13 +42,39 @@
 
 ## 正式发布，2026-10-27
 
-[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 已提供从合并后主分支提交
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 最初提供从合并后主分支提交
 构建的 `py3-none-any` 可移植 wheel 与源码归档。两个公开文件的哈希及包介绍
 均与已检查的本地产物一致。正式站无缓存安装后，O3、Direct、IR 编译/执行、
 字节输入输出及执行预算检查均通过；TUI 扩展使用 Textual 8.2.8 通过无界面
 启动、单步与回退检查。主分支质量工作流七个作业及 Pages 构建/部署全部通过。
 [发布回执](pypi-1.1.0-publication.json)记录精确产物与源码身份。
-原生加速通过源码构建提供，尚未完成的托管原生 wheel 矩阵另行记录。
+
+随后向同一版本补充了 30 个已验收原生 wheel：CPython 3.9–3.13 的 Linux
+x86-64/ARM64 glibc 与 musl（20 个）、Windows x86-64（5 个）和 macOS Intel
+（5 个）。现共 32 个文件，原有可移植 wheel 与源码归档保留。实际下载的
+30 个公开文件大小及 SHA-256 均与已验收产物一致；其中 56 个 Python 文件
+在换行规范化后与可移植 wheel 一致，仅五个 Windows wheel 使用不同换行。
+原生文件构建于 `e97edc2`，来自[托管验收运行 40356927572](https://github.com/Aiaid/pyMalbolge/actions/runs/40356927572)。
+每个精确 wheel 在上传前已通过 VM/发布安装检查；正式站下载核验不代表
+重新完成了 30 平台执行。发布回执记录逐个产物。Apple Silicon 原生 wheel
+仍未发布，边界见下文。
+
+### Apple Silicon 原生 wheel 待办
+
+Apple Silicon wheel 仍未发布。CPython 3.9–3.13 五个本地 wheel 仅在
+macOS 27.0.1 上通过安装后 VM/JIT 检查，W^X 与 JIT 写保护守卫保持启用。
+四份扩展的 Mach-O 最低系统为 26.0，CPython 3.12 记录为 11.0。发布前需统一
+deployment target、wheel tag 与 Mach-O 最低系统，并实测声明的最低 OS。
+五个 ABI 的托管组因 GitHub 无法分配 macOS ARM64 runner 而未执行测试；
+本地验收不代表完整 35 个 wheel 矩阵通过。见[验收回执](release-1.1.0-acceptance.json)。
+
+## Esolangs Wiki 发布，2026-10-27
+
+用户确认 CC0/等效公有领域贡献条款后，`Anend` 已保存并核对
+[自我介绍（修订 200571）](https://esolangs.org/w/index.php?title=Esolang:Introduce_yourself&oldid=200571)、
+[Malbolge20 条目（修订 200572）](https://esolangs.org/w/index.php?title=Malbolge20&oldid=200572)及
+[Malbolge 资源条目（修订 200573）](https://esolangs.org/w/index.php?title=Malbolge&oldid=200573)。
+这些小幅资源修改与较长文章草稿分开记录。
 
 ## 测试站执行，2026-10-27
 

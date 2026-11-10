@@ -25,7 +25,7 @@
 | 文档 | 状态 | 内容 |
 |---|---|---|
 | [native-jit.zh.md](design/native-jit.zh.md) | ✅ 本地显式试验 | 真实带守卫 ARM64 NOP 代码生成、精确退出/COW/预算、冷暖证据及短夹具性能回退 |
-| [native-packaging.zh.md](design/native-packaging.zh.md) | ✅ 本地及 TestPyPI 验收；完整矩阵待跑 | 原生源码构建 hook、构建模式、暂存二进制/ABI 标签、GitHub wheel 产物及安装包验收 |
+| [native-packaging.zh.md](design/native-packaging.zh.md) | ✅ 30 个原生 wheel 已发布；Apple Silicon 待补 | 原生源码构建 hook、ABI/平台标签、安装验收、正式发布哈希及 macOS ARM64 兼容性后续工作 |
 | [native-vm.zh.md](design/native-vm.zh.md) | ✅ 批处理默认优先原生 | Python 接口接原生 Malbolge20 执行/内存核心；正确性、快照、本地构建、同映像测量和带守卫 JIT 边界 |
 | [highlevel-to-malbolge.zh.md](design/highlevel-to-malbolge.zh.md) | ⚠️ 路线现行；子集/测量为历史 | 路线决策:高级语言→Malbolge 可行性、推荐管线、里程碑、Python 前端 v1 与直连后端 |
 | [optimization-status.zh.md](design/optimization-status.zh.md) | ✅ 带日期快照 | 全部优化层、已验收/默认/opt-in/本地原型状态、证据索引及未解决边界 |
@@ -43,6 +43,8 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
+| [malbolge-reference.zh.md](upstream/malbolge-reference.zh.md) | ✅ 有来源的参考说明 | 原版 10-trit 机器、解码、指令、自修改、输入输出与规格/参考实现差异 |
+| [malbolge20-reference.zh.md](upstream/malbolge20-reference.zh.md) | ✅ 有来源的参考说明 | 20-trit 机器、与原版的不兼容性、参考运行时及工具链各层 |
 | [toolchain-guide.zh.md](upstream/toolchain-guide.zh.md) | ✅ | 外部参考工具链的构建与复现指南(平台坑、确定性、验证惯例);编译已不需要外部工具,保留给 conformance 对拍与考古 |
 | [lmao-internals.zh.md](upstream/lmao-internals.zh.md) | ✅ | LMAO 汇编器内部算法分析(布局、自举生成) |
 
@@ -50,8 +52,8 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
-| [release-1.1.0.zh.md](notes/release-1.1.0.zh.md) | ✅ 2026-10-27 已发布 | 相对 PyPI 1.0.0 的变化、可移植/源码发布范围与安装包验收 |
-| [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ 正式发布及安装通过 | 合并后源码提交、精确公开产物/哈希、无缓存安装后的编译器/IR/TUI 验收与主分支 CI/Pages 成功 |
+| [release-1.1.0.zh.md](notes/release-1.1.0.zh.md) | ✅ 2026-10-27 已发布 | 相对 PyPI 1.0.0 的变化、30 个原生 wheel 加通用/源码分发与安装包验收 |
+| [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ 32 个公开文件已复核 | 源码身份、精确产物/哈希、30 个原生下载逐一复核、初次无缓存编译器/IR/TUI 检查及主分支 CI/Pages |
 | [release-1.1.0-acceptance.json](notes/release-1.1.0-acceptance.json) | ✅ TestPyPI 远端验收；平台范围单列 | 构建/公开文件哈希、九组远端安装、产品 CI 与各平台原生/JIT 证据 |
 | [pypi-description.zh.md](notes/pypi-description.zh.md) | ✅ 已发布 1.1.0 元数据 | pyproject.toml 使用的简洁安装包介绍；英文版嵌入分发元数据 |
 | [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ 本地 CI 矩阵验收 | 干净源码 Python 3.8/3.12/3.13 基础套件、可选 IR 和语义对照；固定独立参考准备及 AST/CLI/测试可移植性修复 |

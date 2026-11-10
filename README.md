@@ -118,10 +118,13 @@ native distributions were uploaded, then nine remote installations verified
 exact package identity, compiler output and runtime contracts. Native platform
 coverage and any pending hosted cases are recorded separately in that receipt.
 
-[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) is now available as a
-portable wheel and source archive. The [production publication receipt](docs/notes/pypi-1.1.0-publication.json)
-records no-cache installation and compiler/IR/TUI checks. Native execution
-can be enabled through a source build.
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) provides 30 native wheels
+for CPython 3.9–3.13 on Linux x86-64/AArch64 (glibc and musl), Windows AMD64 and
+Intel macOS, plus a portable wheel and source archive. The
+[production publication receipt](docs/notes/pypi-1.1.0-publication.json) records
+exact public hashes and installed-package acceptance. Apple Silicon native
+wheels remain pending deployment-target compatibility and hosted acceptance;
+the portable wheel and optional source build remain available there.
 
 ### Current defaults
 
@@ -722,7 +725,8 @@ receipts in [native packaging](docs/design/native-packaging.md).
 - [x] Semantic IR with verified named passes, O3 automatic selection and structured target handoff
 - [x] Native-first Malbolge20 batches, Python fallback and explicit guarded ARM64 JIT
 - [x] Native source-wheel hook, wheel CI configuration and one hosted TestPyPI installation check
-- [ ] Complete hosted native-wheel platform matrix and production release validation
+- [x] Publish 30 accepted Linux, Windows AMD64 and Intel macOS native wheels to PyPI
+- [ ] Complete Apple Silicon deployment-target compatibility and hosted wheel acceptance
 - [ ] Compiler v2: signed integers, general runtime objects/strings and arrays via `IND_OPR`
 - [ ] Malbolge Unshackled support (3-adic integers, variable rotation width, Unicode I/O)
 

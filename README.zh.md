@@ -106,9 +106,12 @@ macOS ARM64 验收；[TestPyPI 记录](docs/notes/testpypi-ci-validation.json)�
 九组远端安装核对了精确包身份、编译输出与执行契约。原生平台覆盖和仍待运行的
 托管用例在该回执中分别记录。
 
-[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 已提供可移植 wheel 与源码归档。
-[正式发布回执](docs/notes/pypi-1.1.0-publication.json)记录无缓存安装及编译器、IR、TUI 检查。
-原生执行可通过源码构建启用。
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 已提供 30 个原生 wheel，
+覆盖 CPython 3.9–3.13 的 Linux x86-64/AArch64（glibc 与 musl）、Windows AMD64
+及 Intel macOS，另有可移植 wheel 与源码归档。
+[正式发布回执](docs/notes/pypi-1.1.0-publication.json)记录精确公开哈希与安装包验收。
+Apple Silicon 原生 wheel 仍待最低系统版本兼容性及托管验收；该平台可继续使用
+可移植 wheel 或可选源码构建。
 
 ### 当前默认行为
 
@@ -634,7 +637,8 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 - [x] 语义 IR、经校验的具名 pass、O3 自动选择与结构化目标传递
 - [x] Malbolge20 批量执行优先原生、Python 回退与显式带守卫 ARM64 JIT
 - [x] 原生源码 wheel hook、wheel CI 配置及一次托管 TestPyPI 安装验收
-- [ ] 完成托管原生 wheel 平台矩阵与正式发布验收
+- [x] 向 PyPI 发布 30 个已验收的 Linux、Windows AMD64 与 Intel macOS 原生 wheel
+- [ ] 完成 Apple Silicon 最低系统版本兼容性与托管 wheel 验收
 - [ ] 编译器 v2：有符号整数、一般运行时对象/字符串，以及通过 `IND_OPR` 支持数组
 - [ ] Malbolge Unshackled 支持(3-adic 整数、可变旋转宽度、Unicode I/O)
 

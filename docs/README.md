@@ -27,7 +27,7 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 | Document | Status | Contents |
 |---|---|---|
 | [native-jit.md](design/native-jit.md) | ✅ local opt-in experiment | Actual guarded ARM64 NOP code generation, exact exits/COW/budgets, cold versus warm evidence and short-fixture regressions |
-| [native-packaging.md](design/native-packaging.md) | ✅ local + TestPyPI acceptance; full matrix pending | Native source-build hook, build modes, staged binary/ABI tags, GitHub wheel artifacts and installed-package acceptance |
+| [native-packaging.md](design/native-packaging.md) | ✅ 30 native wheels published; Apple Silicon pending | Native source-build hook, ABI/platform tags, installed acceptance, production hashes and remaining macOS ARM64 compatibility work |
 | [native-vm.md](design/native-vm.md) | ✅ native-first batch default | Python API over a native Malbolge20 execution/memory core; correctness, snapshots, local build, same-image measurements and guarded-JIT scope |
 | [highlevel-to-malbolge.md](design/highlevel-to-malbolge.md) | ⚠️ route current; subset/measurements historical | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
 | [optimization-status.md](design/optimization-status.md) | ✅ dated snapshot | All optimization layers, accepted/default versus opt-in/local prototype status, evidence links and remaining limits |
@@ -45,6 +45,8 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 
 | Document | Status | Contents |
 |---|---|---|
+| [malbolge-reference.md](upstream/malbolge-reference.md) | ✅ source-backed reference | Original 10-trit machine, decoding, instructions, self-modification, I/O and specification/reference differences |
+| [malbolge20-reference.md](upstream/malbolge20-reference.md) | ✅ source-backed reference | 20-trit machine, original-Malbolge incompatibility, reference runtime and toolchain layers |
 | [toolchain-guide.md](upstream/toolchain-guide.md) | ✅ | Building and reproducing the external reference toolchain (platform pitfalls, determinism, verification conventions); no longer needed for compilation, kept for conformance cross-checking and archaeology |
 | [lmao-internals.md](upstream/lmao-internals.md) | ✅ | Analysis of the LMAO assembler's internal algorithms (layout, bootstrap generation) |
 
@@ -52,8 +54,8 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 
 | Document | Status | Contents |
 |---|---|---|
-| [release-1.1.0.md](notes/release-1.1.0.md) | ✅ published 2026-10-27 | Changes since PyPI 1.0.0, portable/source release scope and installed-package acceptance |
-| [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ production published and installed | Merged source commit, exact public artifacts/hashes, no-cache installed compiler/IR/TUI smoke and successful mainline CI/Pages |
+| [release-1.1.0.md](notes/release-1.1.0.md) | ✅ published 2026-10-27 | Changes since PyPI 1.0.0, 30 native wheels plus portable/source distributions and installed-package acceptance |
+| [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ 32 public files verified | Source provenance, exact public artifacts/hashes, all 30 native downloads verified, initial no-cache compiler/IR/TUI smoke and mainline CI/Pages |
 | [release-1.1.0-acceptance.json](notes/release-1.1.0-acceptance.json) | ✅ TestPyPI remote acceptance; platform scope explicit | Build/public-file hashes, nine remote installations, product CI and per-platform native/JIT evidence |
 | [pypi-description.md](notes/pypi-description.md) | ✅ published 1.1.0 metadata | Concise package introduction used by pyproject.toml; English text is embedded in distribution metadata |
 | [ci-portability-validation.json](notes/ci-portability-validation.json) | ✅ local CI matrix acceptance | Clean-source Python 3.8/3.12/3.13 base suites, optional IR and semantic differential; pinned independent reference setup and AST/CLI/test portability repairs |

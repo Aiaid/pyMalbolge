@@ -7,7 +7,8 @@
 > 2026-10-10。扩展后的 1.1.0 TestPyPI 上传及九个远程安装用例于
 > 2026-10-27 全部通过。30 个托管原生 wheel 与 5 个补充本地 macOS ARM64
 > wheel 已通过；托管 macOS ARM64 重试因容量不足、未分配到 runner 而结束。
-> 正式 PyPI 1.1.0 已发布可移植 wheel 与源码归档，见
+> 正式 PyPI 1.1.0 现提供这 30 个原生 wheel、可移植 wheel 与源码归档，
+> 共 32 个文件；Apple Silicon wheel 仍为待办。见
 > [发布回执](../notes/pypi-1.1.0-publication.json)。
 
 ## 安装行为
@@ -196,9 +197,19 @@ JIT 步。剩余 macOS ARM64 组排队超过十分钟后，在提交 `b7b36ed` �
 其余四份为 26.0；在 macOS 27.0.1 上执行确立该本地系统的验收结果，旧系统
 及最低系统版本的运行验收仍未验证。
 
+Apple Silicon 分发仍为待办：发布前统一 deployment target、wheel 平台标签与
+Mach-O 最低系统，并在声明的最低 OS 上运行安装后 VM/JIT 检查。保持 W^X
+与原生 JIT 写保护守卫启用。五个 ABI 的托管 ARM64 组仍等待 runner 容量；
+本地 macOS 27 检查不能替代该组验收。
+
 [1.1.0 验收记录](../notes/release-1.1.0-acceptance.json)保存九个 TestPyPI 用例、
 30 个托管 wheel、五个本地 wheel 及仍待完成的托管 macOS ARM64 范围。
-原版原生引擎、一般 JIT 发射器及向 PyPI 分发预构建原生 wheel 属于独立 roadmap 项。
+2026-10-27 已向正式 PyPI 发布这 30 个 CPython 3.9–3.13 wheel：Linux
+x86-64/ARM64 glibc/musl（20）、Windows x86-64（5）及 macOS Intel（5）。
+实际下载的 30 个公开文件哈希与大小均匹配已验收产物，连同保留的可移植 wheel
+和 sdist，1.1.0 共 32 个文件。安装后执行验收在上传前完成，正式站检查核对
+下载产物，不宣称重新完成跨平台执行。见[发布回执](../notes/pypi-1.1.0-publication.json)。
+Apple Silicon 发布、原版原生引擎及一般 JIT 发射器仍为独立 roadmap 项。
 
 pip 可能缓存纯回退 wheel，之后已有编译器仍继续复用。已有 wheel 的
 安装不会调用 build hook，改变构建模式也不会重建；需要原生时应明确从

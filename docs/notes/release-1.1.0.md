@@ -2,8 +2,10 @@
 
 > **English** | [中文](release-1.1.0.zh.md)
 >
-> Status: published to production PyPI on 2026-10-27 as a portable wheel and
-> source archive. The source commit is `0176888` on the default `master` branch.
+> Status: production PyPI 1.1.0 contains 30 native wheels, one portable wheel
+> and one source archive (32 files), published on 2026-10-27. The initial
+> portable/source commit is `0176888` on the default `master` branch; the
+> accepted native wheels were built at `e97edc2`. Apple Silicon remains TODO.
 > [Publication and fresh-install receipt](pypi-1.1.0-publication.json).
 
 This release packages the development since 1.0.0 together with updated
@@ -56,7 +58,7 @@ Production upload, Git tags and the Wiki edits are separate actions.
 
 ## Production publication, 2026-10-27
 
-[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) contains the portable
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) initially received the portable
 `py3-none-any` wheel and source archive built from the merged mainline commit.
 Both public file hashes and the description match the inspected local artifacts.
 A fresh no-cache installation from production PyPI passed O3, Direct and IR
@@ -64,8 +66,40 @@ compilation/execution, byte I/O and execution-budget checks. The TUI extra
 passed headless startup, step and step-back checks with Textual 8.2.8.
 The mainline quality workflow passed all seven jobs and Pages build/deploy passed.
 The [publication receipt](pypi-1.1.0-publication.json) records exact artifacts
-and source identity. Native acceleration is available through source builds;
-the incomplete hosted native-wheel matrix is recorded separately.
+and source identity.
+
+Thirty accepted native wheels were subsequently added to the same release:
+CPython 3.9–3.13 across Linux x86-64/ARM64 with glibc and musl (20 files),
+Windows x86-64 (5) and macOS Intel (5). The release now contains 32 files;
+the original portable wheel and source archive are preserved. All 30 public
+downloads match their accepted size and SHA-256. Their 56 Python payload files
+match the portable wheel after newline normalization; only the five Windows
+wheels use different line endings. The native artifacts came from `e97edc2`
+and [hosted acceptance run 40356927572](https://github.com/Aiaid/pyMalbolge/actions/runs/40356927572).
+Each exact wheel passed VM/release installed-package checks before upload;
+the production download checks do not constitute a new 30-platform execution
+run. The publication receipt records every artifact. Apple Silicon native
+wheels remain excluded as described below.
+
+### Apple Silicon native-wheel TODO
+
+Apple Silicon wheels remain unpublished. The five local CPython 3.9–3.13
+wheels passed installed VM/JIT checks on macOS 27.0.1 only, with W^X and JIT
+write-protection guards enabled. Four extensions record Mach-O minimum OS
+26.0; CPython 3.12 records 11.0. Reconcile deployment target, wheel tag and
+Mach-O minimum OS, then test the claimed minimum OS before publication.
+The five-ABI hosted group remains untested because GitHub could not assign a
+macOS ARM64 runner; local acceptance does not complete the 35-wheel matrix.
+See the [acceptance receipt](release-1.1.0-acceptance.json).
+
+## Esolangs Wiki publication, 2026-10-27
+
+After the user confirmed CC0/public-domain-equivalent contribution terms,
+`Anend` saved and verified the
+[self-introduction (revision 200571)](https://esolangs.org/w/index.php?title=Esolang:Introduce_yourself&oldid=200571),
+[Malbolge20 entry (revision 200572)](https://esolangs.org/w/index.php?title=Malbolge20&oldid=200572)
+and [Malbolge resource entry (revision 200573)](https://esolangs.org/w/index.php?title=Malbolge&oldid=200573).
+These small resource edits are separate from the larger article drafts.
 
 ## Test-site execution, 2026-10-27
 

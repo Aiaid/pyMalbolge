@@ -52,7 +52,8 @@
         "step back"
       ]
     },
-    "success": true
+    "success": true,
+    "scope": "Initial pure wheel installation on Apple Silicon before the 30 native wheels were added."
   },
   "main_branch_quality_ci": {
     "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/40438716265",
@@ -63,5 +64,239 @@
     "build": "success",
     "deploy": "success"
   },
-  "distribution_scope": "Portable Python wheel and source archive; native VM can be built from source. Full hosted native-wheel matrix is not claimed complete."
+  "distribution_scope": "30 native CPython 3.9-3.13 wheels: Linux x86_64/aarch64 manylinux and musllinux, Windows amd64, macOS Intel; plus portable Python wheel and source archive. Apple Silicon native wheels remain pending.",
+  "native_publication": {
+    "status": "published_and_public_download_hashes_verified",
+    "date": "2026-10-27",
+    "source_commit": "e97edc225be376559cd67190e4942a7e2a10342d",
+    "acceptance_workflow": "https://github.com/Aiaid/pyMalbolge/actions/runs/40356927572",
+    "native_wheels": 30,
+    "total_pypi_files": 32,
+    "python_payload_files_matching_initial_portable_wheel": 56,
+    "python_payload_comparison": "All source bytes match after CRLF-to-LF normalization; only the five Windows wheels differ in line endings.",
+    "newline_only_wheels": [
+      "malbolge-1.1.0-cp310-cp310-win_amd64.whl",
+      "malbolge-1.1.0-cp311-cp311-win_amd64.whl",
+      "malbolge-1.1.0-cp312-cp312-win_amd64.whl",
+      "malbolge-1.1.0-cp313-cp313-win_amd64.whl",
+      "malbolge-1.1.0-cp39-cp39-win_amd64.whl"
+    ],
+    "pre_upload_twine_check": "passed",
+    "public_json_hashes_match": true,
+    "public_download_hashes_match": true,
+    "installed_acceptance": "Each exact native wheel passed hosted VM and release smoke before upload; production checks download and hash all 30 without claiming a new 30-platform installed test run.",
+    "apple_silicon_status": "Not uploaded; minimum-OS compatibility and hosted five-ABI acceptance remain TODO.",
+    "artifacts": [
+      {
+        "platform": "macos-15-intel",
+        "file": "malbolge-1.1.0-cp310-cp310-macosx_10_9_x86_64.whl",
+        "bytes": 243173,
+        "sha256": "52d3b42d8f857ffc6e4e4bd3d98bd12a9d867de9b5395c6ed8ea6106cfb57b0d",
+        "uploaded_at_utc": "2026-10-27T03:04:36.820853Z"
+      },
+      {
+        "platform": "macos-15-intel",
+        "file": "malbolge-1.1.0-cp311-cp311-macosx_10_9_x86_64.whl",
+        "bytes": 243174,
+        "sha256": "149e36394fb757ea7884eff73409a49a5ab9ac3413db67126ddc73cbd954bcdc",
+        "uploaded_at_utc": "2026-10-27T03:04:38.184346Z"
+      },
+      {
+        "platform": "macos-15-intel",
+        "file": "malbolge-1.1.0-cp312-cp312-macosx_10_13_x86_64.whl",
+        "bytes": 243290,
+        "sha256": "7b5925152d60b3989b85bb969a99a41bd831b0a7e4e2dca6c7835739510dc9cd",
+        "uploaded_at_utc": "2026-10-27T03:04:39.317396Z"
+      },
+      {
+        "platform": "macos-15-intel",
+        "file": "malbolge-1.1.0-cp313-cp313-macosx_10_13_x86_64.whl",
+        "bytes": 243281,
+        "sha256": "e2db3777946641fc7d3dc3aaf47cf707826d8ca192bd3e4c079072aea5a163cb",
+        "uploaded_at_utc": "2026-10-27T03:04:40.582890Z"
+      },
+      {
+        "platform": "macos-15-intel",
+        "file": "malbolge-1.1.0-cp39-cp39-macosx_10_9_x86_64.whl",
+        "bytes": 243170,
+        "sha256": "989e78c8b26ae34bb6525c378ed5c3b546268e1190ee933a3d7a983c26654061",
+        "uploaded_at_utc": "2026-10-27T03:04:41.961941Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "bytes": 281487,
+        "sha256": "815af0d2d9fae025ba45c4007fa4971d046d4b8f2169def27de908951855f780",
+        "uploaded_at_utc": "2026-10-27T03:04:43.109492Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp310-cp310-musllinux_1_2_x86_64.whl",
+        "bytes": 280467,
+        "sha256": "df45f1ca886d384926237bf7d0715f73d9d7c717f471508b2f296976fa475ac1",
+        "uploaded_at_utc": "2026-10-27T03:04:44.220180Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "bytes": 282199,
+        "sha256": "4bc6c91232ff8b1d436d11ecadace90e908a0e0ac28073c4a7dc15fc0e345a90",
+        "uploaded_at_utc": "2026-10-27T03:04:45.343304Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp311-cp311-musllinux_1_2_x86_64.whl",
+        "bytes": 281156,
+        "sha256": "15c850a7541bf62a8d5555aa26c4e9c648e0b7203f0bf3f8aad5554e26a5c129",
+        "uploaded_at_utc": "2026-10-27T03:04:46.571216Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "bytes": 283028,
+        "sha256": "b1ef35a579aa7553bf906e882ad4c05cbebcf845504dbd413e180c5da2c95f9a",
+        "uploaded_at_utc": "2026-10-27T03:04:47.971173Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp312-cp312-musllinux_1_2_x86_64.whl",
+        "bytes": 282111,
+        "sha256": "1c614994f36a982b71326d9a94004f0420a48238b699833ff453f02994eb5ac8",
+        "uploaded_at_utc": "2026-10-27T03:04:49.181064Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "bytes": 283047,
+        "sha256": "e4ad46ff01380d0cbf29383321093f096caf17607f11e2d9ba4706b104a11a99",
+        "uploaded_at_utc": "2026-10-27T03:04:50.440136Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp313-cp313-musllinux_1_2_x86_64.whl",
+        "bytes": 282165,
+        "sha256": "555713f7b116eb0cefe809b468a676997ccb136cc8eb7343e49506c99869d579",
+        "uploaded_at_utc": "2026-10-27T03:04:51.522004Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "bytes": 281304,
+        "sha256": "2d1de2f180a3f64bdbed1fa7e140359518391cc67206a6334c0da0fb60f1809a",
+        "uploaded_at_utc": "2026-10-27T03:04:52.864803Z"
+      },
+      {
+        "platform": "ubuntu-24.04",
+        "file": "malbolge-1.1.0-cp39-cp39-musllinux_1_2_x86_64.whl",
+        "bytes": 280326,
+        "sha256": "eef543063deace0485226f81375bef1b2b9f49c33c0e2e6a23e18f0927498926",
+        "uploaded_at_utc": "2026-10-27T03:04:54.132266Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "bytes": 287401,
+        "sha256": "05c1f9af46155b5bd9ded8aa0a47b60f2aa81d900a4c89af595720f38ec452ec",
+        "uploaded_at_utc": "2026-10-27T03:04:55.472245Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp310-cp310-musllinux_1_2_aarch64.whl",
+        "bytes": 285605,
+        "sha256": "3aefe01f315b6930d9c60ffa2679c14cda12f9eeca6c92d0e2bb8c734675209f",
+        "uploaded_at_utc": "2026-10-27T03:04:56.643014Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "bytes": 288121,
+        "sha256": "74bef1833baef0c0a590e7232cad06edd66065ffbc57ff57ea7f39e2ac56e301",
+        "uploaded_at_utc": "2026-10-27T03:04:57.722376Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp311-cp311-musllinux_1_2_aarch64.whl",
+        "bytes": 286330,
+        "sha256": "266c0bb4254537fa2f891c6770dc27524208565506970e5fa5bc646354f8bbce",
+        "uploaded_at_utc": "2026-10-27T03:04:58.823785Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "bytes": 289014,
+        "sha256": "6d2cdda4ec23523deeed64cdee45431f4eb18d419508e24d4281e645a6c3e08f",
+        "uploaded_at_utc": "2026-10-27T03:04:59.874442Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp312-cp312-musllinux_1_2_aarch64.whl",
+        "bytes": 287334,
+        "sha256": "37fd1509ff90d7d18892cfab15f1ce32444bfba24e7bf648e20140e6ca805314",
+        "uploaded_at_utc": "2026-10-27T03:05:01.257523Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "bytes": 289052,
+        "sha256": "c91e39f368cf129fbed1a8f254f7e176b82291697cc8435034b2b8e6078d27b2",
+        "uploaded_at_utc": "2026-10-27T03:05:02.535889Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp313-cp313-musllinux_1_2_aarch64.whl",
+        "bytes": 287339,
+        "sha256": "0030061dadc21f5d6d4a13a6b0fe2f791db5e6cb29a9b110e935323233b67d8f",
+        "uploaded_at_utc": "2026-10-27T03:05:03.861931Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "bytes": 287276,
+        "sha256": "52c62844f6033892d9a2dc59f4fbc25d76cd0dccdd29cb58149bbaa5572fe8bd",
+        "uploaded_at_utc": "2026-10-27T03:05:04.920978Z"
+      },
+      {
+        "platform": "ubuntu-24.04-arm",
+        "file": "malbolge-1.1.0-cp39-cp39-musllinux_1_2_aarch64.whl",
+        "bytes": 285464,
+        "sha256": "7a009c7a6a1cd37a60a4ddcff8a54d9e7ac339ec2b661398501ca66ecb3a89d4",
+        "uploaded_at_utc": "2026-10-27T03:05:06.028229Z"
+      },
+      {
+        "platform": "windows-2022",
+        "file": "malbolge-1.1.0-cp310-cp310-win_amd64.whl",
+        "bytes": 247218,
+        "sha256": "30ca6eac5b640079ca8ffbdb7d5982a36fb6d0409717c4b0886d993494db0cbb",
+        "uploaded_at_utc": "2026-10-27T03:05:07.109049Z"
+      },
+      {
+        "platform": "windows-2022",
+        "file": "malbolge-1.1.0-cp311-cp311-win_amd64.whl",
+        "bytes": 247216,
+        "sha256": "33b0f4d8ca4b04b986d807710025d534b6c8d19c589a4a5d7413149e1f33298e",
+        "uploaded_at_utc": "2026-10-27T03:05:08.360027Z"
+      },
+      {
+        "platform": "windows-2022",
+        "file": "malbolge-1.1.0-cp312-cp312-win_amd64.whl",
+        "bytes": 247266,
+        "sha256": "ee535b6a263702924a4eb63fe19ff34982a29b7f88919328807e191a0f874c46",
+        "uploaded_at_utc": "2026-10-27T03:05:09.666371Z"
+      },
+      {
+        "platform": "windows-2022",
+        "file": "malbolge-1.1.0-cp313-cp313-win_amd64.whl",
+        "bytes": 247255,
+        "sha256": "e75c2d82ff162ab9b13eb84f7b2ad025e7bd74cc1bfec656620cdcd1b12b4e0a",
+        "uploaded_at_utc": "2026-10-27T03:05:10.913919Z"
+      },
+      {
+        "platform": "windows-2022",
+        "file": "malbolge-1.1.0-cp39-cp39-win_amd64.whl",
+        "bytes": 247215,
+        "sha256": "0c1a633c10e7b850a8779c16c9cb2ae2d6e9790d44f3a8723b5953cdc8ebdd84",
+        "uploaded_at_utc": "2026-10-27T03:05:12.243054Z"
+      }
+    ]
+  }
 }

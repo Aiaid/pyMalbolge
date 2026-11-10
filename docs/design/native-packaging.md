@@ -8,8 +8,9 @@
 > nine remote installation cases passed on 2026-10-27. Thirty hosted native
 > wheels and five supplementary local macOS ARM64 wheels passed; hosted macOS
 > ARM64 retry ended without acquiring a runner because of hosted capacity.
-> Production PyPI 1.1.0 was published as a portable wheel and source archive;
-> see the [publication receipt](../notes/pypi-1.1.0-publication.json).
+> Production PyPI 1.1.0 now provides those 30 native wheels plus the portable
+> wheel and source archive (32 files); Apple Silicon wheels remain TODO. See
+> the [publication receipt](../notes/pypi-1.1.0-publication.json).
 
 ## Installation behavior
 
@@ -228,10 +229,23 @@ matched the pinned sdist. The CPython 3.12 extension has a Mach-O minimum OS of
 11.0; the other four have 26.0. Execution on macOS 27.0.1 establishes local
 acceptance there; older OS and minimum-OS runtime acceptance remain unverified.
 
+Apple Silicon distribution remains a TODO: reconcile the deployment target,
+wheel platform tag and Mach-O minimum OS, then execute installed VM/JIT checks
+on the claimed minimum OS before publication. Preserve W^X and native JIT
+write-protection guards. The five-ABI hosted ARM64 group also remains pending
+runner capacity; the local macOS 27 checks do not replace it.
+
 The [1.1.0 acceptance receipt](../notes/release-1.1.0-acceptance.json) records
 the nine TestPyPI cases, 30 hosted wheels, five local wheels and pending hosted
-macOS ARM64 scope. Original native support, general JIT emitters and
-prebuilt native-wheel distribution to PyPI remain separate roadmap items.
+macOS ARM64 scope. On 2026-10-27 the 30 accepted CPython 3.9–3.13 wheels were
+published to production PyPI: Linux x86-64/ARM64 glibc/musl (20), Windows x86-64
+(5) and macOS Intel (5). All 30 public downloads match the accepted hashes and
+sizes; with the preserved portable wheel and sdist, 1.1.0 has 32 files.
+Installed execution acceptance predates upload; the production checks verify
+the downloaded artifacts, without claiming a new cross-platform execution run.
+See the [publication receipt](../notes/pypi-1.1.0-publication.json). Apple Silicon
+publication, Original native support and general JIT emitters remain separate
+roadmap items.
 
 pip can cache a pure fallback wheel and reuse it after a compiler becomes
 available. Installing a selected wheel never runs a build hook, so changing
