@@ -43,7 +43,7 @@ function stage() {
     fail("manifest.json must contain a programs array");
   }
   const names = [
-    "index.html", "bridge.js", "worker.js", "theme.js",
+    "index.html", "bridge.js", "worker.js", "theme.js", "i18n.js", "messages.js",
     "screens/launch.js", "screens/debugger.js",
     "vendor/build.json", "vendor/manifest.json", `vendor/${build.wheel}`,
   ];

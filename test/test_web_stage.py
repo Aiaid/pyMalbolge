@@ -11,7 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 WHEEL = "malbolge-1.0.0-py3-none-any.whl"
 RUNTIME = {
-    "index.html", "bridge.js", "worker.js", "theme.js",
+    "index.html", "bridge.js", "worker.js", "theme.js", "i18n.js", "messages.js",
     "screens/launch.js", "screens/debugger.js", "vendor/build.json",
     "vendor/manifest.json", "vendor/" + WHEEL, "vendor/examples/hello.mal",
 }

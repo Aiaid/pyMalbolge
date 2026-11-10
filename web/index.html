@@ -26,6 +26,10 @@
      team-lead to add — screen-1d-specific: page background and the hero
      radial-gradient's inner stop) — literal until then. */
   html, body { height: 100%; }
+  #language-control { padding: 10px 20px; background: var(--mb-bar, #100e16); }
+  .mb-language { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; }
+  .mb-language select { font: inherit; padding: 6px 10px; border: 1px solid var(--mb-bd); border-radius: 6px; color: var(--mb-tx); background: var(--mb-pn); }
+  .mb-language select:focus-visible { outline: 2px solid var(--mb-amb); outline-offset: 2px; }
   body {
     margin: 0;
     background: #09080d;
@@ -45,9 +49,13 @@
 </style>
 </head>
 <body>
+<div id="language-control"></div>
 <div id="app" role="main"></div>
 
 <script type="module">
+  import { getLocale, mountLocaleControl, onLocaleChange } from "./i18n.js";
+  const uiText = (zh, en) => getLocale() === "zh" ? zh : en;
+  mountLocaleControl(document.getElementById("language-control"));
   import { mountLaunch } from "./screens/launch.js";
   import { applyTheme } from "./theme.js";
 
@@ -83,17 +91,19 @@
       // different agent's file boundary and this screen must not block on
       // its existence.
       const { mountDebugger } = await import("./screens/debugger.js");
+      launchHandle?.destroy();
       app.style.background = "";
       app.innerHTML = "";
       mountDebugger(app, session);
     } catch (err) {
       console.error("debugger screen unavailable:", err);
-      app.innerHTML = `
-        <div style="margin:auto;padding:24px;max-width:520px;text-align:center;color:var(--mb-sub, #cfc9e0);font-size:14px;line-height:1.6;font-family:'Space Grotesk','Noto Sans SC',sans-serif">
-          调试视图还没有落地(<code style="color:var(--mb-amb, #ffb454)">web/screens/debugger.js</code> 缺失或加载失败)。<br/>
-          程序已经载入到调试会话里 —— 在控制台里对 <code style="color:var(--mb-amb, #ffb454)">session</code>
-          调用 <code style="color:var(--mb-amb, #ffb454)">.on('snapshot', console.log)</code> 之类的方法可以确认它在跑。
-        </div>`;
+      const error = document.createElement('p');
+      error.style.cssText = 'margin: auto; padding: 24px';
+      launchHandle?.destroy();
+      const updateError = () => { error.textContent = uiText('调试视图加载失败：', 'Debugger view failed to load: ') + err.message; };
+      updateError();
+      onLocaleChange(updateError);
+      app.replaceChildren(error);
     }
   }
 
@@ -160,8 +170,8 @@
         if (!session) {
           alert(
             sessionError
-              ? `调试内核初始化失败:${sessionError.message}`
-              : "调试内核尚未就绪(bridge.js 还没有落地),暂时无法运行程序。",
+              ? uiText("调试内核初始化失败：", "Debugger initialization failed: ") + sessionError.message
+              : uiText("调试内核尚未就绪，暂时无法运行程序。", "Debugger core is not ready; cannot run the program."),
           );
           return;
         }
@@ -176,7 +186,7 @@
           await resultPromise;
         } catch (err) {
           console.error("session.load failed:", err);
-          alert(`载入失败:${err.message}`);
+          alert(uiText("载入失败：", "Load failed: ") + err.message);
           return;
         }
         await showDebugger(session);

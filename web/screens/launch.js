@@ -1,3 +1,4 @@
+import { tr, onLocaleChange } from "../i18n.js";
 // web/screens/launch.js — canvas 1d, the "stranger's first click" screen:
 // pick an example / paste code / drop a file.
 //
@@ -75,47 +76,47 @@ const T = {
 //                       truth.mal is preferred over cat/cat2 because its
 //                       3,836 steps give a breakpoint something to land on;
 //                       cat2.mal's 33 steps do not.
-const FEATURED_ROLES = [
+const featuredRoles = () => [
   {
-    label: "入门",
-    desc: "经典 Hello, World —— 观察加密改写最直观的一步",
+    label: tr("m145"),
+    desc: tr("m146"),
     candidates: ["hello.mal"],
   },
   {
-    label: "长循环",
-    desc: "步数很多,适合看时间线拖拽和内存热力图,但要等得起",
+    label: tr("m147"),
+    desc: tr("m148"),
     candidates: ["99bottles.mal", "quine.mal"],
   },
   {
-    label: "带输入",
-    desc: "需要标准输入,适合练断点与监视点",
+    label: tr("m149"),
+    desc: tr("m150"),
     candidates: ["truth.mal", "cat.mal", "cat2.mal"],
   },
 ];
 
 export function formatCells(n) {
-  return `${n.toLocaleString("en-US")} 单元`;
+  return `${n.toLocaleString("en-US")}${tr("m151")}`;
 }
 
 export function formatSteps(n) {
-  if (n < 10_000) return `${n.toLocaleString("en-US")} 步`;
-  if (n < 1_000_000) return `≈ ${(n / 1000).toFixed(1)} 千步`;
-  return `≈ ${Math.round(n / 10_000).toLocaleString("en-US")} 万步`;
+  if (n < 10_000) return `${n.toLocaleString("en-US")}${tr("m152")}`;
+  if (n < 1_000_000) return `≈ ${(n / 1000).toFixed(1)}${tr("m153")}`;
+  return `≈ ${Math.round(n / 10_000).toLocaleString("en-US")}${tr("m154")}`;
 }
 
 /** null when the run is fast enough that a cost line would just be noise. */
 export function formatCost(steps) {
   const seconds = steps / STEPS_PER_SEC;
   if (seconds < 1.5) return null;
-  if (seconds < 90) return `预计运行 ≈ ${Math.round(seconds)} 秒`;
-  return `预计运行 ≈ ${(seconds / 60).toFixed(1)} 分钟`;
+  if (seconds < 90) return `${tr("m155")}${Math.round(seconds)}${tr("m156")}`;
+  return `${tr("m157")}${(seconds / 60).toFixed(1)}${tr("m158")}`;
 }
 
 /** Pure: manifest in, card view-models out. No DOM, easy to unit test. */
 export function pickFeaturedExamples(manifest) {
   const byFile = new Map((manifest?.programs ?? []).map((p) => [p.file, p]));
   const cards = [];
-  for (const role of FEATURED_ROLES) {
+  for (const role of featuredRoles()) {
     const file = role.candidates.find((f) => byFile.has(f));
     if (!file) continue;
     const prog = byFile.get(file);
@@ -146,18 +147,18 @@ function escapeHtml(s) {
 // nearly all its time showing the "pyodide" label. "ready" is not one of the
 // bridge's phases; it's this module's own sentinel (set by index.html once
 // createSession() resolves) for "boot finished, hide the indicator".
-const BOOT_LABELS = {
-  vendor: "读取版本信息…",
-  pyodide: "Pyodide 运行时加载中…",
-  wheel: "解包 pyMalbolge…",
-  import: "初始化 Python 环境…",
-  ready: "就绪",
-};
+const bootLabels = () => ({
+  vendor: tr("m159"),
+  pyodide: tr("m160"),
+  wheel: tr("m161"),
+  import: tr("m162"),
+  ready: tr("m163"),
+});
 
 function cardHtml(ex) {
   return `
     <div class="mb-card" data-example="${escapeHtml(ex.file)}" tabindex="0" role="button"
-         aria-label="载入示例 ${escapeHtml(ex.file)}"
+         aria-label="${escapeHtml(tr("m165"))}${escapeHtml(ex.file)}"
          style="width:240px;padding:18px 20px;border-radius:12px;background:${T.pn};border:1px solid ${T.pnBd};cursor:pointer">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:${T.tx}">${escapeHtml(ex.file)}</span>
@@ -166,7 +167,7 @@ function cardHtml(ex) {
       <div style="font-size:12px;color:${T.mut};margin-top:6px;line-height:1.5">${escapeHtml(ex.desc)}</div>
       <div style="display:flex;gap:10px;margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:${T.dim}">
         <span>${escapeHtml(ex.cellsText)}</span><span style="color:${T.amb}">${escapeHtml(ex.stepsText)}</span>
-        ${ex.readsInput ? `<span style="color:${T.cyn}">需输入</span>` : ""}
+        ${ex.readsInput ? `<span style="color:${T.cyn}">${escapeHtml(tr("m164_1"))}</span>` : ""}
       </div>
       ${ex.costText ? `<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:${T.amb}">⏱ ${escapeHtml(ex.costText)}</div>` : ""}
     </div>`;
@@ -179,7 +180,7 @@ export function renderLaunchHTML({ examples, bootPhase }) {
     bootPhase && bootPhase !== "ready"
       ? `<div class="mb-boot" role="status" aria-live="polite">
            <span class="mb-boot-dot"></span>
-           <span>${escapeHtml(BOOT_LABELS[bootPhase] ?? bootPhase)}</span>
+           <span>${escapeHtml(bootLabels()[bootPhase] ?? bootPhase)}</span>
          </div>`
       : "";
 
@@ -192,24 +193,24 @@ export function renderLaunchHTML({ examples, bootPhase }) {
         <div style="width:8px;height:25px;border-radius:3px;background:${T.amb}"></div>
       </div>
       <div style="font-size:34px;font-weight:700;letter-spacing:.01em;margin-top:16px">pyMalbolge</div>
-      <div style="font-size:15px;color:${T.tagline};margin-top:6px">Malbolge 调试器 —— 一门每走一步都会自我改写的语言,现在可以单步看清它</div>
+      <div style="font-size:15px;color:${T.tagline};margin-top:6px">${escapeHtml(tr("m166_1"))}</div>
       <div style="display:flex;gap:8px;margin-top:14px;font-size:11.5px;color:${T.dim};flex-wrap:wrap;justify-content:center">
-        <span style="padding:3px 10px;border-radius:999px;border:1px solid ${T.bd};background:color-mix(in srgb, ${T.pn} 80%, transparent)">纯静态 · 无服务器</span>
-        <span style="padding:3px 10px;border-radius:999px;border:1px solid ${T.bd};background:color-mix(in srgb, ${T.pn} 80%, transparent)">Python 跑在 Web Worker</span>
-        <span style="padding:3px 10px;border-radius:999px;border:1px solid ${T.bd};background:color-mix(in srgb, ${T.pn} 80%, transparent)">代码不离开浏览器</span>
+        <span style="padding:3px 10px;border-radius:999px;border:1px solid ${T.bd};background:color-mix(in srgb, ${T.pn} 80%, transparent)">${escapeHtml(tr("m167_1"))}</span>
+        <span style="padding:3px 10px;border-radius:999px;border:1px solid ${T.bd};background:color-mix(in srgb, ${T.pn} 80%, transparent)">${escapeHtml(tr("m168_1"))}</span>
+        <span style="padding:3px 10px;border-radius:999px;border:1px solid ${T.bd};background:color-mix(in srgb, ${T.pn} 80%, transparent)">${escapeHtml(tr("m169_1"))}</span>
       </div>
     </div>
 
     <div style="display:flex;gap:16px;margin-top:52px;flex-wrap:wrap;justify-content:center;padding:0 24px">${cardsHtml}</div>
 
     <div class="mb-drop" style="width:764px;max-width:calc(100vw - 48px);box-sizing:border-box;margin-top:20px;border-radius:12px;border:1.5px dashed ${T.tipBd};background:color-mix(in srgb, ${T.dropBg} 80%, transparent);padding:26px;text-align:center">
-      <div style="font-size:14px;color:${T.sub}">拖入 <span style="font-family:'IBM Plex Mono',monospace;color:${T.amb}">.mal</span> 文件,或把代码粘贴到这里</div>
-      <textarea class="mb-paste" spellcheck="false" aria-label="粘贴 Malbolge 代码"
+      <div style="font-size:14px;color:${T.sub}">${escapeHtml(tr("m170_1"))}<span style="font-family:'IBM Plex Mono',monospace;color:${T.amb}">.mal</span>${escapeHtml(tr("m171_2"))}</div>
+      <textarea class="mb-paste" spellcheck="false" aria-label="${escapeHtml(tr("m171_1"))}"
         style="display:block;width:100%;box-sizing:border-box;min-height:64px;margin-top:12px;resize:vertical;background:transparent;border:none;outline:none;font-family:'IBM Plex Mono',monospace;font-size:12px;color:${T.tx};text-align:left"
         placeholder="(=&lt;\`#9]~6ZY32Vx/4Rs+0No-&amp;Jk)&quot;Fh}|Bcy?\`=*z]Kw%oG4UUS0/@-ejc(:'8dc"></textarea>
       <div style="display:flex;justify-content:center;gap:14px;align-items:center;margin-top:16px;flex-wrap:wrap">
-        <div class="mb-load-btn" role="button" tabindex="0" style="padding:9px 26px;border-radius:9px;background:${T.acc};color:${T.accTx};font-size:14px;font-weight:600;cursor:pointer">载入并调试</div>
-        <span style="font-size:11.5px;color:${T.dim}">仅可打印 ASCII;空白字符会被忽略</span>
+        <div class="mb-load-btn" role="button" tabindex="0" style="padding:9px 26px;border-radius:9px;background:${T.acc};color:${T.accTx};font-size:14px;font-weight:600;cursor:pointer">${escapeHtml(tr("m172_1"))}</div>
+        <span style="font-size:11.5px;color:${T.dim}">${escapeHtml(tr("m173_1"))}</span>
       </div>
       <div class="mb-drop-error" style="display:none;margin-top:10px;font-size:11.5px;color:${T.err}"></div>
     </div>
@@ -218,7 +219,7 @@ export function renderLaunchHTML({ examples, bootPhase }) {
 
     <div style="margin-top:auto;padding:18px;display:flex;gap:8px;align-items:center;font-size:11.5px;color:${T.logo2};text-align:center;max-width:640px">
       <span style="width:7px;height:7px;border-radius:50%;background:${T.amb};animation:pulse 1.6s infinite;flex-shrink:0"></span>
-      <span>首次加载需要联网 · v1 仅支持原始 Malbolge:3¹⁰ = 59,049 个内存单元</span>
+      <span>${escapeHtml(tr("m174_1"))}</span>
     </div>
   </div>`;
 }
@@ -272,113 +273,141 @@ export async function mountLaunch(container, opts = {}) {
 
   injectStyles(doc);
 
-  let examples = [];
+  let manifest = null;
+  let currentBootPhase = bootPhase;
+  let currentError = null;
+  let destroyed = false;
   let manifestError = null;
   try {
-    examples = pickFeaturedExamples(await fetchManifest());
+    manifest = await fetchManifest();
   } catch (err) {
     manifestError = err;
   }
 
-  container.innerHTML = renderLaunchHTML({ examples, bootPhase });
+  function paint() {
+    if (destroyed) return;
+    const savedTextarea = container.querySelector('.mb-paste');
+    const focused = doc.activeElement;
+    const cardFile = focused?.dataset.example;
+    const wasLoad = focused?.classList.contains('mb-load-btn');
+    container.innerHTML = renderLaunchHTML({ examples: pickFeaturedExamples(manifest), bootPhase: currentBootPhase });
 
-  const dropEl = container.querySelector(".mb-drop");
-  const textarea = container.querySelector(".mb-paste");
-  const loadBtn = container.querySelector(".mb-load-btn");
-  const errorEl = container.querySelector(".mb-drop-error");
-
-  function showError(msg) {
-    if (!errorEl) return;
-    errorEl.textContent = msg;
-    errorEl.style.display = "block";
-  }
-  function clearError() {
-    if (!errorEl) return;
-    errorEl.style.display = "none";
-  }
-
-  if (manifestError) {
-    showError(`示例列表加载失败(${manifestError.message}),仍可手动粘贴代码运行。`);
-  }
-
-  function submit(source) {
-    if (!source || !source.trim()) {
-      showError("还没有代码 —— 拖入文件、粘贴代码,或点一张示例卡片。");
-      return;
+    const dropEl = container.querySelector(".mb-drop");
+    let textarea = container.querySelector(".mb-paste");
+    if (savedTextarea) {
+      for (const name of ['aria-label', 'placeholder']) savedTextarea.setAttribute(name, textarea.getAttribute(name));
+      textarea.replaceWith(savedTextarea);
+      textarea = savedTextarea;
     }
-    clearError();
-    onLoad(source, "");
-  }
+    const loadBtn = container.querySelector(".mb-load-btn");
 
-  loadBtn?.addEventListener("click", () => submit(textarea.value));
-  loadBtn?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      submit(textarea.value);
+    function showError(msg) {
+      if (destroyed) return;
+      const errorEl = container.querySelector(".mb-drop-error");
+      if (!errorEl) return;
+      currentError = msg;
+      errorEl.textContent = typeof msg === "function" ? msg() : msg;
+      errorEl.style.display = "block";
     }
-  });
+    function clearError() {
+      const errorEl = container.querySelector(".mb-drop-error");
+      if (!errorEl) return;
+      currentError = null;
+      errorEl.style.display = "none";
+    }
 
-  container.querySelectorAll(".mb-card").forEach((card) => {
-    const activate = async () => {
-      const file = card.dataset.example;
-      clearError();
-      try {
-        const res = await fetch(exampleSourceUrl(file));
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const source = await res.text();
-        textarea.value = source;
-        onLoad(source, "");
-      } catch (err) {
-        showError(
-          `未能加载示例 ${file}(${err.message})—— 构建脚本可能还没有把 examples/ 复制到 web/vendor/examples/。`,
-        );
+    if (currentError) showError(currentError);
+    else if (manifestError) {
+      showError(() => `${tr("m175")}${manifestError.message}${tr("m176")}`);
+    }
+
+    function submit(source) {
+      if (!source || !source.trim()) {
+        showError(() => tr("m177"));
+        return;
       }
-    };
-    card.addEventListener("click", activate);
-    card.addEventListener("keydown", (e) => {
+      clearError();
+      onLoad(source, "");
+    }
+
+    loadBtn?.addEventListener("click", () => submit(textarea.value));
+    loadBtn?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        activate();
+        submit(textarea.value);
       }
     });
-  });
 
-  if (dropEl) {
-    ["dragenter", "dragover"].forEach((evt) =>
-      dropEl.addEventListener(evt, (e) => {
-        e.preventDefault();
-        dropEl.classList.add("mb-drop-active");
-      }),
-    );
-    ["dragleave", "drop"].forEach((evt) =>
-      dropEl.addEventListener(evt, (e) => {
-        e.preventDefault();
-        dropEl.classList.remove("mb-drop-active");
-      }),
-    );
-    dropEl.addEventListener("drop", async (e) => {
-      const file = e.dataTransfer?.files?.[0];
-      if (!file) return;
-      try {
-        const source = await file.text();
-        textarea.value = source;
-        submit(source);
-      } catch (err) {
-        showError(`文件读取失败:${err.message}`);
-      }
+    container.querySelectorAll(".mb-card").forEach((card) => {
+      const activate = async () => {
+        const file = card.dataset.example;
+        clearError();
+        try {
+          const res = await fetch(exampleSourceUrl(file));
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const source = await res.text();
+          textarea.value = source;
+          onLoad(source, "");
+        } catch (err) {
+          showError(
+            () => `${tr("m178")}${file}(${err.message}${tr("m179")}`,
+          );
+        }
+      };
+      card.addEventListener("click", activate);
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activate();
+        }
+      });
     });
+
+    if (dropEl) {
+      ["dragenter", "dragover"].forEach((evt) =>
+        dropEl.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropEl.classList.add("mb-drop-active");
+        }),
+      );
+      ["dragleave", "drop"].forEach((evt) =>
+        dropEl.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropEl.classList.remove("mb-drop-active");
+        }),
+      );
+      dropEl.addEventListener("drop", async (e) => {
+        const file = e.dataTransfer?.files?.[0];
+        if (!file) return;
+        try {
+          const source = await file.text();
+          textarea.value = source;
+          submit(source);
+        } catch (err) {
+          showError(() => `${tr("m180")}${err.message}`);
+        }
+      });
+    }
+
+    if (focused === savedTextarea) savedTextarea.focus();
+    else if (wasLoad) loadBtn.focus();
+    else if (cardFile) container.querySelector('[data-example="' + cardFile + '"]')?.focus();
   }
+  paint();
+  const offLocale = onLocaleChange(paint);
 
   return {
+    destroy() { destroyed = true; offLocale(); },
     setBootPhase(phase) {
+      currentBootPhase = phase;
       const existing = container.querySelector(".mb-boot");
       if (phase === "ready") {
         existing?.remove();
         return;
       }
-      const label = escapeHtml(BOOT_LABELS[phase] ?? phase);
+      const label = escapeHtml(bootLabels()[phase] ?? phase);
       if (existing) {
-        existing.querySelector("span:last-child").textContent = BOOT_LABELS[phase] ?? phase;
+        existing.querySelector("span:last-child").textContent = bootLabels()[phase] ?? phase;
         return;
       }
       const el = doc.createElement("div");

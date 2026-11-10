@@ -1,3 +1,4 @@
+import { tr, onLocaleChange, semanticText } from "../i18n.js";
 /**
  * Canvas 1a -- the main debugger view.
  *
@@ -44,7 +45,7 @@ const NON_EXEC = new Set(["unknown_opcode", "illegal"]);
 
 /* ---------------------------------------------------------- DOM utilities */
 
-function el(tag, attrs = {}, ...kids) {
+function createElement(tag, attrs = {}, ...kids) {
   const n = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (v == null || v === false) continue;
@@ -284,7 +285,7 @@ button.mb-tag{cursor:pointer}
 
 function ensureStyles(doc) {
   if (doc.getElementById("mb-debugger-css")) return;
-  doc.head.appendChild(el("style", { id: "mb-debugger-css", text: CSS }));
+  doc.head.appendChild(createElement("style", { id: "mb-debugger-css", text: CSS }));
 }
 
 /* ------------------------------------------------------------------ screen */
@@ -306,6 +307,28 @@ function ensureStyles(doc) {
  */
 export function mountDebugger(root, session = {}, options = {}) {
   ensureStyles(root.ownerDocument || document);
+
+  const bindings = [];
+  // Only UI expressions explicitly marked in buildSkeleton are bound. Raw
+  // program output, file names, breakpoint conditions and errors bypass this.
+  function el(tag, attrs = {}, ...kids) {
+    const resolved = { ...attrs };
+    const pending = [];
+    for (const [key, value] of Object.entries(attrs)) {
+      if (typeof value === 'function' && !key.startsWith('on')) {
+        resolved[key] = value();
+        pending.push((node) => { if (key === 'text') node.textContent = value(); else node.setAttribute(key, value()); });
+      }
+    }
+    const node = createElement(tag, resolved, ...kids.map(kid => {
+      if (typeof kid !== 'function') return kid;
+      const text = document.createTextNode(kid());
+      bindings.push(() => { text.textContent = kid(); });
+      return text;
+    }));
+    for (const update of pending) bindings.push(() => update(node));
+    return node;
+  }
 
   const state = {
     snap: null,
@@ -376,14 +399,14 @@ export function mountDebugger(root, session = {}, options = {}) {
 
     // ---- top bar -------------------------------------------------------
     o.file = el("div", { class: "mb-file" });
-    o.btnBack = el("button", { class: "mb-btn", title: "回退一步 (←)" }, "⏮ 回退");
-    o.btnStep = el("button", { class: "mb-btn", title: "单步执行 (→)" }, "⏭ 单步");
-    o.btnRun = el("button", { class: "mb-btn mb-primary", title: "继续 / 暂停 (F5)" }, "▶ 继续");
+    o.btnBack = el("button", { class: "mb-btn", title: () => (tr("m1")) }, () => (tr("m2")));
+    o.btnStep = el("button", { class: "mb-btn", title: () => (tr("m3")) }, () => (tr("m4")));
+    o.btnRun = el("button", { class: "mb-btn mb-primary", title: () => (tr("m5")) }, () => (tr("m6")));
     o.btnChunk = el("button", {
       class: "mb-btn mb-quiet",
-      title: "每个运行分块的步数。worker 在分块之间才检查停止请求，块越大越快、响应越钝。",
+      title: () => (tr("m7")),
     });
-    o.btnReset = el("button", { class: "mb-btn mb-quiet", title: "重置到第 0 步" }, "⟲ 重置");
+    o.btnReset = el("button", { class: "mb-btn mb-quiet", title: () => (tr("m8")) }, () => (tr("m9")));
     o.stepNum = el("div", { class: "mb-step" });
     o.stepSub = el("div", { class: "mb-sub" });
     o.pill = el("div", { class: "mb-pill" });
@@ -405,29 +428,29 @@ export function mountDebugger(root, session = {}, options = {}) {
     o.dsmFoot = el("div", { class: "mb-pfoot" });
     const dsm = el("div", { class: "mb-panel" },
       el("div", { class: "mb-phead" },
-        el("div", { class: "mb-ptitle", text: "反汇编" }), o.dsmNote),
+        el("div", { class: "mb-ptitle", text: () => (tr("m10")) }), o.dsmNote),
       el("div", { class: "mb-dsm-cols" },
-        el("span"), el("span", { text: "地址" }), el("span", { text: "字符" }),
-        el("span", { text: "原值" }), el("span", { text: "助记符" }),
-        el("span", { text: "效果" })),
+        el("span"), el("span", { text: () => (tr("m11")) }), el("span", { text: () => (tr("m12")) }),
+        el("span", { text: () => (tr("m13")) }), el("span", { text: () => (tr("m14")) }),
+        el("span", { text: () => (tr("m15")) })),
       o.dsmList, o.dsmFoot);
 
     // ---- memory --------------------------------------------------------
     o.memRange = el("span", { class: "mb-tag" });
-    o.memFollow = el("button", { class: "mb-tag mb-on", title: "把窗口拉回 D 附近" });
+    o.memFollow = el("button", { class: "mb-tag mb-on", title: () => (tr("m16")) });
     o.memC = el("span", { class: "mb-tag" });
     o.rowLab = el("div", { class: "mb-rowlab" });
     o.grid = el("div", {
       class: "mb-grid", role: "grid",
-      "aria-label": "内存写入热力图",
+      "aria-label": () => (tr("m17")),
     });
     o.tip = el("div", { class: "mb-tip", hidden: true });
     o.peak = el("span", { class: "mb-lg-txt" });
     o.scaleBtn = el("button", {
       class: "mb-tag",
-      title: "热度归一化方式。线性 = heat / heat_max（契约字面读法）；"
-           + "对数 = log1p(heat)/log1p(heat_max)。真实程序里单格写入次数相差上千倍，"
-           + "线性会把除最热一格外的所有格子压成纯黑。",
+      title: () => (tr("m18")
+           + tr("m19")
+           + tr("m20")),
     });
     o.legendBar = el("div", { class: "mb-lg-bar" });
     o.selLine = el("div", { class: "mb-selline" });
@@ -435,21 +458,21 @@ export function mountDebugger(root, session = {}, options = {}) {
     const memWrap = el("div", { class: "mb-memwrap" }, o.rowLab, o.grid, o.tip);
     const mem = el("div", { class: "mb-panel" },
       el("div", { class: "mb-phead" },
-        el("div", { class: "mb-ptitle", text: "内存 · 写入热度" }),
+        el("div", { class: "mb-ptitle", text: () => (tr("m21")) }),
         el("div", { class: "mb-pnote", style: { display: "flex", gap: "8px", alignItems: "center" } },
           o.memRange, o.memFollow, o.memC)),
       memWrap,
       el("div", { class: "mb-legend" },
-        el("span", { class: "mb-lg-txt", text: "冷" }),
+        el("span", { class: "mb-lg-txt", text: () => (tr("m22")) }),
         o.legendBar,
         o.peak,
         o.scaleBtn,
         el("span", { class: "mb-chip" },
-          el("i", { style: { boxShadow: "0 0 0 2px var(--mb-dRing) inset" } }), "D 指针"),
+          el("i", { style: { boxShadow: "0 0 0 2px var(--mb-dRing) inset" } }), () => (tr("m23"))),
         el("span", { class: "mb-chip", style: { color: "var(--mb-acc)" } },
-          el("i", { style: { boxShadow: "0 0 0 2px var(--mb-acc) inset" } }), "C 指针"),
+          el("i", { style: { boxShadow: "0 0 0 2px var(--mb-acc) inset" } }), () => (tr("m24"))),
         el("span", { class: "mb-chip", style: { color: "var(--mb-wRing)" } },
-          el("i", { style: { boxShadow: "0 0 0 2px var(--mb-wRing) inset" } }), "本步写入")),
+          el("i", { style: { boxShadow: "0 0 0 2px var(--mb-wRing) inset" } }), () => (tr("m25")))),
       o.selLine);
 
     // ---- right column --------------------------------------------------
@@ -458,7 +481,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     o.explain = el("button", {
       class: "mb-ptitle",
       style: { color: "var(--mb-amb)", letterSpacing: "0", fontSize: "11px" },
-      text: "展开讲解 ↗",
+      text: () => (tr("m26")),
     });
     o.bpList = el("div", {
       style: { display: "flex", flexDirection: "column", gap: "7px",
@@ -467,21 +490,21 @@ export function mountDebugger(root, session = {}, options = {}) {
 
     const right = el("div", { class: "mb-right" },
       el("div", { class: "mb-card" },
-        el("div", { class: "mb-ptitle", style: { marginBottom: "10px" }, text: "寄存器" }),
+        el("div", { class: "mb-ptitle", style: { marginBottom: "10px" }, text: () => (tr("m27")) }),
         o.regs),
       el("div", { class: "mb-card" },
         el("div", { style: { display: "flex", justifyContent: "space-between",
                              alignItems: "center", marginBottom: "10px" } },
-          el("span", { class: "mb-ptitle", text: "下一步预演" }), o.explain),
+          el("span", { class: "mb-ptitle", text: () => (tr("m28")) }), o.explain),
         o.prevList),
       el("div", { class: "mb-card mb-grow" },
-        el("div", { class: "mb-ptitle", style: { marginBottom: "10px" }, text: "断点 · 监视点" }),
+        el("div", { class: "mb-ptitle", style: { marginBottom: "10px" }, text: () => (tr("m29")) }),
         o.bpList));
 
     // ---- timeline ------------------------------------------------------
     o.tlStat = el("div", { class: "mb-tl-stat" });
     o.tlHint = el("div", { class: "mb-tl-hint" });
-    o.ovLost = el("div", { class: "mb-ov-lost", title: "这段历史已被丢弃，不可回溯" });
+    o.ovLost = el("div", { class: "mb-ov-lost", title: () => (tr("m30")) });
     o.ovLive = el("div", { class: "mb-ov-live" });
     o.ovEdge = el("div", { class: "mb-ov-edge" });
     o.ovLab = el("div", { class: "mb-ov-lab" });
@@ -492,7 +515,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     o.zoomGhost = el("div", { class: "mb-zoom-ghost" });
     o.knob = el("div", {
       class: "mb-knob", role: "slider", tabindex: "0",
-      "aria-label": "时间线位置（仅可回溯区间）",
+      "aria-label": () => (tr("m31")),
     }, el("i"));
     o.zoom = el("div", { class: "mb-zoom" },
       el("div", { class: "mb-zoom-ticks" }), o.zoomFill, o.zoomGhost, o.knob);
@@ -501,7 +524,7 @@ export function mountDebugger(root, session = {}, options = {}) {
 
     const tl = el("div", { class: "mb-tl" },
       el("div", { class: "mb-tl-head" },
-        el("span", { class: "mb-ptitle", text: "时间线" }), o.tlStat, o.tlHint),
+        el("span", { class: "mb-ptitle", text: () => (tr("m32")) }), o.tlStat, o.tlHint),
       el("div", { class: "mb-ov" }, o.ovLost, o.ovLive, o.ovEdge, o.ovLab, o.ovCur, o.ovHead),
       el("div", { class: "mb-wedge" }, o.wedge),
       o.zoom, o.marks,
@@ -513,7 +536,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     const out = el("div", { class: "mb-out" },
       el("div", { style: { display: "flex", justifyContent: "space-between",
                            marginBottom: "8px" } },
-        el("span", { class: "mb-ptitle", text: "输出" }), o.outCount),
+        el("span", { class: "mb-ptitle", text: () => (tr("m33")) }), o.outCount),
       o.outBox);
 
     o.err = el("div", { class: "mb-err", hidden: true });
@@ -542,24 +565,24 @@ export function mountDebugger(root, session = {}, options = {}) {
   // ---- top bar ---------------------------------------------------------
   function renderBar(s) {
     const r = s.registers, tl = s.timeline;
-    ui.file.textContent = state.fileName || "(未命名)";
+    ui.file.textContent = state.fileName || tr("m34");
     ui.file.hidden = !state.fileName;
 
     const step = state.running && state.liveStep != null ? state.liveStep : r.step;
-    ui.stepNum.textContent = `步 ${fmt(step)}`;
+    ui.stepNum.textContent = `${tr("m35")}${fmt(step)}`;
 
     // The 10,000-cap is not a snapshot field; when history has saturated it is
     // exactly the width of `seekable`, and before that there is no cap to show.
     const cap = tl.seekable[0] > 0 ? tl.seekable[1] - tl.seekable[0] : null;
     ui.stepSub.textContent =
-      `历史 ${fmt(r.history_size)}${cap ? ` / ${fmt(cap)}` : ""}`
-      + ` · 输入 ${fmt(r.input_consumed)}/${fmt(r.input_total)}`;
+      `${tr("m36")}${fmt(r.history_size)}${cap ? ` / ${fmt(cap)}` : ""}`
+      + `${tr("m37")}${fmt(r.input_consumed)}/${fmt(r.input_total)}`;
 
     const { text, tone } = statusPill(s);
     ui.pill.textContent = text;
     ui.pill.className = `mb-pill${tone ? ` mb-${tone}` : ""}`;
 
-    ui.btnRun.textContent = state.running ? "⏸ 暂停" : "▶ 继续";
+    ui.btnRun.textContent = state.running ? tr("m38") : tr("m39");
     ui.btnChunk.textContent = `⏩ ×${fmt(state.chunk)}`;
     const dead = r.terminated;
     ui.btnStep.disabled = dead || state.running || typeof session.step !== "function";
@@ -571,29 +594,29 @@ export function mountDebugger(root, session = {}, options = {}) {
     ui.explain.disabled = typeof options.onExplain !== "function";
     ui.explain.style.opacity = ui.explain.disabled ? ".4" : "1";
     ui.explain.title = ui.explain.disabled
-      ? "教学视图（设计稿 1b）在 v1 范围之外，尚未构建"
-      : "打开教学视图";
+      ? tr("m40")
+      : tr("m41");
   }
 
   function statusPill(s) {
     const r = s.registers;
-    if (state.running) return { text: "▶ 运行中", tone: "live" };
-    if (r.terminated) return { text: "■ 已终止", tone: "calm" };
+    if (state.running) return { text: tr("m42"), tone: "live" };
+    if (r.terminated) return { text: tr("m43"), tone: "calm" };
     const reason = state.stopReason || r.stop_reason;
     if (reason === "breakpoint") {
       const bp = (s.breakpoints.breakpoints || []).find((b) => b.addr === r.c);
       return {
-        text: `⏸ 断点 @${pad5(r.c)}${bp ? ` · 第 ${fmt(bp.hit_count)} 次` : ""}`,
+        text: `${tr("m46")}${pad5(r.c)}${bp ? `${tr("m44")}${fmt(bp.hit_count)}${tr("m45")}` : ""}`,
         tone: "",
       };
     }
-    if (reason === "watchpoint") return { text: `⏸ 监视点命中`, tone: "" };
-    if (reason === "error") return { text: "⚠ 错误", tone: "" };
-    if (reason === "input_exhausted") return { text: "⏸ 输入耗尽", tone: "" };
+    if (reason === "watchpoint") return { text: `${tr("m47")}`, tone: "" };
+    if (reason === "error") return { text: tr("m48"), tone: "" };
+    if (reason === "input_exhausted") return { text: tr("m49"), tone: "" };
     // `stop_reason` is "running" whenever the debugger is not *stopped* for a
     // reason -- including after a plain step() -- so it is not evidence that
     // anything is executing. `state.running`, driven by run/stopped events, is.
-    const label = reason === "running" ? "已暂停" : (STOP_REASON_TEXT[reason] || "已暂停");
+    const label = reason === "running" ? tr("m50") : (semanticText(STOP_REASON_TEXT[reason]) || tr("m51"));
     return { text: `⏸ ${label}`, tone: "calm" };
   }
 
@@ -601,10 +624,10 @@ export function mountDebugger(root, session = {}, options = {}) {
   function renderDisasm(s) {
     const d = s.disasm, ops = opColors(state.theme);
     ui.dsmNote.textContent =
-      `${pad5(d.window[0])}–${pad5(d.window[1])} · 跟随 C ◉`;
+      `${pad5(d.window[0])}–${pad5(d.window[1])}${tr("m52")}`;
     // The contract gives DisasmView no scroll offset -- the window is always
     // centred on C -- so "跟随 C" is a statement of fact, not a toggle.
-    ui.dsmNote.title = "反汇编窗口恒以 C 为中心（ViewModel 未提供偏移量），无法脱离跟随";
+    ui.dsmNote.title = tr("m53");
 
     clear(ui.dsmList);
     for (const r of d.rows) {
@@ -615,15 +638,15 @@ export function mountDebugger(root, session = {}, options = {}) {
       });
       row.appendChild(el("button", {
         class: `mb-gut${r.has_breakpoint ? " mb-has" : ""}`,
-        title: r.has_breakpoint ? "移除断点" : "在此设置断点",
-        "aria-label": `${r.has_breakpoint ? "移除" : "设置"}断点 ${pad5(r.addr)}`,
+        title: r.has_breakpoint ? tr("m54") : tr("m55"),
+        "aria-label": `${r.has_breakpoint ? tr("m56") : tr("m57")}${tr("m58")}${pad5(r.addr)}`,
         text: r.is_current ? "▶" : (r.has_breakpoint ? "●" : ""),
         style: { color: r.has_breakpoint && !r.is_current ? "var(--mb-acc)" : "" },
         onclick: () => call("breakpoint", r.addr, "toggle"),
       }));
       row.appendChild(el("span", {
         class: "mb-dsm-addr", text: pad5(r.addr),
-        title: "双击：把内存窗口移到此地址",
+        title: tr("m59"),
         style: { color: r.is_current ? "var(--mb-tx)" : "var(--mb-faint)" },
         ondblclick: () => jumpMemory(r.addr),
       }));
@@ -643,8 +666,8 @@ export function mountDebugger(root, session = {}, options = {}) {
       }));
       row.appendChild(el("span", {
         class: "mb-dsm-fx",
-        text: EFFECT_TEXT[r.effect] || r.effect,
-        title: r.opcode == null ? "" : `opcode (${r.raw} + ${r.addr}) % 94 = ${r.opcode}`,
+        text: semanticText(EFFECT_TEXT[r.effect]) || r.effect,
+        title: (semanticText(EFFECT_TEXT[r.effect]) || r.effect) + (r.opcode == null ? "" : ` · opcode (${r.raw} + ${r.addr}) % 94 = ${r.opcode}`),
         style: { color: r.is_current ? "var(--mb-sub)" : "var(--mb-dim)" },
       }));
       ui.dsmList.appendChild(row);
@@ -653,13 +676,13 @@ export function mountDebugger(root, session = {}, options = {}) {
     const cur = d.rows.find((r) => r.is_current);
     clear(ui.dsmFoot);
     ui.dsmFoot.append(
-      "点击行首打点断点 · 双击地址跳到内存 · ",
+      tr("m60"),
       el("span", {
         style: { color: "var(--mb-amb)" },
         text: cur && s.teaching.encrypt
-          ? `${JSON.stringify(cur.char)}+${s.teaching.encrypt.index} 执行后改写为 `
+          ? `${JSON.stringify(cur.char)}+${s.teaching.encrypt.index}${tr("m61")}`
             + `${JSON.stringify(s.teaching.encrypt.new_char)}`
-          : "当前指令不触发加密改写",
+          : tr("m62"),
       }));
   }
 
@@ -679,11 +702,11 @@ export function mountDebugger(root, session = {}, options = {}) {
 
     ui.memRange.textContent = `${pad5(m.start)}–${pad5(end)}`;
     ui.memFollow.textContent = m.offset === 0
-      ? "跟随 D" : `偏移 ${m.offset > 0 ? "+" : ""}${fmt(m.offset)}`;
+      ? tr("m63") : `${tr("m64")}${m.offset > 0 ? "+" : ""}${fmt(m.offset)}`;
     ui.memFollow.classList.toggle("mb-on", m.offset === 0);
     ui.memFollow.onclick = () => { state.memOffset = 0; reSnapshot(); };
-    ui.memC.textContent = m.c < m.start ? `C=${pad5(m.c)} 窗外 ↖`
-      : m.c > end ? `C=${pad5(m.c)} 窗外 ↘` : `C=${pad5(m.c)} 窗内`;
+    ui.memC.textContent = m.c < m.start ? `C=${pad5(m.c)}${tr("m65")}`
+      : m.c > end ? `C=${pad5(m.c)}${tr("m66")}` : `C=${pad5(m.c)}${tr("m67")}`;
 
     clear(ui.rowLab);
     for (let r = 0; r < rows; r++) {
@@ -707,7 +730,7 @@ export function mountDebugger(root, session = {}, options = {}) {
         class: `mb-cell${state.selected === c.addr ? " mb-sel" : ""}`,
         role: "gridcell", tabindex: "-1",
         "data-addr": c.addr,
-        "aria-label": `mem[${c.addr}] = ${c.value}，写入 ${c.heat} 次`,
+        "aria-label": `mem[${c.addr}] = ${c.value}${tr("m68")}${c.heat}${tr("m69")}`,
         text: c.is_d ? "D" : (c.is_c ? "C" : ""),
         style: {
           background: heatColor(t, state.palette),
@@ -720,8 +743,8 @@ export function mountDebugger(root, session = {}, options = {}) {
     }
     renderSelLine(s);
 
-    ui.peak.textContent = `热 · 峰值 ${fmt(m.heat_max)} 次`;
-    ui.scaleBtn.textContent = state.heatScale === "log" ? "对数刻度" : "线性刻度";
+    ui.peak.textContent = `${tr("m70")}${fmt(m.heat_max)}${tr("m71")}`;
+    ui.scaleBtn.textContent = state.heatScale === "log" ? tr("m72") : tr("m73");
     ui.scaleBtn.onclick = () => {
       state.heatScale = state.heatScale === "log" ? "linear" : "log";
       if (state.snap) renderMemory(state.snap);
@@ -741,25 +764,25 @@ export function mountDebugger(root, session = {}, options = {}) {
     if (!c) {
       ui.selLine.appendChild(el("span", {
         style: { color: "var(--mb-dim)", fontSize: "11px" },
-        text: "点击任一格固定选中 · ⇧点击设/撤监视点 · 滚轮上下翻页",
+        text: tr("m74"),
       }));
       return;
     }
     const wp = (s.breakpoints.watchpoints || []).find((w) => w.addr === c.addr);
     ui.selLine.append(
-      el("span", { style: { color: "var(--mb-faint)", fontSize: "11px" }, text: "已选" }),
+      el("span", { style: { color: "var(--mb-faint)", fontSize: "11px" }, text: tr("m75") }),
       el("span", { style: { color: "var(--mb-tx)" }, text: `mem[${c.addr}]` }),
       el("span", { style: { color: "var(--mb-mut)" }, text: `= ${fmt(c.value)}` }),
       el("span", { style: { color: "var(--mb-dim)" }, text: charNote(c) }),
-      el("span", { style: { color: "var(--mb-amb)" }, text: `写入 ${fmt(c.heat)} 次` }),
-      wp ? el("span", { style: { color: "var(--mb-grn)" }, text: "◈ 已布设监视点" }) : null,
+      el("span", { style: { color: "var(--mb-amb)" }, text: `${tr("m76")}${fmt(c.heat)}${tr("m77")}` }),
+      wp ? el("span", { style: { color: "var(--mb-grn)" }, text: tr("m78") }) : null,
       el("span", {
         style: { marginLeft: "auto", color: c.is_d ? "var(--mb-cyn)" : "var(--mb-dim)" },
-        text: c.is_d ? "= D" : `距 D ${c.addr - m.d >= 0 ? "+" : ""}${fmt(c.addr - m.d)}`,
+        text: c.is_d ? "= D" : `${tr("m79")}${c.addr - m.d >= 0 ? "+" : ""}${fmt(c.addr - m.d)}`,
       }));
   }
 
-  const charNote = (c) => (c.char === "." ? "不可打印" : `${JSON.stringify(c.char)} 可打印`);
+  const charNote = (c) => (c.char === "." ? tr("m80") : `${JSON.stringify(c.char)}${tr("m81")}`);
 
   function showTip(addr, cellEl) {
     const s = state.snap, c = cellAt(addr);
@@ -769,23 +792,23 @@ export function mountDebugger(root, session = {}, options = {}) {
     ui.tip.append(
       el("h4", { text: `mem[${c.addr}]` }),
       el("dl", {},
-        el("dt", { text: "值" }),
+        el("dt", { text: tr("m82") }),
         el("dd", { text: `${fmt(c.value)} · ${charNote(c)}` }),
-        el("dt", { text: "写入" }),
-        el("dd", { style: { color: "var(--mb-amb)" }, text: `${fmt(c.heat)} 次` }),
-        el("dt", { text: "距 D" }),
+        el("dt", { text: tr("m83") }),
+        el("dd", { style: { color: "var(--mb-amb)" }, text: `${fmt(c.heat)}${tr("m84")}` }),
+        el("dt", { text: tr("m85") }),
         el("dd", {
           style: { color: "var(--mb-cyn)" },
           text: `${c.addr - s.memory.d >= 0 ? "+" : ""}${fmt(c.addr - s.memory.d)}`,
         }),
-        el("dt", { text: "监视" }),
+        el("dt", { text: tr("m86") }),
         el("dd", {
           style: { color: wp ? "var(--mb-grn)" : "var(--mb-dim)" },
           text: wp
-            ? `✓ wp 已布设${wp.last_value == null ? "" : ` · 上次 ${fmt(wp.last_value)}`}`
+            ? `${tr("m88")}${wp.last_value == null ? "" : `${tr("m87")}${fmt(wp.last_value)}`}`
             : "—",
         })),
-      el("div", { class: "mb-tipfoot", text: "点击固定 · ⇧点击设监视点" }));
+      el("div", { class: "mb-tipfoot", text: tr("m89") }));
 
     const wrap = ui.tip.parentElement.getBoundingClientRect();
     const box = cellEl.getBoundingClientRect();
@@ -808,12 +831,12 @@ export function mountDebugger(root, session = {}, options = {}) {
     const sym = r.a_char_kind === "printable"
       ? JSON.stringify(r.a_char_symbol) : r.a_char_symbol;
     const aSub = r.a_char_kind === "other" || !r.a_char_symbol
-      ? (CHAR_KIND_TEXT[r.a_char_kind] || "")
-      : `ASCII ${sym} ${CHAR_KIND_TEXT[r.a_char_kind] || ""}`;
+      ? (semanticText(CHAR_KIND_TEXT[r.a_char_kind]) || "")
+      : `ASCII ${sym} ${semanticText(CHAR_KIND_TEXT[r.a_char_kind]) || ""}`;
     const rows = [
       { n: "A", color: "var(--mb-amb)", v: r.a, next: r.next_a, sub: aSub },
-      { n: "C", color: "var(--mb-acc)", v: r.c, next: r.next_c, sub: "代码指针" },
-      { n: "D", color: "var(--mb-cyn)", v: r.d, next: r.next_d, sub: "数据指针" },
+      { n: "C", color: "var(--mb-acc)", v: r.c, next: r.next_c, sub: tr("m90") },
+      { n: "D", color: "var(--mb-cyn)", v: r.d, next: r.next_d, sub: tr("m91") },
     ];
     clear(ui.regs);
     for (const row of rows) {
@@ -823,7 +846,7 @@ export function mountDebugger(root, session = {}, options = {}) {
         el("span", {
           class: "mb-next",
           text: `→ ${row.next == null ? "—" : fmt(row.next)}`,
-          title: row.next == null ? "下一步不改变该寄存器，或程序已终止" : "",
+          title: row.next == null ? tr("m92") : "",
         }),
         el("span", { class: "mb-rsub", text: row.sub })));
     }
@@ -836,7 +859,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     if (!t.effects || !t.effects.length) {
       ui.prevList.appendChild(el("div", {
         class: "mb-empty",
-        text: t.terminated ? "程序已终止，没有下一步。" : "下一步没有可展示的副作用。",
+        text: t.terminated ? tr("m93") : tr("m94"),
       }));
       return;
     }
@@ -868,7 +891,7 @@ export function mountDebugger(root, session = {}, options = {}) {
       };
     }
     const was = /^was (.+)$/.exec(e.detail || "");
-    return { text: e.text, detail: was ? `原 ${was[1]}` : e.detail };
+    return { text: e.text, detail: was ? `${tr("m95")}${was[1]}` : e.detail };
   }
 
   // ---- breakpoints / watchpoints ---------------------------------------
@@ -879,7 +902,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     if (!bps.length && !wps.length) {
       ui.bpList.appendChild(el("div", {
         class: "mb-empty",
-        text: "尚未设置。点击反汇编行首打断点，⇧点击内存格设监视点。",
+        text: tr("m96"),
       }));
       return;
     }
@@ -905,27 +928,27 @@ export function mountDebugger(root, session = {}, options = {}) {
             ? (bp.temporary ? "var(--mb-amb)" : "var(--mb-acc)") : "var(--mb-mut)",
             flex: "none" },
           text: bp.temporary ? "◌" : "●",
-          title: bp.enabled ? "停用" : "启用",
+          title: bp.enabled ? tr("m97") : tr("m98"),
           onclick: () => call("breakpoint", bp.addr, bp.enabled ? "disable" : "enable"),
         }),
         el("button", {
           style: { color: "var(--mb-tx)", flex: "none" },
           text: pad5(bp.addr),
-          title: "把内存窗口移到此地址",
+          title: tr("m99"),
           onclick: () => jumpMemory(bp.addr),
         }),
         el("span", { style: { color: "var(--mb-faint)" }, text: bp.mnemonic }),
         el("span", {
           class: "mb-bptag",
-          text: bp.condition_text || (bp.temporary ? "临时" : ""),
-          title: bp.condition_text ? "命中条件" : "",
+          text: bp.condition_text || (bp.temporary ? tr("m100") : ""),
+          title: bp.condition_text ? tr("m101") : "",
         }),
         el("span", {
           class: "mb-bphits",
-          text: bp.enabled ? `命中 ${fmt(bp.hit_count)}` : "已停用",
+          text: bp.enabled ? `${tr("m102")}${fmt(bp.hit_count)}` : tr("m103"),
         }),
         el("button", {
-          class: "mb-x", text: "✕", title: "删除断点",
+          class: "mb-x", text: "✕", title: tr("m104"),
           onclick: () => call("breakpoint", bp.addr, "toggle"),
         }));
       ui.bpList.appendChild(row);
@@ -937,16 +960,16 @@ export function mountDebugger(root, session = {}, options = {}) {
         el("span", { style: { color: "var(--mb-grn)", flex: "none" }, text: "◈" }),
         el("button", {
           style: { color: "var(--mb-tx)", flex: "none" }, text: pad5(wp.addr),
-          title: "把内存窗口移到此地址", onclick: () => jumpMemory(wp.addr),
+          title: tr("m105"), onclick: () => jumpMemory(wp.addr),
         }),
         el("span", { style: { color: "var(--mb-faint)" }, text: "watch" }),
         el("span", {
           class: "mb-bptag",
-          text: wp.last_value == null ? "" : `上次 ${fmt(wp.last_value)}`,
+          text: wp.last_value == null ? "" : `${tr("m106")}${fmt(wp.last_value)}`,
         }),
-        el("span", { class: "mb-bphits", text: wp.enabled ? "启用" : "已停用" }),
+        el("span", { class: "mb-bphits", text: wp.enabled ? tr("m107") : tr("m108") }),
         el("button", {
-          class: "mb-x", text: "✕", title: "删除监视点",
+          class: "mb-x", text: "✕", title: tr("m109"),
           onclick: () => call("watchpoint", wp.addr, "toggle"),
         })));
     }
@@ -979,11 +1002,11 @@ export function mountDebugger(root, session = {}, options = {}) {
     const lost = lo > 0;
 
     ui.tlStat.textContent =
-      `全程 ${fmt(tl.max_reached)} 步 · 当前 ${fmt(cur)}`
-      + ` · 已回溯 ${fmt(Math.max(0, tl.max_reached - tl.current))}`;
+      `${tr("m110")}${fmt(tl.max_reached)}${tr("m111")}${fmt(cur)}`
+      + `${tr("m112")}${fmt(Math.max(0, tl.max_reached - tl.current))}`;
     ui.tlHint.textContent = lost
-      ? "灰色区域历史已丢弃，不可拖拽 · 需要更早状态请重置后重新运行"
-      : "全部历史仍在窗口内，整条时间线均可拖拽";
+      ? tr("m113")
+      : tr("m114");
     ui.tlHint.style.color = lost ? "var(--mb-amb)" : "var(--mb-dim)";
 
     const pct = (v) => `${clamp((v / max) * 100, 0, 100)}%`;
@@ -1001,7 +1024,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     ui.ovLab.style.textAlign = roomy ? "right" : "left";
     ui.ovLab.style.paddingRight = roomy ? "5px" : "0";
     ui.ovLab.textContent = lost
-      ? (roomy ? `历史已丢弃 · 不可达 · ${fmt(lo)} 起可回溯 ▶` : `◀ 不可达 · ${fmt(lo)} 起`)
+      ? (roomy ? `${tr("m115")}${fmt(lo)}${tr("m116")}` : `${tr("m117")}${fmt(lo)}${tr("m118")}`)
       : "";
     ui.ovLab.hidden = !lost;
     ui.ovCur.style.left = pct(cur);
@@ -1017,12 +1040,12 @@ export function mountDebugger(root, session = {}, options = {}) {
     ui.knob.setAttribute("aria-valuemin", String(lo));
     ui.knob.setAttribute("aria-valuemax", String(hi));
     ui.knob.setAttribute("aria-valuenow", String(cur));
-    ui.knob.setAttribute("aria-valuetext", `第 ${fmt(cur)} 步`);
+    ui.knob.setAttribute("aria-valuetext", `${tr("m119")}${fmt(cur)}${tr("m120")}`);
     const seekable = span > 0 && typeof session.seek === "function" && !state.running;
     ui.zoom.classList.toggle("mb-dead", !seekable);
     ui.zoom.title = seekable
-      ? `可拖拽区间 ${fmt(lo)} – ${fmt(hi)}（最近 ${fmt(span)} 步）`
-      : (state.running ? "运行中不可拖拽" : "尚无可回溯的历史");
+      ? `${tr("m121")}${fmt(lo)} – ${fmt(hi)}${tr("m122")}${fmt(span)}${tr("m123")}`
+      : (state.running ? tr("m124") : tr("m125"));
 
     // marks carry an ADDRESS, not a step (§3.5), so they cannot be positioned
     // on a time axis. Listed as address chips instead of invented positions.
@@ -1030,15 +1053,15 @@ export function mountDebugger(root, session = {}, options = {}) {
     if (tl.marks && tl.marks.length) {
       ui.marks.appendChild(el("span", {
         style: { fontSize: "10.5px", color: "var(--mb-dim)" },
-        title: "ViewModel 的 marks 带的是内存地址而非步数，无法投影到时间轴上，故在此列出",
-        text: "标记(地址)",
+        title: tr("m126"),
+        text: tr("m127"),
       }));
       for (const mk of tl.marks) {
         ui.marks.appendChild(el("button", {
           class: "mb-mk",
           style: { color: mk.kind === "watchpoint" ? "var(--mb-grn)" : "var(--mb-acc)" },
           text: `${mk.kind === "watchpoint" ? "◈" : "●"} ${pad5(mk.addr)}`,
-          title: "把内存窗口移到此地址",
+          title: tr("m128"),
           onclick: () => jumpMemory(mk.addr),
         }));
       }
@@ -1047,11 +1070,11 @@ export function mountDebugger(root, session = {}, options = {}) {
     clear(ui.tlA); clear(ui.tlB); clear(ui.tlC);
     ui.tlA.append(fmt(lo), el("span", {
       style: { color: lost ? "var(--mb-amb)" : "var(--mb-ghost)" },
-      text: lost ? ` · 可回溯区起点(最近 ${fmt(span)} 步)` : " · 全程可回溯",
+      text: lost ? `${tr("m129")}${fmt(span)}${tr("m130")}` : tr("m131"),
     }));
     ui.tlB.style.color = "var(--mb-mut)";
     ui.tlB.textContent = `▲ ${fmt(cur)}`;
-    ui.tlC.textContent = `${fmt(tl.max_reached)} · 最新 ▶`;
+    ui.tlC.textContent = `${fmt(tl.max_reached)}${tr("m132")}`;
   }
 
   function stepAtPointer(ev) {
@@ -1153,7 +1176,7 @@ export function mountDebugger(root, session = {}, options = {}) {
   on(ui.zoom, "pointercancel", endDrag);
   on(ui.ovLost, "click", (ev) => {
     ev.stopPropagation();
-    showError("这段历史已被丢弃（后端只保留最近 10,000 步），无法回溯到这里。", "info");
+    showError(() => tr("m133"), "info");
   });
   on(ui.knob, "keydown", (ev) => {
     const s = state.snap;
@@ -1188,7 +1211,10 @@ export function mountDebugger(root, session = {}, options = {}) {
    * testing it against "error" silently downgraded every real failure to a
    * calm blue notice.
    */
+  let errorMessage = null;
+  let errorSeverity = "error";
   function showError(message, severity = "error") {
+    errorMessage = message; errorSeverity = severity;
     clear(ui.err);
     ui.err.hidden = false;
     ui.err.style.background = severity === "error"
@@ -1197,9 +1223,9 @@ export function mountDebugger(root, session = {}, options = {}) {
     ui.err.style.borderColor = severity === "error" ? "#8c2620" : "var(--mb-amb)";
     ui.err.append(
       el("span", { text: severity === "error" ? "⚠" : "ℹ" }),
-      el("span", { text: message }),
+      el("span", { text: typeof message === "function" ? message() : message }),
       el("button", {
-        style: { marginLeft: "auto", color: "inherit" }, text: "✕",
+        style: { marginLeft: "auto", color: "inherit" }, text: "✕", 'aria-label': document.documentElement.lang === 'en' ? 'Dismiss message' : '关闭消息',
         onclick: () => { ui.err.hidden = true; },
       }));
   }
@@ -1218,7 +1244,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     if (!Number.isFinite(step)) return;
     state.running = true;
     state.liveStep = step;
-    if (!state.snap) { ui.stepNum.textContent = `步 ${fmt(step)}`; return; }
+    if (!state.snap) { ui.stepNum.textContent = `${tr("m134")}${fmt(step)}`; return; }
     // `progress` carries a step and nothing else, so only the step-derived
     // chrome moves. Repainting 288 heat cells per progress tick would be both
     // wrong (the data is stale) and expensive.
@@ -1242,7 +1268,7 @@ export function mountDebugger(root, session = {}, options = {}) {
     // the program, and rendering it as a red banner would alarm the reader
     // about nothing. Clear the run state so nothing hangs, and say nothing.
     if (payload.kind !== "no_program") {
-      showError(payload.message || "未知错误", "error");
+      showError(payload.message || (() => tr("m135")), "error");
     }
     if (state.snap) render();
   }
@@ -1266,22 +1292,22 @@ export function mountDebugger(root, session = {}, options = {}) {
 
     clear(ui.outBox);
     if (text == null) {
-      ui.outCount.textContent = `${fmt(len)} 字符`;
+      ui.outCount.textContent = `${fmt(len)}${tr("m136")}`;
       ui.outBox.append(el("span", {
         style: { color: "var(--mb-dim)", fontSize: "12px",
                  fontFamily: "var(--mb-headFont)" },
         text: len
-          ? `快照未携带输出文本（只有 output_len = ${fmt(len)}）`
-          : "尚无输出",
+          ? `${tr("m137")}${fmt(len)}）`
+          : tr("m138"),
       }));
       return;
     }
 
     ui.outCount.textContent = r.output_truncated
-      ? `显示最后 ${fmt(text.length)} / 共 ${fmt(len)} 字符`
-      : `${fmt(len)} 字符`;
+      ? `${tr("m139")}${fmt(text.length)}${tr("m140")}${fmt(len)}${tr("m141")}`
+      : `${fmt(len)}${tr("m142")}`;
     ui.outCount.title = r.output_truncated
-      ? `更早的 ${fmt(len - text.length)} 个字符不在快照里` : "";
+      ? `${tr("m143")}${fmt(len - text.length)}${tr("m144")}` : "";
 
     // The truncation notice lives in the header, not in the box: the box
     // auto-scrolls to the newest character, which would park any leading
@@ -1292,7 +1318,23 @@ export function mountDebugger(root, session = {}, options = {}) {
 
   /* ---------------------------------------------------- session wiring */
 
-  const offs = [];
+  const offs = [onLocaleChange(() => {
+    for (const update of bindings) update();
+    // Dynamic panels read the current locale but never issue worker commands.
+    // Keep keyboard focus on the equivalent address control after repaint.
+    const active = document.activeElement;
+    const addr = active?.closest('[data-addr]')?.dataset.addr;
+    const wasGutter = active?.classList.contains('mb-gut');
+    render();
+    if (!ui.err.hidden) showError(errorMessage, errorSeverity);
+    if (addr != null && !active.isConnected) {
+      frame.querySelector('[data-addr="' + addr + '"]' + (wasGutter ? ' .mb-gut' : ''))?.focus();
+    }
+    if (state.hover != null) {
+      const cell = ui.grid.querySelector('[data-addr="' + state.hover + '"]');
+      if (cell) showTip(state.hover, cell);
+    }
+  })];
   if (typeof session.on === "function") {
     const sub = (name, fn) => {
       const off = session.on(name, fn);

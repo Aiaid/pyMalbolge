@@ -318,3 +318,37 @@ layout `build.mjs` produces.
 v1 is **original Malbolge only** (59,049 cells). Malbolge20's 3.48-billion-cell
 sparse memory needs its browser-heap behaviour measured before being promised;
 `load` rejects it rather than half-supporting it.
+
+## Interface language
+
+The **Language / 语言** control is available above both the launch screen and
+running debugger. Choose English or Simplified Chinese without restarting
+Pyodide or changing execution, breakpoints, memory selection, theme, input or
+output. Unsubmitted source remains in the same textarea. Program text,
+filenames, breakpoint conditions and backend diagnostics stay verbatim.
+
+Share `?lang=en` or `?lang=zh` on the demo URL to select a language. Startup
+uses a supported URL language, then the saved `pymalbolge.language` preference,
+then the first supported browser language, falling back to English. Changing
+the control also updates the URL without navigating, preserving other query
+parameters and the fragment. Only the language preference is saved; if browser
+storage or history access is blocked, switching still works for the session.
+
+`i18n.js` owns locale selection and subscriptions; `messages.js` holds UI-only
+English/Chinese text. Renderers escape HTML-bound text, leave runtime data
+untouched, and unsubscribe when destroyed. Locale repaint never sends worker
+commands. The worker protocol and Python package are unchanged.
+
+Run deterministic locale and DOM/state regressions with:
+
+```bash
+npm ci --prefix web --ignore-scripts
+npm test --prefix web
+uv run --no-sync pytest test/test_web_build.py test/test_web_stage.py -q
+```
+
+The DOM tests cover supported-language fallback, blocked storage, shareable
+URLs, catalog completeness, partially entered source, boot/error messages,
+paused/running/completed views, raw output/errors, and listener cleanup. They
+complement the real worker smoke test and browser acceptance, rather than
+claiming to measure browser layout or focus behavior.

@@ -60,6 +60,8 @@ jobs:
           npm ci --prefix web --ignore-scripts --no-audit --no-fund
       - name: Verify portable browser build and native packaging policy
         run: uv run --no-sync pytest test/test_web_build.py test/test_web_stage.py test/test_native_packaging.py -q
+      - name: Verify bilingual UI and state preservation
+        run: npm test --prefix web
       - name: Build portable wheel and browser assets
         run: node web/build.mjs --clean
       - name: Exercise the real Pyodide worker and bridge

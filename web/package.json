@@ -9,6 +9,10 @@
   "description": "Pyodide-hosted Malbolge debugger (web build)",
   "scripts": {
     "build": "node build.mjs",
-    "smoke": "node smoke.mjs"
+    "smoke": "node smoke.mjs",
+    "test": "node --test i18n.test.mjs"
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.15"
   }
 }
