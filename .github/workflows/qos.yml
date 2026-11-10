@@ -2,6 +2,7 @@ name: Python semantics and runtime quality
 
 on:
   push:
+    branches-ignore: ['codex/check-pypi-release-credential']
   pull_request:
   workflow_dispatch:
   workflow_call:
