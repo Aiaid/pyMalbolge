@@ -1,0 +1,518 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-10",
+  "status": "published_and_remote_install_verified",
+  "version": "1.2.0",
+  "pypi_url": "https://pypi.org/project/malbolge/1.2.0/",
+  "source_commit": "65c44bf7ee112f0df8c85b64b1c826787713492b",
+  "source_url": "https://github.com/Aiaid/pyMalbolge/commit/65c44bf7ee112f0df8c85b64b1c826787713492b",
+  "compiler_vm_baseline": "063a3c59efaa1de4545e59bd0a26ee68dfddf860",
+  "experimental_jit_lookahead_included": false,
+  "workflow": {
+    "id": 42782746293,
+    "attempt": 1,
+    "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293",
+    "status": "success",
+    "same_commit_quality_groups_passed": 7,
+    "pre_upload_install_input_groups_passed": 13,
+    "post_upload_install_input_groups_passed": 13
+  },
+  "distribution_scope": {
+    "native_wheels": 35,
+    "portable_wheels": 1,
+    "source_archives": 1,
+    "total": 37,
+    "cpython_abi": [
+      "3.9",
+      "3.10",
+      "3.11",
+      "3.12",
+      "3.13"
+    ],
+    "native_platforms": [
+      "Linux glibc x86_64",
+      "Linux glibc aarch64",
+      "Linux musl x86_64",
+      "Linux musl aarch64",
+      "Windows AMD64",
+      "macOS Intel",
+      "macOS ARM64"
+    ],
+    "python38": "Separate native source-wheel and portable compatibility checks; no CPython 3.8 manylinux release wheel."
+  },
+  "acceptance": {
+    "canonical_package_python_sources_match": true,
+    "canonical_license_texts_match": true,
+    "allowed_text_difference": "CRLF-to-LF normalization only; raw artifact hashes remain exact.",
+    "all_public_files_downloaded_and_hashes_verified": 37,
+    "public_description_matches_source": true,
+    "description_sha256": "54800581e3f2c4653b3caa05175097231a517409837477d16f76360cfd49f3da",
+    "no_private_research_or_optional_gpl_fixtures_in_sdist": true,
+    "release_manifest_sha256": "ff71fa58dae18dae041e39a856ed1030885133c543344bd3eed7d92130863cbc",
+    "bundle_zip_sha256": "93247d5cf7966e26237cbb9c7d1101ea72ad6d3d9f6053d8cbc06764b403c2a6"
+  },
+  "trusted_publishing": {
+    "provider": "GitHub",
+    "repository": "Aiaid/pyMalbolge",
+    "workflow": "pypi.yml",
+    "environment": "pypi",
+    "long_lived_production_token_used": false,
+    "publisher_identity_verified_via_pypi_integrity_api": true,
+    "portable_wheel_attestation_verification": {
+      "tool": "pypi-attestations",
+      "version": "0.0.31",
+      "repository": "https://github.com/Aiaid/pyMalbolge",
+      "result": "OK",
+      "file": "malbolge-1.2.0-py3-none-any.whl",
+      "provenance_url": "https://pypi.org/integrity/malbolge/1.2.0/malbolge-1.2.0-py3-none-any.whl/provenance"
+    }
+  },
+  "platform_limits": {
+    "macos_arm64": {
+      "deployment_target": "15.0",
+      "wheel_tag_minimum": "15.0",
+      "mach_o_minimum": "15.0.0",
+      "host_os_tested": "15.8.2",
+      "exact_15_0_execution_tested": false,
+      "hosted_jit_available": false,
+      "thread_local_write_protection_supported": false,
+      "unavailable_jit_explicitly_rejected": true
+    },
+    "linux_arm64": {
+      "real_nop_jit_execution_verified_for_native_wheels": 10
+    },
+    "jit_policy": "Explicit experimental engine; native remains automatic default when available. No general performance improvement is claimed. Device tests against rc2 are separate evidence, not final-package device acceptance."
+  },
+  "remote_install_input_matrix": [
+    {
+      "label": "linux-py38-pure",
+      "job_id": 129719823778,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823778",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "linux-py310-ir",
+      "job_id": 129719823777,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823777",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "linux-py312-native",
+      "job_id": 129719824114,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719824114",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "linux-py313-pure",
+      "job_id": 129719823760,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823760",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "linux-arm64-pure",
+      "job_id": 129719823799,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823799",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "macos-arm64-pure",
+      "job_id": 129719823765,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823765",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "macos-intel-pure",
+      "job_id": 129719823838,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823838",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "windows-pure",
+      "job_id": 129719823824,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823824",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "linux-arm64-native",
+      "job_id": 129719823796,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823796",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "macos-arm64-native",
+      "job_id": 129719823847,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823847",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "macos-intel-native",
+      "job_id": 129719823823,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823823",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "windows-native",
+      "job_id": 129719823901,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823901",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    },
+    {
+      "label": "linux-source-native",
+      "job_id": 129719823786,
+      "status": "passed",
+      "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293/job/129719823786",
+      "required_checks": [
+        "Download and install exact hashed distribution from PyPI",
+        "Verify installed compiler, runtime and exact package identity",
+        "Verify VM memory, byte I/O and native contracts",
+        "Check fixed byte inputs, consumption and bounded recursion",
+        "Complete job"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "bytes": 249235,
+      "file": "malbolge-1.2.0-cp310-cp310-macosx_10_9_x86_64.whl",
+      "sha256": "4e9ee5232f1ab5399253e7bcf9f73df4fe3cb6beacf2de94733e86bcadb6e5bd",
+      "url": "https://files.pythonhosted.org/packages/f1/9e/3e35030d158883c1951962c5b853db2724fca02ada1fc59afd5b456523d0/malbolge-1.2.0-cp310-cp310-macosx_10_9_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:07.529750Z"
+    },
+    {
+      "bytes": 252593,
+      "file": "malbolge-1.2.0-cp310-cp310-macosx_15_0_arm64.whl",
+      "sha256": "30611798a152847b3a5f5868be919ae019e828ee0f1d947cfbc93c7bf8a75300",
+      "url": "https://files.pythonhosted.org/packages/6d/09/b48c185a06fca8978d185b65efe783ecaedd9787c6a670f8a9ec11eb2b7f/malbolge-1.2.0-cp310-cp310-macosx_15_0_arm64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:08.945340Z"
+    },
+    {
+      "bytes": 293459,
+      "file": "malbolge-1.2.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "7a45a83c131dbec2c01341f51817ece4aee4e7253cd3a930b8e452e4ff835199",
+      "url": "https://files.pythonhosted.org/packages/5a/f1/4559725091d931832dea3d235eb0848f0ca8fdb778a197e7c40c3ac77004/malbolge-1.2.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:10.479280Z"
+    },
+    {
+      "bytes": 287542,
+      "file": "malbolge-1.2.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "1a2e186c17adabafd6175bb7017510ed24c3e87984d174b3aaa986101ca79250",
+      "url": "https://files.pythonhosted.org/packages/9b/3a/9d2eceeeaec1f9d4f421666f132e9855dfcaaee569b8892d6c377a50779b/malbolge-1.2.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:11.945220Z"
+    },
+    {
+      "bytes": 291671,
+      "file": "malbolge-1.2.0-cp310-cp310-musllinux_1_2_aarch64.whl",
+      "sha256": "d15e41265ab12e1dbc5798e6f943845806a4972df6239c0aa0b8bb8bb4b0d10c",
+      "url": "https://files.pythonhosted.org/packages/fd/c2/aef13b8d04643a4a4e643feb5cc4b1812ab940b54b99a93fc85a9e426f5f/malbolge-1.2.0-cp310-cp310-musllinux_1_2_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:13.446046Z"
+    },
+    {
+      "bytes": 286531,
+      "file": "malbolge-1.2.0-cp310-cp310-musllinux_1_2_x86_64.whl",
+      "sha256": "9127852b5335653f0f08c6842854897d138202411f86aab30e46c4ededf10fab",
+      "url": "https://files.pythonhosted.org/packages/b4/d1/a424859a142422dedaf3d14c764207421de7c274df2d2f398a1b8f2e9348/malbolge-1.2.0-cp310-cp310-musllinux_1_2_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:14.693736Z"
+    },
+    {
+      "bytes": 253162,
+      "file": "malbolge-1.2.0-cp310-cp310-win_amd64.whl",
+      "sha256": "47224b82c570954733188921fe9a5fe41368c14c1a41f5f495cc8acef64651f3",
+      "url": "https://files.pythonhosted.org/packages/6a/f2/daaa06a9e8d4d1342e3e4ea90dbd5ec7fca61ce95678d7388b786c97ac7b/malbolge-1.2.0-cp310-cp310-win_amd64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:16.192642Z"
+    },
+    {
+      "bytes": 249235,
+      "file": "malbolge-1.2.0-cp311-cp311-macosx_10_9_x86_64.whl",
+      "sha256": "09ea7301b03833863d2509ecdc115b4f07ae5b57c1e970182c4acc3134725400",
+      "url": "https://files.pythonhosted.org/packages/0d/33/dfe8fd27549dc793978abac54543117554c2621d21e952fbf37060fe4101/malbolge-1.2.0-cp311-cp311-macosx_10_9_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:17.434374Z"
+    },
+    {
+      "bytes": 252596,
+      "file": "malbolge-1.2.0-cp311-cp311-macosx_15_0_arm64.whl",
+      "sha256": "b9db482c821430031fb978c90bacd76f59bbb4d979f1cb935664521f4b678d9f",
+      "url": "https://files.pythonhosted.org/packages/37/3b/2caea08db05db05f4b3972d307f3d38789942fe45d1dce9ff35196bcc3f7/malbolge-1.2.0-cp311-cp311-macosx_15_0_arm64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:18.727476Z"
+    },
+    {
+      "bytes": 294183,
+      "file": "malbolge-1.2.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "c04df5a5abf392248373065dd9e22865429a7515d3d7d75787b9b0c44a11d5eb",
+      "url": "https://files.pythonhosted.org/packages/d0/0c/ffbc15846560c5c2e133e2f43b034b71be26bdf1846a9ed2addf24d5c5dd/malbolge-1.2.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:20.065373Z"
+    },
+    {
+      "bytes": 288260,
+      "file": "malbolge-1.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "ea9bfc56db5d209df0432a4e426adbe83923b0cbc8cb59d8bb34d35d964e2413",
+      "url": "https://files.pythonhosted.org/packages/2f/82/882c128e91313bba7b145be37b6b46db3a448de4be574245b0d3de49887b/malbolge-1.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:21.302554Z"
+    },
+    {
+      "bytes": 292389,
+      "file": "malbolge-1.2.0-cp311-cp311-musllinux_1_2_aarch64.whl",
+      "sha256": "7266629385669f771610ce8773669c47abe3256dd172dd0034422cc0b96fcf0b",
+      "url": "https://files.pythonhosted.org/packages/04/94/cc216e58c023275f022116a1364bf44145d27fd0f2dab73b9aa61670f136/malbolge-1.2.0-cp311-cp311-musllinux_1_2_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:22.517139Z"
+    },
+    {
+      "bytes": 287217,
+      "file": "malbolge-1.2.0-cp311-cp311-musllinux_1_2_x86_64.whl",
+      "sha256": "a348b45426827bd6c1d7548d26770fbd0b341da3d2c78480236ebb13d2653b4d",
+      "url": "https://files.pythonhosted.org/packages/8f/01/d893bab107a2b207044f8e0be5691bd2e8d7cdeddf2a27aae31f41c65208/malbolge-1.2.0-cp311-cp311-musllinux_1_2_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:23.809841Z"
+    },
+    {
+      "bytes": 253163,
+      "file": "malbolge-1.2.0-cp311-cp311-win_amd64.whl",
+      "sha256": "69bd8191e71812ed56b7dd04b9613ee2120bc635fc1150c309daeb1d6d2a2fbd",
+      "url": "https://files.pythonhosted.org/packages/d9/9e/ac5367e3381412ccbfcbf0898eadcd9738a3e24e338e02946405808e7e44/malbolge-1.2.0-cp311-cp311-win_amd64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:25.152194Z"
+    },
+    {
+      "bytes": 249355,
+      "file": "malbolge-1.2.0-cp312-cp312-macosx_10_13_x86_64.whl",
+      "sha256": "524939ca58fd87139b232b33ea90c784502ebcc7e82817e2ec9e393de577e408",
+      "url": "https://files.pythonhosted.org/packages/98/35/4d9153d5a57ca4d1eed0cbe2b0a28c9b77dd34d98222d15e758153657134/malbolge-1.2.0-cp312-cp312-macosx_10_13_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:26.622501Z"
+    },
+    {
+      "bytes": 252640,
+      "file": "malbolge-1.2.0-cp312-cp312-macosx_15_0_arm64.whl",
+      "sha256": "586433a5504b45347f0b35f1f4afef344a8bd3aad1a04ad6234fae082eb39b77",
+      "url": "https://files.pythonhosted.org/packages/fb/c5/15af9efea8e3a846b1a1bc9ececac4c359b7b2f6fd7b53bd3cab3a71ee4b/malbolge-1.2.0-cp312-cp312-macosx_15_0_arm64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:27.979281Z"
+    },
+    {
+      "bytes": 295077,
+      "file": "malbolge-1.2.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "3e27ed73fe29042cbf154d0f858611fb11db366a45c0fd637906ba646fbfc375",
+      "url": "https://files.pythonhosted.org/packages/3c/67/999802caa5b427c014d93c43370f3b1ec4dac4708ae75942534c43a82fdd/malbolge-1.2.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:29.208231Z"
+    },
+    {
+      "bytes": 289079,
+      "file": "malbolge-1.2.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "827c85536d7ff26083eaac6f04da1e6b815d7c9ca00669cf8129a6250d126627",
+      "url": "https://files.pythonhosted.org/packages/92/39/0e5537e2c51ec7cff264742ce9512191d28c3bbd516dddc95f8684f979e7/malbolge-1.2.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:30.438532Z"
+    },
+    {
+      "bytes": 293395,
+      "file": "malbolge-1.2.0-cp312-cp312-musllinux_1_2_aarch64.whl",
+      "sha256": "e6f5879bc75e45e4de7c35ddab7035668f2522fd300f0a4c108ed1930210acbd",
+      "url": "https://files.pythonhosted.org/packages/7a/c7/0d90c65f25d7b29a8f69a277b8b8e9d9ede031bb41aecd001e07c40a96cc/malbolge-1.2.0-cp312-cp312-musllinux_1_2_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:31.750270Z"
+    },
+    {
+      "bytes": 288174,
+      "file": "malbolge-1.2.0-cp312-cp312-musllinux_1_2_x86_64.whl",
+      "sha256": "488c541a1d7ceab229a8a7bace3723e084c769b83705c173dd5a202f116e2a21",
+      "url": "https://files.pythonhosted.org/packages/14/28/e07884f6ef951127a08f89c3e51a7e6407081a0c064addfe932abe4a0b8b/malbolge-1.2.0-cp312-cp312-musllinux_1_2_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:33.035168Z"
+    },
+    {
+      "bytes": 253214,
+      "file": "malbolge-1.2.0-cp312-cp312-win_amd64.whl",
+      "sha256": "50f3def4bebf1cf817a101d8c2b88c9a16c2057284bf680afabf09029118d7bd",
+      "url": "https://files.pythonhosted.org/packages/79/aa/9721e8a7ab4494dfad09892dc325ca6b2d2d38aea4aa5db4d5c207963831/malbolge-1.2.0-cp312-cp312-win_amd64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:34.215002Z"
+    },
+    {
+      "bytes": 249345,
+      "file": "malbolge-1.2.0-cp313-cp313-macosx_10_13_x86_64.whl",
+      "sha256": "433ac392cb4b3e48b7f66df36c8a559562c46adbae86a84452bad75330164ce5",
+      "url": "https://files.pythonhosted.org/packages/e7/ba/5f9752b32143f56121804bed8e47bb900c8b6ff092db406f877117483c8f/malbolge-1.2.0-cp313-cp313-macosx_10_13_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:35.579577Z"
+    },
+    {
+      "bytes": 252621,
+      "file": "malbolge-1.2.0-cp313-cp313-macosx_15_0_arm64.whl",
+      "sha256": "8e3e8c90baff7df644014b5cf8cbec9310c51a938a1e24c105b6a10bd71a51fb",
+      "url": "https://files.pythonhosted.org/packages/e5/b6/032ad595085710cb8d1bcac80a19eff56354a3accbdf62943e1f2bf854f6/malbolge-1.2.0-cp313-cp313-macosx_15_0_arm64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:36.791756Z"
+    },
+    {
+      "bytes": 295109,
+      "file": "malbolge-1.2.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "aaa95a1667bd15654370044ac5bfd519f3eceebd43ca177e478ef097a207ac1a",
+      "url": "https://files.pythonhosted.org/packages/9b/0a/5f133005e0dc55dca740a4ada2163aefc68922a34a7a4fd97fc6e8a66a17/malbolge-1.2.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:38.126091Z"
+    },
+    {
+      "bytes": 289105,
+      "file": "malbolge-1.2.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "f26596a884b42811ef8c21df3426235923db17789958ebf4ebcf59685978ad67",
+      "url": "https://files.pythonhosted.org/packages/9f/c4/5a11679bf0a6744990ae2f2944c5bd84068abc8ad5b8f1b92111948e2b12/malbolge-1.2.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:39.383226Z"
+    },
+    {
+      "bytes": 293402,
+      "file": "malbolge-1.2.0-cp313-cp313-musllinux_1_2_aarch64.whl",
+      "sha256": "a7fded89a0d562d6b02a83962ee746801b841274d36c09748fd5413923d0191c",
+      "url": "https://files.pythonhosted.org/packages/11/6d/e1440ef919b8ac99224423983c7f5e28a6e2afa32247bff7a498acb3ea7e/malbolge-1.2.0-cp313-cp313-musllinux_1_2_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:40.645903Z"
+    },
+    {
+      "bytes": 288222,
+      "file": "malbolge-1.2.0-cp313-cp313-musllinux_1_2_x86_64.whl",
+      "sha256": "570749854f5eaa6ac7cbd6c3f2aee7e8026d4628312a9a32898fb39f5c6f0bb7",
+      "url": "https://files.pythonhosted.org/packages/36/fe/e8f5b3789c7d1da2447cee32a8bddbe96739dfa9da344c6955ebb9c3f7b7/malbolge-1.2.0-cp313-cp313-musllinux_1_2_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:42.060477Z"
+    },
+    {
+      "bytes": 253202,
+      "file": "malbolge-1.2.0-cp313-cp313-win_amd64.whl",
+      "sha256": "32414a8a65d8b539483d259258cf2e455db0aae3f43909469b3da0b6106dd741",
+      "url": "https://files.pythonhosted.org/packages/78/32/0250a7afb746abd8c6d45aa7c339250bacee20647e105081dab886d03d2b/malbolge-1.2.0-cp313-cp313-win_amd64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:43.239807Z"
+    },
+    {
+      "bytes": 249236,
+      "file": "malbolge-1.2.0-cp39-cp39-macosx_10_9_x86_64.whl",
+      "sha256": "1ea3babb8f85ba6f39fb843ac83e23f914c3ce7ffc349dad26426ca6fe2d059e",
+      "url": "https://files.pythonhosted.org/packages/b4/58/dfb56836f6addd8a362785b6e3dab2787cab4f6e235a44916c982729ae8c/malbolge-1.2.0-cp39-cp39-macosx_10_9_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:44.522563Z"
+    },
+    {
+      "bytes": 252588,
+      "file": "malbolge-1.2.0-cp39-cp39-macosx_15_0_arm64.whl",
+      "sha256": "0d886d4bd1ed0436bf513b1e8bac3a59a3ec272701f7fc8f2b3c7265aa0b4ab9",
+      "url": "https://files.pythonhosted.org/packages/d3/91/63248342e1338b527a6cde3785439dca7d1c6d50ad5c23a4f1ae4f3ba896/malbolge-1.2.0-cp39-cp39-macosx_15_0_arm64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:45.819273Z"
+    },
+    {
+      "bytes": 293329,
+      "file": "malbolge-1.2.0-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "139840eea9aef11c630e270500bcc206dc2ad87341e58a958c28c6fdd201aa69",
+      "url": "https://files.pythonhosted.org/packages/2c/8f/35bef848363489b9119bbbd3f188fcd39b275f9a17edc73063b804176c83/malbolge-1.2.0-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:47.411941Z"
+    },
+    {
+      "bytes": 287373,
+      "file": "malbolge-1.2.0-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "57338c5168b0222b38626ce441eaa79d876dffad10586be5d114644448c5dc51",
+      "url": "https://files.pythonhosted.org/packages/99/88/2be136fc4b6551b46b8b8624bd2afab30bbec9d16a262522cab28db1c4e0/malbolge-1.2.0-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:48.719164Z"
+    },
+    {
+      "bytes": 291522,
+      "file": "malbolge-1.2.0-cp39-cp39-musllinux_1_2_aarch64.whl",
+      "sha256": "c8bd520f4a7f94ab686b6b58dbe612190711bd6ca3bf5be2287609026cc4a9cc",
+      "url": "https://files.pythonhosted.org/packages/f3/1e/cc19612550eb2e882c4e923216daf6256b964adadef825d82e31463062b5/malbolge-1.2.0-cp39-cp39-musllinux_1_2_aarch64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:50.081784Z"
+    },
+    {
+      "bytes": 286383,
+      "file": "malbolge-1.2.0-cp39-cp39-musllinux_1_2_x86_64.whl",
+      "sha256": "172d0fa970c7d9f786f619a2b9a55b622bdf10f6ae0ed2716943f974e329ea9d",
+      "url": "https://files.pythonhosted.org/packages/53/8c/38dd6825d7feb2a452ee0ddc3650cc8e7f1ac305b38cdc57bfe0eb59de9d/malbolge-1.2.0-cp39-cp39-musllinux_1_2_x86_64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:51.425760Z"
+    },
+    {
+      "bytes": 253164,
+      "file": "malbolge-1.2.0-cp39-cp39-win_amd64.whl",
+      "sha256": "5396914d7ff8660e604394cac81773086131f65c5ebfdc5b3b293e7f0669ac1c",
+      "url": "https://files.pythonhosted.org/packages/f5/a9/a5b0d24b88e4aa218a0a1b2914a83007113d7251497f20c7c6aeefd5d400/malbolge-1.2.0-cp39-cp39-win_amd64.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:52.712222Z"
+    },
+    {
+      "bytes": 238843,
+      "file": "malbolge-1.2.0-py3-none-any.whl",
+      "sha256": "cf90acdd6e8aefd12f2079b4c4c2a072691848be3b480d98fd89567f44efe494",
+      "url": "https://files.pythonhosted.org/packages/0a/ec/bf2a897302bdd6f4dcfc7ceb68c9a0a74bb264220fa2536686b24c608fff/malbolge-1.2.0-py3-none-any.whl",
+      "uploaded_at_utc": "2026-11-10T08:34:53.969382Z"
+    },
+    {
+      "bytes": 1211815,
+      "file": "malbolge-1.2.0.tar.gz",
+      "sha256": "83318984515cd613603236477708aee390a2564594909b843e1753b39956f82f",
+      "url": "https://files.pythonhosted.org/packages/aa/b2/7d5a3fc7e4c4f7b425168ca0d1434f8e2cdb704028e0aa81b4e5733f6a31/malbolge-1.2.0.tar.gz",
+      "uploaded_at_utc": "2026-11-10T08:34:55.515414Z"
+    }
+  ]
+}

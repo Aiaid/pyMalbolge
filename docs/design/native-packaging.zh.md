@@ -2,13 +2,22 @@
 
 > [English](native-packaging.md) | **中文**
 >
-> 状态核对：2026-11-10。rc2 TestPyPI 完整矩阵已通过；正式 1.2.0 冻结，
-> 正式产物与发布验收仍待完成。1.1.0 的发布记录保持为历史证据。
+> 发布核对：2026-11-10。
 
-[rc2 回执](../notes/release-1.2.0rc2-testpypi.json)记录提交 `063a3c59`、版本
-`1.2.0rc2.dev42757794922001`：35 个原生 wheel 加便携/源码包、13 组远端
-安装/输入和七个质量 CI 作业全部通过。正式版冻结相同编译器/VM 实现，不纳入
-未提交的实验 JIT 修改；最终产物必须重新验收。见[正式发行门槛](../notes/release-1.2.0.zh.md)。
+**[1.2.0 已发布到正式 PyPI](https://pypi.org/project/malbolge/1.2.0/)。**
+源码提交：`65c44bf7ee112f0df8c85b64b1c826787713492b`。
+[正式运行 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+通过 GitHub OIDC Trusted Publishing 上传 35 个原生 wheel、一个便携 wheel 和
+一个 sdist。全部 37 个公开产物哈希、七个同提交质量 CI 作业及 13 组上传前
+安装/输入检查通过。上传后 13 组远端安装/输入检查也全部通过；最终各组结果及精确产物身份见
+[正式发布回执](../notes/pypi-1.2.0-publication.json)。
+
+发行编译器/VM 保留 rc2 基线，未发布未提交的实验 JIT 修改。
+[rc2 回执](../notes/release-1.2.0rc2-testpypi.json)保留为独立历史证据，不替代
+正式产物检查。macOS ARM64 的 deployment target、标签与 Mach-O 最低系统为
+15.0，精确 macOS 15.0 运行兼容性仍未测试。rc2 及正式版五个 ARM64 ABI 的实际宿主均为 15.8.2。正式托管 Mac JIT 不可用，
+保留守卫并显式拒绝；Linux ARM64 NOP JIT 执行为另一项证据。本地
+Mac/CM4 执行只证明对应设备，不构成普遍提速结论。
 
 ## 安装行为
 
@@ -123,16 +132,29 @@ Malbolge 字节 I/O 和 CLI 预算退出码。它拒绝副本导入，记录已�
 Windows 原生安装组；便携组与源码构建组仍保留。
 
 macOS ARM64 的 deployment target、标签及 Mach-O 最低系统一致为 **15.0**；
-托管机器实际为 **15.8.2**，未测试精确 15.0。元数据一致不能替代最低系统运行
+历史 rc2 托管机器实际为 **15.8.2**，未测试精确 15.0。元数据一致不能替代最低系统运行
 证明。托管 Mac JIT 不可用并正确拒绝，原生写保护守卫未移除；十个 Linux ARM64
 libc/ABI wheel 实际执行 NOP JIT 机器码。本地 Mac/CM4 证据只适用于对应设备，
 不构成普遍提速声明。
 
-正式工作流 `pypi.yml` 要求最终同提交质量检查、37 文件构建和 13 组上传前
-安装包/输入检查通过，且具有正式凭据，才可上传。上传后还须验证全部公开哈希
-和 13 组远端安装/输入。最终提交及产物尚未在本文验收；最新状态见
-[正式 Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)和
-[正式项目页](https://pypi.org/project/malbolge/)。
+## 正式发布与验证
+
+最终源码提交为 `65c44bf7ee112f0df8c85b64b1c826787713492b`。
+[正式运行 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+通过七个同提交质量 CI 作业，构建完整 **37 文件**产物包，并通过 **13 组上传前
+安装包/输入检查**。通过 GitHub OIDC Trusted Publishing、使用 `pypi` 环境
+成功上传 PyPI，不使用长期正式 API token。该环境自动创建，尚未独立验证
+分支/环境保护配置。
+
+CI 已通过全部 **37 个公开产物哈希**验证。上传后 **13 组远端安装/输入检查也全部通过**。最终结果、哈希和实际
+宿主证据见[正式发布回执](../notes/pypi-1.2.0-publication.json)。精确 macOS 15.0 运行测试
+仍未完成；rc2 的 15.8.2 执行及元数据一致不等于先前最低系统执行要求已满足。
+
+后续正式工作流计划改为仅手动触发，避免普通推送重试不可覆盖的 1.2.0 上传。
+触发前核对当前[正式工作流](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)。
+新发行需要新版本与自己的验收。本维护发行不包含新布局协议、直接 semantic→LAL
+后端、一般 Python 支持或普遍提速声明。
+
 
 ## TestPyPI 试发布管线：已记录的 rc1 配置
 

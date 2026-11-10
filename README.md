@@ -113,23 +113,24 @@ Imports and execution never build the extension. See
 
 ### Release status (2026-11-10)
 
-**Final 1.2.0 is frozen for release; production acceptance is pending.** Its
-compiler/VM implementation is unchanged from rc2 commit `063a3c59`; subsequent
-uncommitted experimental JIT changes are excluded. The accepted TestPyPI
-version is **1.2.0rc2.dev42757794922001**: 35 native wheels plus a portable wheel
-and sdist, 13 remote installation/input groups and seven quality-CI jobs passed.
-See the [rc2 receipt](docs/notes/release-1.2.0rc2-testpypi.json) and
-[release gates](docs/notes/release-1.2.0.md). These results do not certify final
-1.2.0 artifacts. Check [production Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
-and the [production project](https://pypi.org/project/malbolge/) for later status.
+**[1.2.0 is published on PyPI](https://pypi.org/project/malbolge/1.2.0/).**
+Source commit: `65c44bf7ee112f0df8c85b64b1c826787713492b`.
+[Production run 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+uploaded 35 native wheels, one portable wheel and one sdist through GitHub
+OIDC Trusted Publishing. All 37 public artifact hashes, seven same-commit
+quality-CI jobs and 13 pre-upload installation/input groups passed. All 13 post-upload remote installation/input groups passed. See the [publication receipt](docs/notes/pypi-1.2.0-publication.json)
+for the final per-group results and artifact identities.
 
-macOS ARM64 rc2 wheels have deployment target, wheel tag and Mach-O floor
-**15.0**, with execution tested on **15.8.2 only**. Exact macOS 15.0 runtime
-compatibility remains untested. Hosted Mac JIT was unavailable and correctly
-rejected; Linux ARM64 executed real NOP JIT machine code. Local Mac/CM4 JIT
-checks are device-specific evidence, not a general speed claim.
+The released compiler/VM retains the rc2 baseline; uncommitted experimental
+JIT changes were not released. The [rc2 receipt](docs/notes/release-1.2.0rc2-testpypi.json)
+is separate historical evidence, not a substitute for final artifact checks.
+macOS ARM64 has a 15.0 deployment/tag/Mach-O floor; exact macOS 15.0 runtime
+compatibility remains untested. Both rc2 and all five final ARM64 ABI checks ran on macOS 15.8.2. Final
+hosted Mac JIT was unavailable and explicitly rejected with guards retained;
+Linux ARM64 NOP JIT execution is a separate claim. Local Mac/CM4 execution is device-specific,
+not a general speed claim.
 
-[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) remains the recorded
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) is the historical
 production release: 30 native wheels, one portable wheel and one sdist. Its
 [publication receipt](docs/notes/pypi-1.1.0-publication.json) is historical and
 does not cover the final 1.2.0 build.
@@ -755,7 +756,8 @@ or single-host results do not establish a complete release-platform matrix.
 - [x] Native source-wheel hook and TestPyPI exact-version remote installation checks
 - [x] Publish 30 accepted 1.1.0 Linux, Windows AMD64 and Intel macOS native wheels to PyPI
 - [x] Accept the rc2 TestPyPI 35-wheel native matrix and 13 remote install/input groups
-- [ ] Complete final 1.2.0 exact-artifact production gates and publication
+- [x] Publish final 1.2.0 and verify all 37 public artifact hashes
+- [x] Pass all 13 post-upload remote installation/input groups
 - [ ] Test Apple Silicon wheels on the exact declared minimum OS (15.0)
 - [ ] Compiler v2: signed integers, general runtime objects/strings and arrays via `IND_OPR`
 - [ ] Malbolge Unshackled support (3-adic integers, variable rotation width, Unicode I/O)

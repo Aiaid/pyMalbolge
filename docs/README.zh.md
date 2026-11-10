@@ -31,7 +31,7 @@
 | 文档 | 状态 | 内容 |
 |---|---|---|
 | [native-jit.zh.md](design/native-jit.zh.md) | ✅ 本地显式试验 | 真实带守卫 ARM64 NOP 代码生成、精确退出/COW/预算、冷暖证据及短夹具性能回退 |
-| [native-packaging.zh.md](design/native-packaging.zh.md) | ✅ 30 个原生 wheel 已发布；Apple Silicon 待补 | 原生源码构建 hook、ABI/平台标签、安装验收、正式发布哈希及 macOS ARM64 兼容性后续工作 |
+| [native-packaging.zh.md](design/native-packaging.zh.md) | ✅ 1.2.0 已发布 35 个原生 wheel，含 Apple Silicon | 原生源码构建 hook、ABI/平台标签、安装验收、正式发布哈希及 macOS ARM64 兼容性后续工作 |
 | [native-vm.zh.md](design/native-vm.zh.md) | ✅ 批处理默认优先原生 | Python 接口接原生 Malbolge20 执行/内存核心；正确性、快照、本地构建、同映像测量和带守卫 JIT 边界 |
 | [highlevel-to-malbolge.zh.md](design/highlevel-to-malbolge.zh.md) | ⚠️ 路线现行；子集/测量为历史 | 路线决策:高级语言→Malbolge 可行性、推荐管线、里程碑、Python 前端 v1 与直连后端 |
 | [optimization-status.zh.md](design/optimization-status.zh.md) | ✅ 带日期快照 | 全部优化层、已验收/默认/opt-in/本地原型状态、证据索引及未解决边界 |
@@ -58,7 +58,8 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
-| [release-1.2.0.zh.md](notes/release-1.2.0.zh.md) | 正式 1.2.0 冻结；正式验收待完成 | 冻结 rc2 编译器/VM、测试站精确版本安装、许可及正式发行门槛 |
+| [release-1.2.0.zh.md](notes/release-1.2.0.zh.md) | ✅ 1.2.0 已发布并通过远端验收 | 正式提交 65c44bf7、37 个公开哈希、OIDC 发布和平台边界 |
+| [pypi-1.2.0-publication.json](notes/pypi-1.2.0-publication.json) | 正式发布回执 | 精确源码/产物身份、公开哈希和最终各组结果 |
 | [release-1.2.0rc2-testpypi.json](notes/release-1.2.0rc2-testpypi.json) | ✅ rc2 完整矩阵已验收 | 提交 063a3c59：35 个原生 wheel 加便携/源码包、13 组远端安装/输入及七个质量 CI 作业；正式产物另行验收 |
 | [release-1.2.0-testpypi.json](notes/release-1.2.0-testpypi.json) | ✅ rc1 历史验收 | 提交 a466170：三个上传产物、九组远端安装、七个质量 CI 作业；不覆盖后续候选或完整原生矩阵 |
 | [release-1.2.0-validation.json](notes/release-1.2.0-validation.json) | 📌 更早的本地候选 | rc1 上传前的分发内容检查、本地测试和安装包验收 |

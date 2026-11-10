@@ -2,16 +2,24 @@
 
 > **English** | [中文](native-packaging.zh.md)
 >
-> Status checkpoint: 2026-11-10. The complete rc2 TestPyPI matrix passed;
-> final 1.2.0 is frozen, with final artifacts and production acceptance pending.
-> The 1.1.0 publication records remain historical evidence.
+> Publication checkpoint: 2026-11-10.
 
-The [rc2 receipt](../notes/release-1.2.0rc2-testpypi.json) records commit
-`063a3c59`, version `1.2.0rc2.dev42757794922001`: 35 native wheels plus pure/sdist,
-13 remote installation/input groups and seven quality-CI jobs passed. Final
-1.2.0 freezes the same compiler/VM implementation, excluding uncommitted
-experimental JIT changes; final artifacts require fresh acceptance. See the
-[final release gates](../notes/release-1.2.0.md).
+**[1.2.0 is published on PyPI](https://pypi.org/project/malbolge/1.2.0/).**
+Source commit: `65c44bf7ee112f0df8c85b64b1c826787713492b`.
+[Production run 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+uploaded 35 native wheels, one portable wheel and one sdist through GitHub
+OIDC Trusted Publishing. All 37 public artifact hashes, seven same-commit
+quality-CI jobs and 13 pre-upload installation/input groups passed. All 13 post-upload remote installation/input groups passed. See the [publication receipt](../notes/pypi-1.2.0-publication.json)
+for the final per-group results and artifact identities.
+
+The released compiler/VM retains the rc2 baseline; uncommitted experimental
+JIT changes were not released. The [rc2 receipt](../notes/release-1.2.0rc2-testpypi.json)
+is separate historical evidence, not a substitute for final artifact checks.
+macOS ARM64 has a 15.0 deployment/tag/Mach-O floor; exact macOS 15.0 runtime
+compatibility remains untested. Both rc2 and all five final ARM64 ABI checks ran on macOS 15.8.2. Final
+hosted Mac JIT was unavailable and explicitly rejected with guards retained;
+Linux ARM64 NOP JIT execution is a separate claim. Local Mac/CM4 execution is device-specific,
+not a general speed claim.
 
 ## Installation behavior
 
@@ -142,18 +150,34 @@ configuration below, native Linux ARM64, macOS ARM64/Intel and Windows groups
 were added; portable and source-build groups remain.
 
 macOS ARM64 deployment target, wheel tag and Mach-O minimum OS agree at
-**15.0**. Hosted execution was on **15.8.2**, not exact 15.0. Metadata agreement
+**15.0**. Historical rc2 hosted execution was on **15.8.2**, not exact 15.0. Metadata agreement
 does not prove minimum-OS runtime compatibility. Hosted Mac JIT was unavailable
 and correctly rejected with native write-protection guards retained. All ten
 Linux ARM64 libc/ABI wheels executed real NOP JIT machine code. Local Mac/CM4
 evidence applies to those devices only and is not a general speed claim.
 
-The production `pypi.yml` workflow gates upload on the final commit's quality
-checks, a 37-file build and 13 pre-upload installed-package/input groups, plus
-production credentials. After upload it checks every public hash and 13 remote
-installation/input groups. Final commit/artifact acceptance is not recorded
-here; consult [production Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
-and the [production project](https://pypi.org/project/malbolge/) for later status.
+## Production publication and verification
+
+The final source commit is `65c44bf7ee112f0df8c85b64b1c826787713492b`.
+[Production run 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+passed seven same-commit quality-CI jobs, built the complete **37-file** bundle
+and passed **13 pre-upload installed-package/input groups**. PyPI upload
+succeeded through GitHub OIDC Trusted Publishing using the `pypi` environment,
+without a long-lived production API token. The environment was automatically
+created; independent branch/environment protection has not been verified.
+
+All **37 public artifact hashes** passed CI verification. All **13 post-upload remote installation/input groups** passed. See the [production publication receipt](../notes/pypi-1.2.0-publication.json)
+for the final results, hashes and actual host evidence. Exact macOS 15.0 runtime
+testing remains unperformed; rc2 execution on 15.8.2 and matching metadata do
+not fulfill the earlier minimum-OS execution requirement.
+
+Future production runs are intended to use manual dispatch only, so routine
+pushes do not retry the immutable 1.2.0 upload. Check the current
+[production workflow](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
+before dispatching. A new release needs a new version and its own acceptance.
+There is no new layout protocol, direct semantic-to-LAL backend, general Python
+support or general speedup claim in this maintenance release.
+
 
 ## TestPyPI trial pipeline: recorded rc1 configuration
 

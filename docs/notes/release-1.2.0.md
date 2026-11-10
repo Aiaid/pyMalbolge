@@ -1,16 +1,25 @@
-# 1.2.0 final release freeze
+# 1.2.0 production release
 
 > **English** | [中文](release-1.2.0.zh.md)
 >
-> Freeze checkpoint: 2026-11-10. Final version: **1.2.0**.
-> Final source commit/artifact acceptance and production publication are pending.
-> The recorded production release remains 1.1.0.
+> Publication checkpoint: 2026-11-10.
 
-The final release freezes the compiler/VM implementation at rc2 commit
-`063a3c59efaa1de4545e59bd0a26ee68dfddf860`. Uncommitted experimental JIT
-changes from the development checkout are excluded. Final version metadata,
-release gates and documentation require a new commit and freshly built bytes;
-the rc2 receipt must not be relabeled as final acceptance.
+**[1.2.0 is published on PyPI](https://pypi.org/project/malbolge/1.2.0/).**
+Source commit: `65c44bf7ee112f0df8c85b64b1c826787713492b`.
+[Production run 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+uploaded 35 native wheels, one portable wheel and one sdist through GitHub
+OIDC Trusted Publishing. All 37 public artifact hashes, seven same-commit
+quality-CI jobs and 13 pre-upload installation/input groups passed. All 13 post-upload remote installation/input groups passed. See the [publication receipt](pypi-1.2.0-publication.json)
+for the final per-group results and artifact identities.
+
+The released compiler/VM retains the rc2 baseline; uncommitted experimental
+JIT changes were not released. The [rc2 receipt](release-1.2.0rc2-testpypi.json)
+is separate historical evidence, not a substitute for final artifact checks.
+macOS ARM64 has a 15.0 deployment/tag/Mach-O floor; exact macOS 15.0 runtime
+compatibility remains untested. Both rc2 and all five final ARM64 ABI checks ran on macOS 15.8.2. Final
+hosted Mac JIT was unavailable and explicitly rejected with guards retained;
+Linux ARM64 NOP JIT execution is a separate claim. Local Mac/CM4 execution is device-specific,
+not a general speed claim.
 
 ## Why a separate version
 
@@ -26,7 +35,7 @@ The 1.2 candidate includes the missing notices and narrows the source archive.
 The original 1.1.0 files remain unchanged; its publication receipt describes
 only those original files.
 
-## Candidate changes
+## Release changes
 
 - Include `THIRD_PARTY_NOTICES.md` and four verbatim upstream MIT license
   texts in wheel and source distributions, with `License-File` metadata.
@@ -63,13 +72,25 @@ remain unchanged historical evidence. Do not add overlapping test counts.
 ### Platform and JIT boundaries
 
 - macOS ARM64 deployment target, wheel tag and Mach-O minimum OS agree at
-  **15.0**. Hosted execution was on **15.8.2 only**; exact 15.0 runtime
+  **15.0**. The historical rc2 hosted execution was on **15.8.2 only**; exact 15.0 runtime
   compatibility is untested. Metadata agreement is not minimum-OS execution proof.
 - Hosted Mac JIT was unavailable and correctly rejected with write-protection
   guards retained. This is native VM acceptance, not hosted Mac JIT execution.
 - All ten Linux ARM64 libc/ABI wheels executed real NOP JIT machine code.
   Existing local Mac/CM4 checks prove execution on those devices only.
   JIT remains explicit and experimental; none of this establishes a general speedup.
+
+## Install production 1.2.0
+
+In a fresh directory outside a source checkout, install the exact production version:
+
+```sh
+uv venv
+uv pip install --index-url https://pypi.org/simple/ 'malbolge==1.2.0'
+uv run --no-project python -c "import malbolge; print(malbolge.__version__)"
+```
+
+The version should be `1.2.0`. The TestPyPI commands below reproduce historical rc2 only.
 
 ## Install the recorded TestPyPI candidate
 
@@ -97,22 +118,24 @@ available otherwise. Audit exact filenames and hashes in the receipt.
 `pyproject.toml` embeds `docs/notes/pypi-description.md` in distribution metadata;
 README edits cannot change already uploaded package descriptions.
 
-## Final production gates
+## Production publication and verification
 
-The production workflow `.github/workflows/pypi.yml` requires the final source
-commit's quality checks, a complete **37-file** build and **13 pre-upload
-installed-package/input groups** before upload. Publication requires a valid
-production credential. After upload, every public artifact hash and **13 remote
-installation/input groups** must pass. A configured or queued gate is not a pass;
-missing credentials or failed gates must not be reported as publication success.
+The final source commit is `65c44bf7ee112f0df8c85b64b1c826787713492b`.
+[Production run 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+passed seven same-commit quality-CI jobs, built the complete **37-file** bundle
+and passed **13 pre-upload installed-package/input groups**. PyPI upload
+succeeded through GitHub OIDC Trusted Publishing using the `pypi` environment,
+without a long-lived production API token. The environment was automatically
+created; independent branch/environment protection has not been verified.
 
-Final source SHA, final artifact hashes and production execution acceptance
-are not yet recorded here. Consult [production Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
-and the [production project](https://pypi.org/project/malbolge/) for subsequent
-status. Rebuild and accept the exact final artifacts rather than reusing rc2
-hashes. Exact macOS 15.0 runtime testing remains a separately disclosed gap;
-the previous minimum-OS execution requirement is not claimed as fulfilled by
-15.8.2 hosting or by matching metadata.
+All **37 public artifact hashes** passed CI verification. All **13 post-upload remote installation/input groups** passed. See the [production publication receipt](pypi-1.2.0-publication.json)
+for the final results, hashes and actual host evidence. Exact macOS 15.0 runtime
+testing remains unperformed; rc2 execution on 15.8.2 and matching metadata do
+not fulfill the earlier minimum-OS execution requirement.
 
+Future production runs are intended to use manual dispatch only, so routine
+pushes do not retry the immutable 1.2.0 upload. Check the current
+[production workflow](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
+before dispatching. A new release needs a new version and its own acceptance.
 There is no new layout protocol, direct semantic-to-LAL backend, general Python
-support or claimed speedup in this maintenance release freeze.
+support or general speedup claim in this maintenance release.

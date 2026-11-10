@@ -35,7 +35,7 @@ Its local validation is separate from any later release or platform matrix.
 | Document | Status | Contents |
 |---|---|---|
 | [native-jit.md](design/native-jit.md) | ✅ local opt-in experiment | Actual guarded ARM64 NOP code generation, exact exits/COW/budgets, cold versus warm evidence and short-fixture regressions |
-| [native-packaging.md](design/native-packaging.md) | ✅ 30 native wheels published; Apple Silicon pending | Native source-build hook, ABI/platform tags, installed acceptance, production hashes and remaining macOS ARM64 compatibility work |
+| [native-packaging.md](design/native-packaging.md) | ✅ 35 native 1.2.0 wheels published, including Apple Silicon | Native source-build hook, ABI/platform tags, installed acceptance, production hashes and remaining macOS ARM64 compatibility work |
 | [native-vm.md](design/native-vm.md) | ✅ native-first batch default | Python API over a native Malbolge20 execution/memory core; correctness, snapshots, local build, same-image measurements and guarded-JIT scope |
 | [highlevel-to-malbolge.md](design/highlevel-to-malbolge.md) | ⚠️ route current; subset/measurements historical | Route decision: feasibility of high-level language → Malbolge, recommended pipeline, milestones, Python front end v1 and the direct backend |
 | [optimization-status.md](design/optimization-status.md) | ✅ dated snapshot | All optimization layers, accepted/default versus opt-in/local prototype status, evidence links and remaining limits |
@@ -62,7 +62,8 @@ Its local validation is separate from any later release or platform matrix.
 
 | Document | Status | Contents |
 |---|---|---|
-| [release-1.2.0.md](notes/release-1.2.0.md) | Final 1.2.0 freeze; production acceptance pending | Frozen rc2 compiler/VM, exact test-version installation, notices and final release gates |
+| [release-1.2.0.md](notes/release-1.2.0.md) | ✅ 1.2.0 published and remotely accepted | Production commit 65c44bf7, 37 public hashes, OIDC publication and platform limits |
+| [pypi-1.2.0-publication.json](notes/pypi-1.2.0-publication.json) | Production receipt | Exact source/artifact identities, public hashes and final per-group results |
 | [release-1.2.0rc2-testpypi.json](notes/release-1.2.0rc2-testpypi.json) | ✅ rc2 full matrix accepted | Commit 063a3c59: 35 native wheels plus pure/sdist, 13 remote install/input groups and seven quality-CI jobs; final artifacts remain separate |
 | [release-1.2.0-testpypi.json](notes/release-1.2.0-testpypi.json) | ✅ dated rc1 acceptance | Commit a466170: three uploaded artifacts, nine remote install groups and seven quality-CI jobs; later candidate and full native matrix excluded |
 | [release-1.2.0-validation.json](notes/release-1.2.0-validation.json) | 📌 earlier local candidate | Distribution-content review, local suite and installed-package checks before the recorded rc1 upload |

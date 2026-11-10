@@ -31,19 +31,20 @@
 
 ## 已发行与实验的区别
 
-**正式 1.2.0 已进入发布冻结，正式产物验收仍待完成。** 编译器/VM 实现保持
-rc2 提交 `063a3c59` 不变，不纳入其后未提交的实验 JIT 修改。已验收的 TestPyPI
-版本为 **1.2.0rc2.dev42757794922001**：35 个原生 wheel 加便携 wheel 和 sdist、
-13 组远端安装/输入检查及七个质量 CI 作业全部通过。见
-[rc2 回执](notes/release-1.2.0rc2-testpypi.json)和
-[发行门槛](notes/release-1.2.0.zh.md)。这些结果不代表正式 1.2.0 产物已通过。
-后续状态以[正式发布 Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
-及[正式项目页](https://pypi.org/project/malbolge/)为准。
+**[1.2.0 已发布到正式 PyPI](https://pypi.org/project/malbolge/1.2.0/)。**
+源码提交：`65c44bf7ee112f0df8c85b64b1c826787713492b`。
+[正式运行 42782746293](https://github.com/Aiaid/pyMalbolge/actions/runs/42782746293)
+通过 GitHub OIDC Trusted Publishing 上传 35 个原生 wheel、一个便携 wheel 和
+一个 sdist。全部 37 个公开产物哈希、七个同提交质量 CI 作业及 13 组上传前
+安装/输入检查通过。上传后 13 组远端安装/输入检查也全部通过；最终各组结果及精确产物身份见
+[正式发布回执](notes/pypi-1.2.0-publication.json)。
 
-macOS ARM64 rc2 wheel 的 deployment target、标签及 Mach-O 最低系统均为
-**15.0**，实际仅在 **15.8.2** 执行；精确 macOS 15.0 的运行兼容性尚未测试。
-托管 Mac JIT 不可用并按契约拒绝；Linux ARM64 实际执行 NOP JIT 机器码。
-本地 Mac/CM4 的 JIT 检查只证明对应设备上的执行，不构成普遍提速结论。
+发行编译器/VM 保留 rc2 基线，未发布未提交的实验 JIT 修改。
+[rc2 回执](notes/release-1.2.0rc2-testpypi.json)保留为独立历史证据，不替代
+正式产物检查。macOS ARM64 的 deployment target、标签与 Mach-O 最低系统为
+15.0，精确 macOS 15.0 运行兼容性仍未测试。rc2 及正式版五个 ARM64 ABI 的实际宿主均为 15.8.2。正式托管 Mac JIT 不可用，
+保留守卫并显式拒绝；Linux ARM64 NOP JIT 执行为另一项证据。本地
+Mac/CM4 执行只证明对应设备，不构成普遍提速结论。
 
 [PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 于 2026-10-27 发布，包含
 **30 个原生 wheel、一个便携 wheel 和一个 sdist**。原生 wheel 覆盖 CPython
@@ -52,7 +53,7 @@ Python 3.8 兼容性检查与这份 wheel 矩阵分开。见
 [发行说明](notes/release-1.1.0.zh.md)及
 [产物哈希和安装验收](notes/pypi-1.1.0-publication.json)。
 
-正式 Apple Silicon 产物发布与精确最低系统版本运行测试仍待完成。本地 macOS ARM64 能运行
+Apple Silicon wheel 已正式发布；精确最低系统版本运行测试仍待完成。本地 macOS ARM64 能运行
 不证明所有标签声明的最低系统版本均兼容。带守卫的 ARM64 NOP JIT 是
 **显式启用的实验功能**，不是默认引擎或通用 LLVM 后端；合成 NOP 用例收益与
 真实短夹具回退同时存在。见[打包](design/native-packaging.zh.md)和
