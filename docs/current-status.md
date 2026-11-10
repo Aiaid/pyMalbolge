@@ -36,6 +36,10 @@
 
 ## Published versus experimental
 
+The working checkout is now preparing **1.2.0rc1**, an unpublished maintenance
+candidate. Its [release notes](notes/release-1.2.0.md) and fresh validation are
+separate from the published 1.1.0 receipt.
+
 [PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) was published on
 2026-10-27 with **30 native wheels, one portable wheel and one sdist**. The
 native wheels cover CPython 3.9–3.13 on Linux glibc/musl x86-64/ARM64,

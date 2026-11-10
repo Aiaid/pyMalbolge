@@ -22,9 +22,10 @@ except ImportError:
     tomllib = None
 
 
-BASE_VERSION = "1.1.0"
 _DECIMAL = re.compile(r"[0-9]+\Z")
-_RELEASE_VERSION = re.compile(r"(?P<base>[0-9]+\.[0-9]+\.[0-9]+)(?:\.dev[0-9]+)?\Z")
+_RELEASE_VERSION = re.compile(
+    r"(?P<base>[0-9]+\.[0-9]+\.[0-9]+(?:(?:a|b|rc)[0-9]+)?)(?:\.dev[0-9]+)?\Z"
+)
 _VERSION_LINE = re.compile(
     r"^[ \t]*version[ \t]*=[ \t]*(?P<quote>['\"])(?P<value>[^'\"\r\n]*)"
     r"(?P=quote)[ \t]*(?:\#[^\r\n]*)?(?:\r?\n|\Z)", re.MULTILINE
@@ -35,7 +36,7 @@ _MODULE_VERSION_LINE = re.compile(
 )
 
 
-def development_version(run_id, attempt, base_version=BASE_VERSION):
+def development_version(run_id, attempt, base_version):
     """Return an injective version stamp for positive run IDs and attempts 1..999."""
     values = []
     for label, value in (("run ID", run_id), ("attempt", attempt)):
@@ -50,7 +51,7 @@ def development_version(run_id, attempt, base_version=BASE_VERSION):
         raise ValueError("attempt must be between 1 and 999")
     match = _RELEASE_VERSION.fullmatch(base_version)
     if match is None or match.group("base") != base_version:
-        raise ValueError("base version must be a numeric major.minor.patch release")
+        raise ValueError("base version must be a numeric release or canonical a/b/rc prerelease")
     return {
         "base_version": base_version,
         "test_version": "%s.dev%d" % (
@@ -221,7 +222,7 @@ def main(argv=None):
         current = project_document(source)["project"]["version"]
         match = _RELEASE_VERSION.fullmatch(current)
         if match is None:
-            raise ValueError("project version must be a numeric release or development version")
+            raise ValueError("project version must be a numeric release, canonical a/b/rc prerelease or development version")
         result = development_version(args.run_id, args.attempt, match.group("base"))
         updated = replace_project_version(
             source, result["test_version"]

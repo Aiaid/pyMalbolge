@@ -3,7 +3,7 @@ name: TestPyPI release acceptance
 on:
   workflow_dispatch:
   push:
-    branches: ['codex/testpypi-native-ci']
+    branches: ['codex/testpypi-native-ci', 'codex/release-1-2-0-testpypi']
 
 # This workflow publishes only to the separate test site.
 permissions:

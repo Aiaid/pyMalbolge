@@ -41,7 +41,7 @@ class TestTestPyPIVersion(unittest.TestCase):
 
     def test_stamp_is_unique_across_runs_and_retries(self):
         pairs = ((1, 1), (1, 999), (2, 1), (2, 2), (100000000000, 999))
-        versions = [helper.development_version(str(run), str(attempt))["test_version"]
+        versions = [helper.development_version(str(run), str(attempt), "1.1.0")["test_version"]
                     for run, attempt in pairs]
         self.assertEqual(len(set(versions)), len(pairs))
         self.assertEqual(versions[:3],
@@ -72,6 +72,33 @@ class TestTestPyPIVersion(unittest.TestCase):
         self.assertEqual(self.module.read_text(), '__version__ = "2.3.4.dev4001"\n')
         self.assertEqual(helper.tomllib.loads(self.project.read_text())["project"]["version"],
                          "2.3.4.dev4001")
+
+    def test_prerelease_identity_survives_ci_stamping_and_retries(self):
+        for version in ("1.2.0a2", "1.2.0b3", "1.2.0rc1"):
+            with self.subTest(version=version):
+                self.project.write_text(SOURCE.replace("1.1.0", version))
+                self.module.write_text(MODULE_SOURCE.replace("1.1.0", version))
+                expected = version + ".dev42001"
+                for _ in range(2):
+                    code, stdout, stderr = self.invoke("--run-id", "42", "--attempt", "1")
+                    self.assertEqual((code, stderr), (0, ""))
+                    self.assertEqual(json.loads(stdout)["base_version"], version)
+                    self.assertEqual(json.loads(stdout)["test_version"], expected)
+                    self.assertEqual(helper.tomllib.loads(self.project.read_text())["project"]["version"], expected)
+                    self.assertEqual(self.module.read_text(), '__version__ = "' + expected + '"\n')
+
+    def test_unsupported_version_forms_fail_without_writes(self):
+        for version in ("1.2", "1.2.0rc", "1.2.0rc-1", "1.2.0+local", "1.2.0.post1", "1!1.2.0"):
+            with self.subTest(version=version):
+                project = SOURCE.replace("1.1.0", version)
+                module = MODULE_SOURCE.replace("1.1.0", version)
+                self.project.write_text(project)
+                self.module.write_text(module)
+                code, stdout, stderr = self.invoke("--run-id", "42", "--attempt", "1")
+                self.assertEqual((code, stdout), (2, ""))
+                self.assertTrue(stderr)
+                self.assertEqual(self.project.read_text(), project)
+                self.assertEqual(self.module.read_text(), module)
 
     def test_explicit_arguments_override_environment_and_append_output(self):
         output = self.root / "github-output"

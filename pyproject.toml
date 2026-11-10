@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "malbolge"
-version = "1.1.0"
+version = "1.2.0rc1"
 authors = [
   { name="Anend", email="anend@live.com" },
 ]
@@ -28,7 +28,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 license = "MIT"
-license-files = ["LICEN[CS]E*"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
 
 dependencies = []
 
@@ -65,10 +65,15 @@ include = [
     "/README.md",
     "/README.zh.md",
     "/LICENSE",
+    "/THIRD_PARTY_NOTICES.md",
+    "/licenses",
     "/pyproject.toml",
 ]
 exclude = [
     "/docs/research",
+    # Optional GPL-licensed LMAO research fixtures stay in the checkout only.
+    "/test/fixtures/hell",
+    "/test/test_hell_examples.py",
     "/malbolge/_native_vm*.so",
     "/malbolge/_native_vm*.pyd",
     "/malbolge/.native-build-*",

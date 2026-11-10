@@ -74,4 +74,4 @@ jobs:
           uv run --no-sync pytest test/test_lal_ir.py test/test_ir_pipeline.py
           test/test_ir_cli.py test/test_semantic_ir.py test/test_semantic_frontend.py
           test/test_semantic_lowering.py test/test_semantic_pipeline.py
-          test/test_semantic_cli.py -q
+          test/test_semantic_cli.py test/test_source_analysis.py -q

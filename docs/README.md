@@ -58,6 +58,7 @@ and work that remains experimental or unimplemented (checked 2026-11-10).
 
 | Document | Status | Contents |
 |---|---|---|
+| [release-1.2.0.md](notes/release-1.2.0.md) | local candidate, not published | 1.2.0rc1 distribution notices, archive boundaries, shared source analysis and validation gates |
 | [release-1.1.0.md](notes/release-1.1.0.md) | ✅ published 2026-10-27 | Changes since PyPI 1.0.0, 30 native wheels plus portable/source distributions and installed-package acceptance |
 | [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ 32 public files verified | Source provenance, exact public artifacts/hashes, all 30 native downloads verified, initial no-cache compiler/IR/TUI smoke and mainline CI/Pages |
 | [release-1.1.0-acceptance.json](notes/release-1.1.0-acceptance.json) | ✅ TestPyPI remote acceptance; platform scope explicit | Build/public-file hashes, nine remote installations, product CI and per-platform native/JIT evidence |

@@ -422,6 +422,28 @@ def test_unsupported_macho_images_do_not_get_host_wheel_tags(monkeypatch, builde
         builder._macos_native_tag(binary, MACOS_WHEEL_TAG)
 
 
+# Hashes of the upstream LICENSE files, retained without edits.
+NAGOYA_LICENSE_HASHES = {
+    "licenses/nagoya-highlevel.txt": "7f4ad91e4623af4f77012909eceb27717cff8c090c609c7a26c52de7def42afb",
+    "licenses/nagoya-ternary.txt": "515ed087a9ccd2cf6256bad084eda21d664c34c66cfa42fc13c98192c0af420a",
+    "licenses/nagoya-lowass.txt": "486cfd5e51a3cb7f1e8424e4691064e575bdd3002d8fc551e62496e39743eced",
+    "licenses/nagoya-malbolge20-interpreter.txt": "486cfd5e51a3cb7f1e8424e4691064e575bdd3002d8fc551e62496e39743eced",
+}
+
+
+def test_upstream_license_texts_are_preserved():
+    for name, digest in NAGOYA_LICENSE_HASHES.items():
+        assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest
+
+
+def assert_distribution_notices(read, prefix, metadata):
+    metadata = metadata.decode("utf8")
+    assert "License-Expression: MIT" in metadata
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md", *NAGOYA_LICENSE_HASHES):
+        assert "License-File: " + name in metadata.splitlines()
+        assert read(prefix + name) == (ROOT / name).read_bytes()
+
+
 def packaging_source(destination):
     """Copy public build inputs, then plant controlled excluded products."""
     destination.mkdir()
@@ -431,13 +453,15 @@ def packaging_source(destination):
     for name in ("native_build.py", "hatch_native.py"):
         shutil.copy2(ROOT / "scripts" / name, destination / "scripts" / name)
     for name in ("pyproject.toml", "README.md", "README.zh.md", "LICENSE",
-                 "docs/notes/pypi-description.md"):
+                 "docs/notes/pypi-description.md", "THIRD_PARTY_NOTICES.md"):
         (destination / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / name, destination / name)
+    shutil.copytree(ROOT / "licenses", destination / "licenses")
     for name in ("_native_vm.stale.so", "_native_vm.stale.pyd"):
         (destination / "malbolge" / name).write_bytes(b"stale checkout binary")
     for name in ("docs/research/private-sentinel.txt", ".claude/private-sentinel.txt",
-                 "build/native-vm/build.json"):
+                 "build/native-vm/build.json", "test/fixtures/hell/excluded.hell",
+                 "test/fixtures/hell/excluded.mal", "test/test_hell_examples.py"):
         path = destination / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("excluded sentinel", encoding="utf8")
@@ -472,6 +496,9 @@ def assert_wheel_integrity(path, *, native):
             assert binary_names == ["malbolge/_native_vm" + sysconfig.get_config_var("EXT_SUFFIX")]
         else:
             assert tags == ["py3-none-any"]
+        metadata_name = next(name for name in names if name.endswith(".dist-info/METADATA"))
+        prefix = metadata_name.rsplit("/", 1)[0] + "/licenses/"
+        assert_distribution_notices(archive.read, prefix, archive.read(metadata_name))
         record_name = next(name for name in names if name.endswith(".dist-info/RECORD"))
         records = list(csv.reader(io.StringIO(archive.read(record_name).decode("utf8"))))
         assert {row[0] for row in records} == set(names)
@@ -493,6 +520,7 @@ def test_sdist_rebuild_and_installed_wheel_contract(tmp_path):
     uv = shutil.which("uv")
     assert uv, "packaging acceptance requires uv"
     source = packaging_source(tmp_path / "source")
+    original_cc = os.environ.get("CC")
     env = dict(os.environ, MALBOLGE_NATIVE_BUILD="required",
                CC="malbolge-test-compiler-does-not-exist")
     env.pop("PYTHONPATH", None)
@@ -512,6 +540,12 @@ def test_sdist_rebuild_and_installed_wheel_contract(tmp_path):
         for required in ("scripts/native_build.py", "scripts/hatch_native.py",
                          "malbolge/_native_vm.c", "malbolge/_native_jit.h"):
             assert any(name.endswith("/" + required) for name in names)
+        assert not any("/test/fixtures/hell/" in name or name.endswith("/test/test_hell_examples.py")
+                       for name in names)
+        prefix = names[0].split("/", 1)[0] + "/"
+        def read_member(name):
+            return archive.extractfile(name).read()
+        assert_distribution_notices(read_member, prefix, read_member(prefix + "PKG-INFO"))
         # Source archives are generated here, but reject traversal before extraction.
         assert all(not Path(name).is_absolute() and ".." not in Path(name).parts for name in names)
         assert all(member.isfile() or member.isdir() for member in members)
@@ -523,7 +557,10 @@ def test_sdist_rebuild_and_installed_wheel_contract(tmp_path):
     for mode in ("disabled", "required"):
         env["MALBOLGE_NATIVE_BUILD"] = mode
         if mode == "required":
-            env.pop("CC", None)
+            if original_cc is None:
+                env.pop("CC", None)
+            else:
+                env["CC"] = original_cc
         wheel_dir = tmp_path / (mode + "-wheel")
         command([uv, "build", "--wheel", "--no-build-isolation", "--python", sys.executable,
                  "--out-dir", str(wheel_dir),

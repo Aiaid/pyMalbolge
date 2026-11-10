@@ -1,0 +1,409 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-10",
+  "version": "1.2.0rc1",
+  "status": "local_candidate_validated_not_published",
+  "source": {
+    "base_commit": "0321a2620d818ba1de0d0b78bf2364a08bc6325a",
+    "state": "uncommitted candidate preparation",
+    "implementation_sha256": "322ad1d84f5e9a6d0aa67836fdbb134d6c9c84c0f818d4b98a7b4ef8580c80cc",
+    "hash_definition": "SHA-256 of sorted compact JSON mapping implementation/build/license relative paths to SHA-256; documentation and validation receipts excluded",
+    "files": {
+      "LICENSE": "e9d9e8092c1f9761ef69fcd261028234da8323f3cb9512ee3d20ce43e61584f1",
+      "THIRD_PARTY_NOTICES.md": "01bf85411abaa344e5aa8eb8489080f8902f021db3eb1e052d4c3a25b1614f14",
+      "licenses/nagoya-highlevel.txt": "7f4ad91e4623af4f77012909eceb27717cff8c090c609c7a26c52de7def42afb",
+      "licenses/nagoya-lowass.txt": "486cfd5e51a3cb7f1e8424e4691064e575bdd3002d8fc551e62496e39743eced",
+      "licenses/nagoya-malbolge20-interpreter.txt": "486cfd5e51a3cb7f1e8424e4691064e575bdd3002d8fc551e62496e39743eced",
+      "licenses/nagoya-ternary.txt": "515ed087a9ccd2cf6256bad084eda21d664c34c66cfa42fc13c98192c0af420a",
+      "malbolge/__init__.py": "c1afe067c17738f99348aa5c4cdc45573564c3b1b506bbdbd77f65b4ceeadda6",
+      "malbolge/__main__.py": "86a5049a45993687fa7d1193b415eea30456680c53a1927d22a34dd8de6484af",
+      "malbolge/_native_jit.h": "d83f49bd3c1c0ccac433d4817535f855250ac74a5c377a6d6792fa7e656b6b1d",
+      "malbolge/_native_vm.c": "df687c273058a4b4429e6c98dd680bf4236f4712effd285c645cdf1e50c67f75",
+      "malbolge/compiler/__init__.py": "d01663df119753bcdcc1ba47f2ccf60c7eaa239ce160e996b1008e93047ce1a4",
+      "malbolge/compiler/c2mg.py": "5599e24291d52ab1e6ae8effc3a3052faf1b78566ddc8d9a58ba7c4ae3406549",
+      "malbolge/compiler/cli.py": "e2c06c3b71e95b3c5b620d60a6f54885fdc3e1037ba9a8bb158cf9866c0fde4f",
+      "malbolge/compiler/decimal_io.py": "89e30084a2175568d9cb46be0d826e801402d4e6deb9ea01fa1caa0f2cde3f69",
+      "malbolge/compiler/ir/__init__.py": "7fa842ef656f0debf31d58ca97dc43b81c44bdbe2681fbdbd1ea67f9018dcab7",
+      "malbolge/compiler/ir/arithmetic_passes.py": "7e9822fbf233e00cdd3d13e83387cf6e7db035bd4a506672083e871d6b046f93",
+      "malbolge/compiler/ir/bridge.py": "439bc3162028cd79d138b53269589a7646526665b3cf7b2552d030dfa8a48c05",
+      "malbolge/compiler/ir/dataflow_passes.py": "c850365a895bcdb2af95794a8b300d3d54511d264fd4b0d82dbcf8383d9ff089",
+      "malbolge/compiler/ir/decimal_passes.py": "37c02b0f5290250e7076a08a50ef8a7d97f1edfedabc434870cd67dd48a33f36",
+      "malbolge/compiler/ir/expression_passes.py": "86ec4da4ae93db17f2610a996019e7880148e7521d8ebd315c9eeab2b7115181",
+      "malbolge/compiler/ir/frontend.py": "276c5cdf0bed626d37f6a2b404806472f203f0300e817fc283b798e9bf0fd93d",
+      "malbolge/compiler/ir/interpreter.py": "f90f261cfa8363722e194db6e593ab09894715fa2bc76e3cf53c0c942e693e8b",
+      "malbolge/compiler/ir/lal.py": "4c61b67189e4e9439daad7a2767d97c7f26e8e6812e9887b4e4f57683f51fd4f",
+      "malbolge/compiler/ir/lowering.py": "85dc333db648bcbcc29c43c9155242ae773e5e64ac673c5ceb8334cc45edd312",
+      "malbolge/compiler/ir/passes.py": "3e875d7341f719cf99ea25cd52c9ebab0c226dac5a4f60fb795b939ab0c0a6af",
+      "malbolge/compiler/ir/semantic.py": "59bd132b19c4c9ee8d92c1c9a56bcf0ad82dcfe26baab4187cc7139467ac65ff",
+      "malbolge/compiler/ir/semantic_passes.py": "f3d4fb6e2a8bb176bdda82ae9167db5766ea6b1fd08b59958bb87caf646dbad2",
+      "malbolge/compiler/lal_model.py": "632a2b506b616511ce64dcffe2fc36a8adc271782db6bda62963d62a453b8d32",
+      "malbolge/compiler/mc2mb.py": "c81d9d3962b1ef3340fcda3f5d89ddf88063544adafa8953dd70c97df10716e6",
+      "malbolge/compiler/memory_image.py": "bae995c3ec8f42a9cba14a3ff0f15093498222749c97e1729a26ddcf00cddfe5",
+      "malbolge/compiler/mg2mc.py": "3389d02afc46b3bf64f4083b3a823668fec37146d6e8a2f72565850103a8cbc9",
+      "malbolge/compiler/optimization.py": "c35134282b4e8bc13cc1d76045949e586e03c1041449556a714212d87373950c",
+      "malbolge/compiler/py2c.py": "2d4a102dd20a96aaebee2bdf03e35ca10360e1df2ca8a251cca8a306b207f959",
+      "malbolge/compiler/py2mg.py": "e4af480de0704192b9f4325dcb23f48f13f7fc678e63661c5fe1390083c81a78",
+      "malbolge/compiler/python_normalize.py": "6a6716f79c54bff2bb3863f22523143662eabafb33fa2f36b27429e66040ae41",
+      "malbolge/compiler/source_analysis.py": "e98f94d0e8a22ebfabb96256a8ace83626c624d76bcc3054c95c6974bc27c01d",
+      "malbolge/compiler/target_ast.py": "08bd9d727fc6def0ad24dc040a88c80547aafa6be750fee4f3ce088a40a1bb58",
+      "malbolge/core.py": "c9ca64f9720b042f6dd15191c29e3332c9d875e3557501396207324ca5461605",
+      "malbolge/debug_cli.py": "79e4a9ab53b63581fe6d928d6e8b0e1939d4ffed96c4fe38efc12a22f369b4a4",
+      "malbolge/debug_tui.py": "f98f52a35c672e39fdbad6c70a7b5f570cb5e29c95396d4e4e1e396803dc4095",
+      "malbolge/debugger.py": "b33dd0db3d858b3c319bdd6227a06874ddf0f16ce7dca41d520c60782d04c198",
+      "malbolge/malbolge.py": "852ab9ae89d3f53a262d5a53eb3825f25bc1ad9944e789e48cacf7fb5a541f59",
+      "malbolge/malbolge20.py": "7fd61c643017a0176a7c37f933578619642296384336a47d53eb7bcea9f0fa4e",
+      "malbolge/native.py": "5f4dfabcffe08c7853ea503ddc1cb17aeb72974abc7ff3d1a5e930a1fc6aa5ba",
+      "malbolge/tui/__init__.py": "130cd00311f3ed0661602fc659a57d251dcdc7ccbb8e5d9b1fe30c0b0692eaab",
+      "malbolge/tui/app.py": "6a9623a476920f26db97a24a9401cf0a5429bb4bda01ff7ebbf5de17ec61591c",
+      "malbolge/tui/panels/__init__.py": "a6dfd225dada9c6ce31274e8f8bf8aa9b1e6e6de05ad4d53c2e4a9de1e0d107b",
+      "malbolge/tui/panels/base.py": "28c0b5c204f5f23385f6a1cf09f02844a6e04828ff018a207dc01f5e39d5792b",
+      "malbolge/tui/panels/disasm.py": "841156ee5562672e2d3604d423f86b54dee19aaf4f8a672434bf059f7ecaf532",
+      "malbolge/tui/panels/io.py": "b372810e5ab2074b544d3fe6794e07cd4a23caaef3c748f2861ca82b1caf915c",
+      "malbolge/tui/panels/memory.py": "11291e172d634c7d05f48f9e9091c8cb41da8938af5a3660983d53280d788333",
+      "malbolge/tui/panels/registers.py": "73631a352342df51a0873946a5ca05025b7e6463b04d412eda45b54c0a34296d",
+      "malbolge/tui/panels/status.py": "2060437e9f0c5d1eed056c92a183c12b45117f30326f747a73717d61b5498670",
+      "malbolge/tui/panels/teaching.py": "6ae9ba78a2c36e390341ace51693c1aa45aa5fd9fcb746f5822d2c27d1d82a0d",
+      "malbolge/tui/screens/__init__.py": "ffa63a220501d9f77a8381051bc4412d9c9379036ead0143da3638d2d3440af9",
+      "malbolge/tui/screens/help.py": "3086429087357acf52281ecb20b78d0b37ce12c4929166d785f0b0a48d4921d0",
+      "malbolge/tui/theme.py": "845f36bae0d5ea76e34e1bd6305a1603796a14facc6c4ea42bc8c98398ddf2cd",
+      "malbolge/view/__init__.py": "45b7e1038d6b568e624daae248e274bb1a559bbfc3b9ed9cd6a95eb75b92941d",
+      "malbolge/view/breakpoints.py": "4b07ea21510d17826bd98d1edc670600091f1055eed25f91c801df8b96c09e2a",
+      "malbolge/view/disasm.py": "df12a7bf037c30a0c12fd2f2d8a0e1d499e2270b09729323da9146abf698f534",
+      "malbolge/view/memory.py": "07f0555a49ac26423120b6490c1549c4580b79a3cea585c4db21a8db234f2d99",
+      "malbolge/view/registers.py": "05db3b3053b75ef034134ffeca77997f19a79accc5ad076c5d699e7473784048",
+      "malbolge/view/snapshot.py": "11fd5692f327a9b968ec6adaeeed68e11bfa8e247c8ce06f7e4c342c35f2c7b7",
+      "malbolge/view/teaching.py": "a40f050e2606036ca258db4afc3d32f526d9601075db00211b98495c496d9990",
+      "malbolge/view/timeline.py": "f463897a203df81304fba06cc7152a4aaa827620fe0b89946d6c7e96579b29b6",
+      "pyproject.toml": "359a55955af359dc5fe127fc9dbf9975f38243c221ac0dd51a897642b77322c7",
+      "scripts/benchmark_fixed_vm.py": "23ed30b1aab7bb877290f119dce91edbd3cc3a877a9a69a2111159fa3546994e",
+      "scripts/benchmark_lower_backend.py": "3ee42c58a0e4f11886cb5d3ba2968bc8d1520c6de2703308bf70b68883780618",
+      "scripts/benchmark_native_jit.py": "3633a9fa0a384b41f1edbf23fac1f4ff1185b4e804cb3387143dc48a1aa64a9f",
+      "scripts/benchmark_native_vm.py": "c21a8a256bdc0e26b6aaa011d154f14d4ec06ae3a3dfa625144211d4ffcea769",
+      "scripts/benchmark_pipeline.py": "b33770d8502882a25b9182e6263dd0cbb3d9cb0319c434449932d88e018f33de",
+      "scripts/benchmark_semantic_passes.py": "480de1183393229ee026d34de0178dd69d5b8947fd2ef9c609fd79d268f6caae",
+      "scripts/benchmark_suite.py": "ab4b32395c5e7399c6a82f730707f03d2328534718ffa4d76e0993454b58ea81",
+      "scripts/build_native_vm.py": "f911f78446a7d2ff9b5dac55ca6e2756fb7593845ab4f29964e9d37045d752df",
+      "scripts/collect_latest_correctness.py": "170c899ed6716875b307d4d37dca0bc26017750baebce25f774d89ce662c7358",
+      "scripts/hatch_native.py": "b863e9b6de18e06c6d46de311a4dc587de71b60116b6f00abda6019e8a4753da",
+      "scripts/native_build.py": "b9d66e3360c5c9521d1dc3b8c42b147c32ea5efddd8d361c7848908fabe2764c",
+      "scripts/prepare_testpypi_version.py": "b97601de45ed177641bf054432032d54690f740f3ed4d550985f17201a31b578",
+      "scripts/verify_benchmark_corpus.py": "314d5e13ecc59ecdd3dc88f48b90e6aece38d73c6c6d57a020121abe584d2a0e",
+      "scripts/verify_mb_reference.py": "ab740145eacdadd743c8a98ea53e4e980f34a7636097d4c1bf923f1b38183bd2",
+      "scripts/verify_native_install.py": "08993180da10491ad2f49cf3c30c85b6786c4a46fdfa9bb25b83eca348b04623",
+      "scripts/verify_release_install.py": "65e53075755ddaea9e8a7102a71dd5c0c0a4835e5a94924641a2f707a73fe0cd"
+    }
+  },
+  "host": {
+    "os": "Linux",
+    "machine": "x86_64",
+    "python": "3.12.14",
+    "compiler": "GCC 14.2.0"
+  },
+  "published_1_1_0_review": {
+    "public_metadata_files_checked": 32,
+    "all_match_recorded_sizes_and_sha256": true,
+    "downloaded_and_hashed": [
+      "portable wheel",
+      "CPython 3.12 manylinux x86-64 wheel",
+      "sdist"
+    ],
+    "findings": [
+      "Both inspected wheels omitted the Nagoya full copyright and permission notices.",
+      "Inspected sdist included twelve optional LMAO HeLL/Malbolge fixtures with GPL-3.0 provenance."
+    ],
+    "scope": "Distribution-content findings, not a blanket legal conclusion; original release files unchanged."
+  },
+  "full_suite": {
+    "command": "CC=gcc MALBOLGE_PACKAGING_TESTS=1 uv run --no-sync --with hatchling --with setuptools --with wheel pytest test/ -q -n 4 -rs",
+    "passed": 2770,
+    "skipped": 141,
+    "subtests_passed": 3602,
+    "warnings": 1,
+    "wall_seconds": 40.12,
+    "packaging_acceptance_enabled": true,
+    "skip_scope": [
+      "ARM64 machine-code JIT is unavailable on x86-64.",
+      "clang-based independent reference gate unavailable.",
+      "Optional reference highlevel/ternary/initializer binaries not built.",
+      "Explicitly gated slow and additional target-VM workloads not enabled."
+    ],
+    "warning_scope": "Existing is-with-integer-literal SyntaxWarning in a negative syntax fixture."
+  },
+  "installed_release_matrix": [
+    {
+      "version": "1.1.0",
+      "artifact": "native",
+      "ir_installed": false,
+      "native_available": true,
+      "compiler_paths": [
+        "auto",
+        "direct"
+      ],
+      "status": "passed"
+    },
+    {
+      "version": "1.1.0",
+      "artifact": "native",
+      "ir_installed": true,
+      "native_available": true,
+      "compiler_paths": [
+        "auto",
+        "direct",
+        "ir"
+      ],
+      "status": "passed"
+    },
+    {
+      "version": "1.1.0",
+      "artifact": "pure",
+      "ir_installed": false,
+      "native_available": false,
+      "compiler_paths": [
+        "auto",
+        "direct"
+      ],
+      "status": "passed"
+    },
+    {
+      "version": "1.1.0",
+      "artifact": "pure",
+      "ir_installed": true,
+      "native_available": false,
+      "compiler_paths": [
+        "auto",
+        "direct",
+        "ir"
+      ],
+      "status": "passed"
+    },
+    {
+      "version": "1.2.0rc1",
+      "artifact": "native",
+      "ir_installed": false,
+      "native_available": true,
+      "compiler_paths": [
+        "auto",
+        "direct"
+      ],
+      "status": "passed"
+    },
+    {
+      "version": "1.2.0rc1",
+      "artifact": "native",
+      "ir_installed": true,
+      "native_available": true,
+      "compiler_paths": [
+        "auto",
+        "direct",
+        "ir"
+      ],
+      "status": "passed"
+    },
+    {
+      "version": "1.2.0rc1",
+      "artifact": "pure",
+      "ir_installed": false,
+      "native_available": false,
+      "compiler_paths": [
+        "auto",
+        "direct"
+      ],
+      "status": "passed"
+    },
+    {
+      "version": "1.2.0rc1",
+      "artifact": "pure",
+      "ir_installed": true,
+      "native_available": false,
+      "compiler_paths": [
+        "auto",
+        "direct",
+        "ir"
+      ],
+      "status": "passed"
+    }
+  ],
+  "installed_additional_checks": {
+    "versions": [
+      "1.1.0",
+      "1.2.0rc1"
+    ],
+    "artifacts": [
+      "native",
+      "portable"
+    ],
+    "tui": [
+      "headless composition",
+      "step",
+      "step back"
+    ],
+    "compiled_byte_io": [
+      "auto",
+      "direct",
+      "semantic"
+    ],
+    "byte_io_expected_hex": "00ff",
+    "byte_io_input_consumed": 2,
+    "byte_io_unconsumed_trailing_byte": true,
+    "status": "passed"
+  },
+  "historical_i7_recheck": {
+    "package": "hash-verified published 1.1.0 native Linux wheel",
+    "oracle": "execute each source fixture under Python with captured putchar bytes",
+    "engine": "native",
+    "max_steps": 150000000,
+    "max_output": 8,
+    "max_image_bytes": 350000000,
+    "results": [
+      {
+        "case": "d1_fails.py",
+        "backend": "auto",
+        "source_sha256": "433cca036d1390debe650bc60c37ec390e4466e15e103319eb0ff18998adde7d",
+        "expected_hex": "20",
+        "predicted_bytes": 53442761,
+        "selected_backend": "direct",
+        "image_bytes": 53442761,
+        "image_sha256": "8b03a0195ff717e954ccf0e54fc941d5562b7a39519ff428db94f297462f468c",
+        "output_hex": "20",
+        "steps": 11596068,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "d1_fails.py",
+        "backend": "direct",
+        "source_sha256": "433cca036d1390debe650bc60c37ec390e4466e15e103319eb0ff18998adde7d",
+        "expected_hex": "20",
+        "predicted_bytes": 53442761,
+        "selected_backend": "direct",
+        "image_bytes": 53442761,
+        "image_sha256": "8b03a0195ff717e954ccf0e54fc941d5562b7a39519ff428db94f297462f468c",
+        "output_hex": "20",
+        "steps": 11596068,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "d1_fails.py",
+        "backend": "ir",
+        "source_sha256": "433cca036d1390debe650bc60c37ec390e4466e15e103319eb0ff18998adde7d",
+        "expected_hex": "20",
+        "predicted_bytes": 130025219,
+        "selected_backend": "ir",
+        "image_bytes": 130025219,
+        "image_sha256": "6000360c346bb06b0becf569e7d0789b5b794ba957b65d7cfde798cd6c4cf03d",
+        "output_hex": "20",
+        "steps": 30370929,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "d2_passes.py",
+        "backend": "auto",
+        "source_sha256": "e4ac7fd2a602ce2a1e90ea6f244b3add87b2938fd18f43e8a334ba6e949ccf07",
+        "expected_hex": "40",
+        "predicted_bytes": 53452161,
+        "selected_backend": "direct",
+        "image_bytes": 53452161,
+        "image_sha256": "7f958beb3532cd157dbefeee0140a21ae973bd803224d84c681c50ccc57d8b34",
+        "output_hex": "40",
+        "steps": 13556665,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "d2_passes.py",
+        "backend": "direct",
+        "source_sha256": "e4ac7fd2a602ce2a1e90ea6f244b3add87b2938fd18f43e8a334ba6e949ccf07",
+        "expected_hex": "40",
+        "predicted_bytes": 53452161,
+        "selected_backend": "direct",
+        "image_bytes": 53452161,
+        "image_sha256": "7f958beb3532cd157dbefeee0140a21ae973bd803224d84c681c50ccc57d8b34",
+        "output_hex": "40",
+        "steps": 13556665,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "d2_passes.py",
+        "backend": "ir",
+        "source_sha256": "e4ac7fd2a602ce2a1e90ea6f244b3add87b2938fd18f43e8a334ba6e949ccf07",
+        "expected_hex": "40",
+        "predicted_bytes": 130034525,
+        "selected_backend": "ir",
+        "image_bytes": 130034525,
+        "image_sha256": "3d1539c85a087e759a567fb2bcca4f8b201be11f35c1fa70613becbb447240e6",
+        "output_hex": "40",
+        "steps": 38301918,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "fib3_in_loop.py",
+        "backend": "auto",
+        "source_sha256": "9654ee9bb996fb9b76ad8bbb055d91f0695369704db11dc936b4f5147ae2ee6c",
+        "expected_hex": "32",
+        "predicted_bytes": 65484725,
+        "selected_backend": "direct",
+        "image_bytes": 65484725,
+        "image_sha256": "9289b00d75e2b9a9f8d064071e388ff62c1352a81616fc6709e4e31e2eb36465",
+        "output_hex": "32",
+        "steps": 15639506,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "fib3_in_loop.py",
+        "backend": "direct",
+        "source_sha256": "9654ee9bb996fb9b76ad8bbb055d91f0695369704db11dc936b4f5147ae2ee6c",
+        "expected_hex": "32",
+        "predicted_bytes": 65484725,
+        "selected_backend": "direct",
+        "image_bytes": 65484725,
+        "image_sha256": "9289b00d75e2b9a9f8d064071e388ff62c1352a81616fc6709e4e31e2eb36465",
+        "output_hex": "32",
+        "steps": 15639506,
+        "stop_reason": "terminated",
+        "status": "passed"
+      },
+      {
+        "case": "fib3_in_loop.py",
+        "backend": "ir",
+        "source_sha256": "9654ee9bb996fb9b76ad8bbb055d91f0695369704db11dc936b4f5147ae2ee6c",
+        "expected_hex": "32",
+        "predicted_bytes": 152706573,
+        "selected_backend": "ir",
+        "image_bytes": 152706573,
+        "image_sha256": "4cd8b50dd22cb9315cd7593f50f5efe15d9eb8d75b7b8e4e44697419686cf63e",
+        "output_hex": "32",
+        "steps": 41282092,
+        "stop_reason": "terminated",
+        "status": "passed"
+      }
+    ],
+    "interpretation": "All nine tested current paths matched source semantics and terminated; old failure comments are historical, not evidence these default paths still fail. No claim about every layout or platform."
+  },
+  "candidate_artifact_contracts": {
+    "sdist_and_wheels_built": true,
+    "verbatim_upstream_notices": true,
+    "license_file_metadata": true,
+    "wheel_record_verified": true,
+    "sdist_excludes_private_research": true,
+    "sdist_excludes_optional_hell_fixtures_and_test": true,
+    "checkout_fixtures_preserved": true,
+    "artifact_identity": "Exact archive hashes are kept in the separate local artifact manifest, avoiding a self-referential sdist receipt."
+  },
+  "remaining_release_gates": [
+    "Review and commit source, then build and accept final artifacts from the exact reviewed commit.",
+    "Run declared Python/OS/ABI matrix; local CPython 3.12 Linux x86-64 is not cross-platform acceptance.",
+    "Apple Silicon deployment-target/minimum-OS and hosted five-ABI group remain pending.",
+    "Real ARM64 JIT execution is not tested on this x86-64 host.",
+    "Production publication requires separate authorization."
+  ],
+  "publication": {
+    "pypi": false,
+    "testpypi": false,
+    "git_push": false
+  }
+}

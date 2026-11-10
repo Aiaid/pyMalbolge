@@ -55,6 +55,7 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
+| [release-1.2.0.zh.md](notes/release-1.2.0.zh.md) | 本地候选，未发布 | 1.2.0rc1 分发声明、源码包边界、共享源码分析与验收门槛 |
 | [release-1.1.0.zh.md](notes/release-1.1.0.zh.md) | ✅ 2026-10-27 已发布 | 相对 PyPI 1.0.0 的变化、30 个原生 wheel 加通用/源码分发与安装包验收 |
 | [pypi-1.1.0-publication.json](notes/pypi-1.1.0-publication.json) | ✅ 32 个公开文件已复核 | 源码身份、精确产物/哈希、30 个原生下载逐一复核、初次无缓存编译器/IR/TUI 检查及主分支 CI/Pages |
 | [release-1.1.0-acceptance.json](notes/release-1.1.0-acceptance.json) | ✅ TestPyPI 远端验收；平台范围单列 | 构建/公开文件哈希、九组远端安装、产品 CI 与各平台原生/JIT 证据 |

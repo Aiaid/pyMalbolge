@@ -31,6 +31,9 @@
 
 ## 已发行与实验的区别
 
+当前工作区准备 **1.2.0rc1**，仅为尚未发布的维护候选；其[候选说明](notes/release-1.2.0.zh.md)
+和新验证记录与已发布 1.1.0 的历史回执分别保存。
+
 [PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 于 2026-10-27 发布，包含
 **30 个原生 wheel、一个便携 wheel 和一个 sdist**。原生 wheel 覆盖 CPython
 3.9–3.13 的 Linux glibc/musl x86-64/ARM64、Windows x86-64 和 macOS Intel。
