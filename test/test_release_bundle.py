@@ -24,11 +24,16 @@ class ReleaseBundleTests(unittest.TestCase):
         self.dist = self.root / 'dist'
         self.dist.mkdir()
         self.identity = dict(version='1.2.0', source_commit='a' * 40, workflow_run='123', workflow_attempt='1')
-        self.args = (self.root, '1.2.0', 'a' * 40, '123', '1')
+        self.source = self.root / 'canonical'
+        self.source.mkdir()
+        self.args = (self.root, '1.2.0', 'a' * 40, '123', '1', self.source)
         artifacts = []
         for i in range(35):
             path = self.dist / ('native-%02d.whl' % i)
-            path.write_bytes(('native fixture %d' % i).encode())
+            with zipfile.ZipFile(path, 'w') as archive:
+                archive.writestr('malbolge/__init__.py', b'__version__ = "1.2.0"\n')
+                for name in bundle.LICENSES:
+                    archive.writestr('malbolge-1.2.0.dist-info/licenses/' + name, b'license notice')
             artifacts.append(dict(path='native-wheels-fixture/' + path.name,
                                   bytes=path.stat().st_size, sha256=bundle.digest(path)))
         report = dict(self.identity, status='passed', mode='full', complete_release_matrix=True,
@@ -39,6 +44,10 @@ class ReleaseBundleTests(unittest.TestCase):
         metadata = ('Name: malbolge\nVersion: 1.2.0\n' + ''.join('License-File: ' + n + '\n' for n in sorted(bundle.LICENSES))).encode()
         files = {n: b'license notice' for n in bundle.LICENSES}
         files['malbolge/__init__.py'] = b'__version__ = "1.2.0"\n'
+        for name, data in files.items():
+            target = self.source / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
         with zipfile.ZipFile(self.dist / 'malbolge-1.2.0-py3-none-any.whl', 'w') as archive:
             archive.writestr('malbolge-1.2.0.dist-info/METADATA', metadata)
             for name, data in files.items():
@@ -175,6 +184,92 @@ class ReleaseBundleTests(unittest.TestCase):
     def test_consistent_record_still_requires_accepted_source(self):
         self.rewrite_wheel({'malbolge/__init__.py': b'__version__ = "1.2.0"\n# changed\n'}, repair_record=True)
         with self.assertRaisesRegex(ValueError, 'pure accepted module hashes mismatch'):
+            bundle.collect_bundle(*self.args)
+
+    def rewrite_native(self, changes=None, drop=None):
+        path = self.dist / 'native-00.whl'
+        with zipfile.ZipFile(path) as archive:
+            files = {n: archive.read(n) for n in archive.namelist()}
+        files.update(changes or {})
+        if drop is not None:
+            files.pop(drop)
+        with zipfile.ZipFile(path, 'w') as archive:
+            for name, data in files.items():
+                archive.writestr(name, data)
+        report = json.loads((self.root / 'native-report.json').read_text())
+        report['artifacts'][0].update(bytes=path.stat().st_size, sha256=bundle.digest(path))
+        self.write_json('native-report.json', report)
+
+    def test_native_canonical_source_required_despite_updated_hashes(self):
+        self.rewrite_native({'malbolge/__init__.py': b'__version__ = "1.2.0"\n# changed\n'})
+        with self.assertRaisesRegex(ValueError, 'canonical package source mismatch'):
+            bundle.collect_bundle(*self.args)
+
+    def test_native_missing_source_rejected(self):
+        self.rewrite_native(drop='malbolge/__init__.py')
+        with self.assertRaisesRegex(ValueError, 'canonical package source mismatch'):
+            bundle.collect_bundle(*self.args)
+
+    def test_native_extra_source_rejected(self):
+        self.rewrite_native({'malbolge/extra.py': b''})
+        with self.assertRaisesRegex(ValueError, 'canonical package source mismatch'):
+            bundle.collect_bundle(*self.args)
+
+    def test_canonical_notices_required_in_native_and_pure(self):
+        name = 'malbolge-1.2.0.dist-info/licenses/LICENSE'
+        self.rewrite_native({name: b'nonempty but wrong'})
+        with self.assertRaisesRegex(ValueError, 'canonical license mismatch'):
+            bundle.collect_bundle(*self.args)
+        self.rewrite_native({name: b'license notice'})
+        self.rewrite_wheel({name: b'nonempty but wrong'}, repair_record=True)
+        with self.assertRaisesRegex(ValueError, 'canonical license mismatch'):
+            bundle.collect_bundle(*self.args)
+
+    def test_canonical_checkout_mismatch_rejected(self):
+        (self.source / 'malbolge/__init__.py').write_bytes(b'__version__ = "wrong"\n')
+        with self.assertRaisesRegex(ValueError, 'canonical package source mismatch'):
+            bundle.collect_bundle(*self.args)
+
+    def test_windows_crlf_source_and_notices_allowed(self):
+        self.rewrite_native({'malbolge/__init__.py': b'__version__ = "1.2.0"\r\n'})
+        (self.source / 'malbolge/__init__.py').write_bytes(b'__version__ = "1.2.0"\r\n')
+        # Both sides normalize only CRLF, not arbitrary whitespace.
+        self.assertEqual(bundle.normalized_bytes(b'a\r\nb\r'), b'a\nb\r')
+        self.assertEqual(len(bundle.collect_bundle(*self.args)['artifacts']), 37)
+
+    def test_windows_crlf_license_allowed(self):
+        licenses, sources = bundle.canonical_content(self.source)
+        licenses['LICENSE'] = b'license\nnotice'
+        self.rewrite_native({'malbolge-1.2.0.dist-info/licenses/LICENSE': b'license\r\nnotice'})
+        bundle.verify_canonical_content(self.dist / 'native-00.whl', '1.2.0', licenses, sources)
+
+    def test_portable_sources_must_match_checkout_even_if_acceptance_updated(self):
+        changed = b'__version__ = "1.2.0"\n# consistent artifact and acceptance\n'
+        self.rewrite_wheel({'malbolge/__init__.py': changed}, repair_record=True)
+        path = self.root / 'pure-acceptance.json'
+        acceptance = json.loads(path.read_text())
+        acceptance['module_sha256']['__init__.py'] = hashlib.sha256(changed).hexdigest()
+        self.write_json(path.name, acceptance)
+        with self.assertRaisesRegex(ValueError, 'canonical package source mismatch'):
+            bundle.collect_bundle(*self.args)
+
+    def test_sdist_sources_must_match_checkout(self):
+        licenses, sources = bundle.canonical_content(self.source)
+        sources['malbolge/__init__.py'] += b'# different source\n'
+        with self.assertRaisesRegex(ValueError, 'canonical package source mismatch'):
+            bundle.verify_canonical_content(self.dist / 'malbolge-1.2.0.tar.gz', '1.2.0', licenses, sources)
+
+    def test_sdist_notice_mismatch_rejected(self):
+        path = self.dist / 'malbolge-1.2.0.tar.gz'
+        with tarfile.open(path) as archive:
+            files = {m.name: archive.extractfile(m).read() for m in archive.getmembers() if m.isfile()}
+        files['malbolge-1.2.0/LICENSE'] = b'wrong notice'
+        with tarfile.open(path, 'w:gz') as archive:
+            for name, data in files.items():
+                entry = tarfile.TarInfo(name)
+                entry.size = len(data)
+                archive.addfile(entry, io.BytesIO(data))
+        with self.assertRaisesRegex(ValueError, 'canonical license mismatch'):
             bundle.collect_bundle(*self.args)
 
 

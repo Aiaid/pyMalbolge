@@ -2,22 +2,16 @@
 
 > **English** | [中文](native-packaging.zh.md)
 >
-> Status: source-build hook implemented; release acceptance workflows updated
-> 2026-10-27. The local installation checks and single hosted Linux TestPyPI
-> trial below are dated 2026-10-10. The expanded 1.1.0 TestPyPI upload and all
-> nine remote installation cases passed on 2026-10-27. Thirty hosted native
-> wheels and five supplementary local macOS ARM64 wheels passed; hosted macOS
-> ARM64 retry ended without acquiring a runner because of hosted capacity.
-> Production PyPI 1.1.0 now provides those 30 native wheels plus the portable
-> wheel and source archive (32 files); Apple Silicon wheels remain TODO. See
-> the [publication receipt](../notes/pypi-1.1.0-publication.json).
+> Status checkpoint: 2026-11-10. The complete rc2 TestPyPI matrix passed;
+> final 1.2.0 is frozen, with final artifacts and production acceptance pending.
+> The 1.1.0 publication records remain historical evidence.
 
-The separate [1.2 rc1 TestPyPI receipt](../notes/release-1.2.0-testpypi.json)
-records three artifacts, nine remote installation groups and seven quality-CI
-jobs passing at `a466170` on 2026-11-10. Its Linux CPython 3.12 native coverage
-must not be confused with the 30 published **1.1.0** wheels. A new same-commit
-native matrix is being prepared for the next 1.2 candidate; configuration is
-not acceptance. See the [1.2 release gates](../notes/release-1.2.0.md).
+The [rc2 receipt](../notes/release-1.2.0rc2-testpypi.json) records commit
+`063a3c59`, version `1.2.0rc2.dev42757794922001`: 35 native wheels plus pure/sdist,
+13 remote installation/input groups and seven quality-CI jobs passed. Final
+1.2.0 freezes the same compiler/VM implementation, excluding uncommitted
+experimental JIT changes; final artifacts require fresh acceptance. See the
+[final release gates](../notes/release-1.2.0.md).
 
 ## Installation behavior
 
@@ -138,25 +132,32 @@ tags and artifact hashes. Compiler command/version receipts are currently saved 
 developer builder; successful hook builds do not archive that receipt in CI
 JSON. Build failures include backend diagnostics.
 
-## Next candidate: configured, not yet accepted
+## Accepted rc2 and final release gates
 
-The 1.2 rc2 working configuration reuses `native-wheels.yml` from the TestPyPI
-workflow. It requires one source commit and stamped version across 35 native
-wheels, one portable wheel and one sdist, then validates the complete bundle
-before the test-site upload. The post-upload plan adds native ARM64, Intel
-macOS and Windows installations to the earlier portable groups, for 13 remote
-groups, plus a download/hash check of all 37 files. The macOS ARM64 build sets
-deployment target 15.0 and uses macOS 15; a declared target is not itself proof
-of minimum-OS execution. The existing native/JIT capability guards still apply.
+[Run 42757794922](https://github.com/Aiaid/pyMalbolge/actions/runs/42757794922)
+reused `native-wheels.yml` to build and accept 35 native wheels, one portable
+wheel and one sdist from one commit/version. All 37 public TestPyPI hashes and
+13 remote installation/input groups passed. Compared with the historical rc1
+configuration below, native Linux ARM64, macOS ARM64/Intel and Windows groups
+were added; portable and source-build groups remain.
 
-These are workflow requirements in the candidate checkout, not completed
-results. Any failed/missing group or mismatched source/artifact identity blocks
-the full-bundle claim. The workflow targets TestPyPI only; production upload
-remains separate. The recorded rc1 run below used the earlier configuration.
+macOS ARM64 deployment target, wheel tag and Mach-O minimum OS agree at
+**15.0**. Hosted execution was on **15.8.2**, not exact 15.0. Metadata agreement
+does not prove minimum-OS runtime compatibility. Hosted Mac JIT was unavailable
+and correctly rejected with native write-protection guards retained. All ten
+Linux ARM64 libc/ABI wheels executed real NOP JIT machine code. Local Mac/CM4
+evidence applies to those devices only and is not a general speed claim.
+
+The production `pypi.yml` workflow gates upload on the final commit's quality
+checks, a 37-file build and 13 pre-upload installed-package/input groups, plus
+production credentials. After upload it checks every public hash and 13 remote
+installation/input groups. Final commit/artifact acceptance is not recorded
+here; consult [production Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
+and the [production project](https://pypi.org/project/malbolge/) for later status.
 
 ## TestPyPI trial pipeline: recorded rc1 configuration
 
-`.github/workflows/testpypi.yml` runs manually or on the
+The historical rc1 `.github/workflows/testpypi.yml` ran manually or on the
 `codex/testpypi-native-ci` and `codex/release-1-2-0-testpypi` branches. It stamps
 matching distribution and module versions with a unique
 `<base-version>.dev<run-id-and-attempt>` in the disposable
@@ -168,9 +169,8 @@ version stays unchanged.
 
 The version helper preserves canonical alpha/beta/rc suffixes, for example
 `1.2.0rc1.dev42754363710001`. The following nine-group, three-artifact layout
-describes that accepted rc1 run. The next candidate's expanded workflow must
-produce its own same-commit artifact and installation receipts before it can
-replace this acceptance evidence.
+describes only the historical rc1 run. The independent complete rc2 receipt
+is linked above.
 
 Nine remote installation jobs cover the following configurations:
 
@@ -209,7 +209,7 @@ explicitly targets `https://test.pypi.org/legacy/`. Missing credentials fail
 before upload. This workflow configures no production PyPI upload. See
 [the historical hosted trial evidence](../notes/testpypi-ci-validation.json).
 
-## Acceptance and remaining limits
+## Historical 1.1.0 acceptance and its limits
 
 The 2026-10-10 local checks showed that installation from a default-mode sdist
 built native code automatically.
@@ -248,8 +248,8 @@ macOS ARM64 group stayed queued for over ten minutes. A
 at `b7b36ed` selected `macos-26`. Rechecked on 2026-10-27, GitHub cancelled
 that job without assigning a runner: "The job was not acquired by Runner of
 type hosted even after multiple attempts", with an ARM64 capacity notice.
-No code tests ran for that group. Full 35-wheel hosted native acceptance
-remains incomplete; 30 hosted wheels passed.
+No code tests ran for that group. At that time, full 35-wheel hosted native acceptance
+remained incomplete; 30 hosted wheels passed.
 
 Supplementary local macOS 27.0.1 ARM64 checks passed for all five CPython
 versions, 3.9–3.13. Each wheel was built from a pinned 1.1.0 sdist, installed into
@@ -259,11 +259,11 @@ matched the pinned sdist. The CPython 3.12 extension has a Mach-O minimum OS of
 11.0; the other four have 26.0. Execution on macOS 27.0.1 establishes local
 acceptance there; older OS and minimum-OS runtime acceptance remain unverified.
 
-Apple Silicon distribution remains a TODO: reconcile the deployment target,
-wheel platform tag and Mach-O minimum OS, then execute installed VM/JIT checks
-on the claimed minimum OS before publication. Preserve W^X and native JIT
-write-protection guards. The five-ABI hosted ARM64 group also remains pending
-runner capacity; the local macOS 27 checks do not replace it.
+Apple Silicon distribution was incomplete at that historical checkpoint. rc2
+now has all five hosted ARM64 ABIs accepted, with target/tag/Mach-O floor aligned
+at 15.0. Exact minimum-OS runtime testing remains unperformed: the earlier
+minimum-OS execution requirement is not claimed as met, and 15.8.2 is the actual
+hosted execution boundary. W^X and native JIT write-protection guards remain.
 
 The [1.1.0 acceptance receipt](../notes/release-1.1.0-acceptance.json) records
 the nine TestPyPI cases, 30 hosted wheels, five local wheels and pending hosted
@@ -273,9 +273,9 @@ published to production PyPI: Linux x86-64/ARM64 glibc/musl (20), Windows x86-64
 sizes; with the preserved portable wheel and sdist, 1.1.0 has 32 files.
 Installed execution acceptance predates upload; the production checks verify
 the downloaded artifacts, without claiming a new cross-platform execution run.
-See the [publication receipt](../notes/pypi-1.1.0-publication.json). Apple Silicon
+See the [publication receipt](../notes/pypi-1.1.0-publication.json). Final Apple Silicon
 publication, Original native support and general JIT emitters remain separate
-roadmap items.
+from this historical 1.1.0 evidence.
 
 pip can cache a pure fallback wheel and reuse it after a compiler becomes
 available. Installing a selected wheel never runs a build hook, so changing

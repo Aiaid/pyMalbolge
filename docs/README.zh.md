@@ -58,7 +58,8 @@
 
 | 文档 | 状态 | 内容 |
 |---|---|---|
-| [release-1.2.0.zh.md](notes/release-1.2.0.zh.md) | rc1 TestPyPI 已验收；下个候选待验 | 测试站精确版本安装、许可声明、源码包边界及原生/发行门槛；正式 1.2 尚未发布 |
+| [release-1.2.0.zh.md](notes/release-1.2.0.zh.md) | 正式 1.2.0 冻结；正式验收待完成 | 冻结 rc2 编译器/VM、测试站精确版本安装、许可及正式发行门槛 |
+| [release-1.2.0rc2-testpypi.json](notes/release-1.2.0rc2-testpypi.json) | ✅ rc2 完整矩阵已验收 | 提交 063a3c59：35 个原生 wheel 加便携/源码包、13 组远端安装/输入及七个质量 CI 作业；正式产物另行验收 |
 | [release-1.2.0-testpypi.json](notes/release-1.2.0-testpypi.json) | ✅ rc1 历史验收 | 提交 a466170：三个上传产物、九组远端安装、七个质量 CI 作业；不覆盖后续候选或完整原生矩阵 |
 | [release-1.2.0-validation.json](notes/release-1.2.0-validation.json) | 📌 更早的本地候选 | rc1 上传前的分发内容检查、本地测试和安装包验收 |
 | [release-1.1.0.zh.md](notes/release-1.1.0.zh.md) | ✅ 2026-10-27 已发布 | 相对 PyPI 1.0.0 的变化、30 个原生 wheel 加通用/源码分发与安装包验收 |

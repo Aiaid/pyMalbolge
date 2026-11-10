@@ -26,6 +26,43 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def normalized_bytes(data):
+    """Allow Git's Windows checkout line endings, but no other text changes."""
+    return data.replace(b'\r\n', b'\n')
+
+
+def canonical_content(source_root):
+    root = Path(source_root)
+    licenses = {name: normalized_bytes((root / name).read_bytes()) for name in LICENSES}
+    require(all(data.strip() for data in licenses.values()), 'empty canonical license')
+    sources = {p.relative_to(root).as_posix(): normalized_bytes(p.read_bytes())
+               for p in (root / 'malbolge').rglob('*.py') if p.is_file()}
+    require('malbolge/__init__.py' in sources, 'missing canonical package source')
+    return licenses, sources
+
+
+def verify_canonical_content(path, version, licenses, sources):
+    if path.suffix == '.whl':
+        with zipfile.ZipFile(path) as archive:
+            names = [n for n in archive.namelist() if not n.endswith('/')]
+            require(len(names) == len(set(names)), 'duplicate wheel member')
+            files = {n: archive.read(n) for n in names}
+        prefix = 'malbolge-' + version + '.dist-info/licenses/'
+    else:
+        with tarfile.open(path) as archive:
+            files = {m.name: archive.extractfile(m).read()
+                     for m in archive.getmembers() if m.isfile()}
+        root = 'malbolge-' + version + '/'
+        files = {name[len(root):]: data for name, data in files.items()}
+        prefix = ''
+    for name, data in licenses.items():
+        require(prefix + name in files and normalized_bytes(files[prefix + name]) == data,
+                'canonical license mismatch: ' + path.name + ': ' + name)
+    actual = {name: normalized_bytes(data) for name, data in files.items()
+              if name.startswith('malbolge/') and name.endswith('.py')}
+    require(actual == sources, 'canonical package source mismatch: ' + path.name)
+
+
 def inspect_portable(path, version):
     if path.name.endswith('.whl'):
         with zipfile.ZipFile(path) as archive:
@@ -81,7 +118,7 @@ def inspect_portable(path, version):
             for name, data in files.items() if name.startswith('malbolge/') and name.endswith('.py')}
 
 
-def collect_bundle(root, version, commit, run_id, attempt):
+def collect_bundle(root, version, commit, run_id, attempt, source_root=None):
     report = json.loads((root / 'native-report.json').read_text(encoding='utf8'))
     require(report.get('status') == 'passed' and report.get('mode') == 'full'
             and report.get('complete_release_matrix') is True and report.get('wheel_count') == 35,
@@ -135,12 +172,20 @@ def collect_bundle(root, version, commit, run_id, attempt):
                     'sdist acceptance requires only the generated native VM extension')
             require(data.get('native_available') is True, 'sdist native acceptance missing')
         acceptance[path.name] = digest(path)
-    return dict(identity, schema_version=1, complete_release_matrix=True, artifacts=artifacts,
+    # Never infer canonical content from an artifact being verified. API callers
+    # may supply a fixture checkout; the CLI requires an explicit frozen root.
+    licenses, sources = canonical_content(source_root if source_root is not None else Path(__file__).resolve().parents[1])
+    for path in paths:
+        verify_canonical_content(path, version, licenses, sources)
+    canonical_hashes = {name: hashlib.sha256(data).hexdigest()
+                        for name, data in dict(licenses, **sources).items()}
+    return dict(identity, schema_version=2, complete_release_matrix=True, artifacts=artifacts,
+                canonical_content_sha256=canonical_hashes,
                 native_report_sha256=digest(root / 'native-report.json'), acceptance_sha256=acceptance)
 
 
-def verify_bundle(root, version, commit, run_id, attempt):
-    expected = collect_bundle(root, version, commit, run_id, attempt)
+def verify_bundle(root, version, commit, run_id, attempt, source_root=None):
+    expected = collect_bundle(root, version, commit, run_id, attempt, source_root)
     actual = json.loads((root / 'release-manifest.json').read_text(encoding='utf8'))
     require(actual == expected, 'bundle manifest mismatch')
     return actual
@@ -149,11 +194,13 @@ def verify_bundle(root, version, commit, run_id, attempt):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bundle-dir', type=Path, required=True)
+    parser.add_argument('--source-root', type=Path, required=True,
+                        help='Frozen checkout with the exact artifact version and canonical notices')
     parser.add_argument('--create', action='store_true')
     for key in ('version', 'commit', 'run-id', 'attempt'):
         parser.add_argument('--expected-' + key, required=True)
     args = parser.parse_args(argv)
-    values = (args.bundle_dir, args.expected_version, args.expected_commit, args.expected_run_id, args.expected_attempt)
+    values = (args.bundle_dir, args.expected_version, args.expected_commit, args.expected_run_id, args.expected_attempt, args.source_root)
     if args.create:
         (args.bundle_dir / 'release-manifest.json').write_text(json.dumps(collect_bundle(*values), indent=2, sort_keys=True) + '\n')
     verify_bundle(*values)

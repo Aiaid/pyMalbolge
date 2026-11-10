@@ -1,15 +1,16 @@
-# 1.2.0 release candidate
+# 1.2.0 final release freeze
 
 > **English** | [中文](release-1.2.0.zh.md)
 >
-> Preparation date: 2026-11-10. Next source candidate: **1.2.0rc2**.
-> Earlier TestPyPI candidate **1.2.0rc1.dev42754363710001** passed the scoped remote checks below.
-> Production PyPI remains at 1.1.0; no production release was made.
+> Freeze checkpoint: 2026-11-10. Final version: **1.2.0**.
+> Final source commit/artifact acceptance and production publication are pending.
+> The recorded production release remains 1.1.0.
 
-The next candidate is being prepared with additional input experiments and a
-same-commit native-wheel matrix. Those checks are not yet accepted here. The
-rc1 evidence below remains tied to `a466170` and its exact artifact hashes;
-it is not evidence that rc2 or a final 1.2.0 package has passed.
+The final release freezes the compiler/VM implementation at rc2 commit
+`063a3c59efaa1de4545e59bd0a26ee68dfddf860`. Uncommitted experimental JIT
+changes from the development checkout are excluded. Final version metadata,
+release gates and documentation require a new commit and freshly built bytes;
+the rc2 receipt must not be relabeled as final acceptance.
 
 ## Why a separate version
 
@@ -45,35 +46,45 @@ only those original files.
 
 ## TestPyPI acceptance
 
-[Run 42754363710](https://github.com/Aiaid/pyMalbolge/actions/runs/42754363710)
-published three distributions from commit `a466170` on the separate
-`codex/release-1-2-0-testpypi` branch. All nine remote install groups passed:
-Linux Python 3.8/3.10 with IR/3.12 native/3.13, Linux ARM64 pure, macOS ARM64
-and Intel pure, Windows pure, and a Linux sdist-to-native build. The seven
-quality-CI jobs also passed. The three TestPyPI files were downloaded and
-matched to the CI build hashes; notices and archive boundaries were rechecked.
+[Run 42757794922](https://github.com/Aiaid/pyMalbolge/actions/runs/42757794922)
+succeeded at rc2 commit `063a3c59`, publishing **1.2.0rc2.dev42757794922001**.
+All **37** public downloads match the accepted hashes: **35 native wheels**
+(CPython 3.9–3.13, Linux glibc/musl x86-64/ARM64, macOS Intel/ARM64 and Windows
+x86-64), one portable wheel and one sdist. All **13 remote installation/input
+groups** and **seven same-commit quality-CI jobs** passed. Python 3.8 source-wheel
+compatibility is checked separately from the 35-wheel matrix.
 
-See the [TestPyPI receipt](release-1.2.0-testpypi.json) and
-[test project](https://test.pypi.org/project/malbolge/1.2.0rc1.dev42754363710001/).
-These are test-site results, not production publication or Apple Silicon
-native/JIT acceptance. The local validation receipt below records the earlier
-pre-publication stage and has not been relabeled as hosted acceptance.
+See the [rc2 receipt](release-1.2.0rc2-testpypi.json) and
+[test project](https://test.pypi.org/project/malbolge/1.2.0rc2.dev42757794922001/).
+The earlier [rc1 receipt](release-1.2.0-testpypi.json), at `a466170` with three
+artifacts and nine installation groups, and [local candidate validation](release-1.2.0-validation.json)
+remain unchanged historical evidence. Do not add overlapping test counts.
+
+### Platform and JIT boundaries
+
+- macOS ARM64 deployment target, wheel tag and Mach-O minimum OS agree at
+  **15.0**. Hosted execution was on **15.8.2 only**; exact 15.0 runtime
+  compatibility is untested. Metadata agreement is not minimum-OS execution proof.
+- Hosted Mac JIT was unavailable and correctly rejected with write-protection
+  guards retained. This is native VM acceptance, not hosted Mac JIT execution.
+- All ten Linux ARM64 libc/ABI wheels executed real NOP JIT machine code.
+  Existing local Mac/CM4 checks prove execution on those devices only.
+  JIT remains explicit and experimental; none of this establishes a general speedup.
 
 ## Install the recorded TestPyPI candidate
 
-Use a fresh directory outside a source checkout. The following pins the
-already recorded rc1 snapshot, not the next candidate or production PyPI:
+Use a fresh directory outside a source checkout. This installs the recorded
+rc2 test snapshot, not final 1.2.0 or a production release:
 
 ```sh
 uv venv
-uv pip install --index-url https://test.pypi.org/simple/ --no-deps 'malbolge==1.2.0rc1.dev42754363710001'
+uv pip install --index-url https://test.pypi.org/simple/ --no-deps 'malbolge==1.2.0rc2.dev42757794922001'
 uv run --no-project python -c "import malbolge; print(malbolge.__version__)"
 ```
 
-The reported version must be `1.2.0rc1.dev42754363710001`. Use a newly
-recorded exact version when testing a later candidate. The base package has
-no runtime dependencies. Optional dependencies come from production PyPI in
-a separate step, without reinstalling the project or mixing package indexes:
+The reported version must be `1.2.0rc2.dev42757794922001`. The base package has
+no runtime dependencies. Install optional dependencies separately from
+production PyPI without reinstalling the project or mixing indexes:
 
 ```sh
 uv pip install --index-url https://pypi.org/simple/ 'textual>=0.40.0'
@@ -81,34 +92,27 @@ uv pip install --index-url https://pypi.org/simple/ 'textual>=0.40.0'
 uv pip install --index-url https://pypi.org/simple/ 'xdsl==0.69.0'
 ```
 
-A matching CPython 3.12 Linux x86-64 installation can select the native rc1
-wheel; other platforms can select its portable wheel. This does not claim
-native support on those platforms. For exact artifact auditing, use the
-filenames and hashes in the receipt rather than only a version constraint.
+A matching platform/CPython ABI selects a native wheel; the portable wheel is
+available otherwise. Audit exact filenames and hashes in the receipt.
+`pyproject.toml` embeds `docs/notes/pypi-description.md` in distribution metadata;
+README edits cannot change already uploaded package descriptions.
 
-`pyproject.toml` embeds `docs/notes/pypi-description.md` as the index description.
-The Chinese file is its companion translation. Updating either GitHub README
-does not change an existing TestPyPI/PyPI page: a new distribution must carry
-the updated metadata. Description edits after rc1 are intended for the next
-candidate, not retroactive changes to the recorded upload.
+## Final production gates
 
-## Validation and remaining gates
+The production workflow `.github/workflows/pypi.yml` requires the final source
+commit's quality checks, a complete **37-file** build and **13 pre-upload
+installed-package/input groups** before upload. Publication requires a valid
+production credential. After upload, every public artifact hash and **13 remote
+installation/input groups** must pass. A configured or queued gate is not a pass;
+missing credentials or failed gates must not be reported as publication success.
 
-See [candidate validation](release-1.2.0-validation.json) for final local
-commands, artifact identities, installed checks and their scope. Test counts
-from overlapping runs must not be added together.
-
-This is not a completed cross-platform release. Before production publication:
-
-1. Select the final production version and commit, then rebuild and accept
-   those exact artifacts. TestPyPI acceptance covers only the recorded bytes.
-2. Complete native OS/ABI coverage beyond the tested Linux CPython 3.12 wheel;
-   the successful pure-wheel platform groups do not validate native builds.
-3. Keep Apple Silicon wheels withheld until deployment target, wheel tag,
-   Mach-O minimum OS and real minimum-OS execution agree.
-4. Keep ARM64 JIT explicit and experimental. x86-64 unavailability tests are
-   not ARM64 machine-code acceptance.
-5. Run the final release-version checks and obtain publication authorization.
+Final source SHA, final artifact hashes and production execution acceptance
+are not yet recorded here. Consult [production Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
+and the [production project](https://pypi.org/project/malbolge/) for subsequent
+status. Rebuild and accept the exact final artifacts rather than reusing rc2
+hashes. Exact macOS 15.0 runtime testing remains a separately disclosed gap;
+the previous minimum-OS execution requirement is not claimed as fulfilled by
+15.8.2 hosting or by matching metadata.
 
 There is no new layout protocol, direct semantic-to-LAL backend, general Python
-support or claimed speedup in this maintenance candidate.
+support or claimed speedup in this maintenance release freeze.

@@ -52,7 +52,7 @@ from .debugger import (
     debug,
 )
 
-__version__ = "1.2.0rc2"
+__version__ = "1.2.0"
 
 __all__ = [
     # Original interpreter

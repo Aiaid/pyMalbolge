@@ -2,20 +2,13 @@
 
 > [English](native-packaging.md) | **中文**
 >
-> 状态：源码构建 hook 已实现，发布验收工作流于 2026-10-27 更新。
-> 下文本地安装检查及单个平台的托管 Linux TestPyPI 试运行记录日期为
-> 2026-10-10。扩展后的 1.1.0 TestPyPI 上传及九个远程安装用例于
-> 2026-10-27 全部通过。30 个托管原生 wheel 与 5 个补充本地 macOS ARM64
-> wheel 已通过；托管 macOS ARM64 重试因容量不足、未分配到 runner 而结束。
-> 正式 PyPI 1.1.0 现提供这 30 个原生 wheel、可移植 wheel 与源码归档，
-> 共 32 个文件；Apple Silicon wheel 仍为待办。见
-> [发布回执](../notes/pypi-1.1.0-publication.json)。
+> 状态核对：2026-11-10。rc2 TestPyPI 完整矩阵已通过；正式 1.2.0 冻结，
+> 正式产物与发布验收仍待完成。1.1.0 的发布记录保持为历史证据。
 
-独立的 [1.2 rc1 TestPyPI 回执](../notes/release-1.2.0-testpypi.json)记录提交
-`a466170` 在 2026-11-10 通过三个产物、九组远端安装及七个质量 CI 作业。
-该轮 Linux CPython 3.12 原生覆盖不能与已发布的 30 个 **1.1.0** 原生 wheel
-混为一谈。下个 1.2 候选正在准备同提交原生矩阵，工作流配置不等于验收通过。
-见 [1.2 发行门槛](../notes/release-1.2.0.zh.md)。
+[rc2 回执](../notes/release-1.2.0rc2-testpypi.json)记录提交 `063a3c59`、版本
+`1.2.0rc2.dev42757794922001`：35 个原生 wheel 加便携/源码包、13 组远端
+安装/输入和七个质量 CI 作业全部通过。正式版冻结相同编译器/VM 实现，不纳入
+未提交的实验 JIT 修改；最终产物必须重新验收。见[正式发行门槛](../notes/release-1.2.0.zh.md)。
 
 ## 安装行为
 
@@ -121,22 +114,29 @@ Malbolge 字节 I/O 和 CLI 预算退出码。它拒绝副本导入，记录已�
 目前由开发构建器保存，成功 hook 构建不把该记录归档进 CI JSON；构建
 失败会输出 backend 诊断。
 
-## 下个候选：已配置，尚未验收
+## rc2 验收与正式版门槛
 
-1.2 rc2 工作区配置由 TestPyPI 工作流复用 `native-wheels.yml`，要求 35 个原生
-wheel、一个便携 wheel 和一个 sdist 具有相同源码提交和临时版本，先校验完整
-产物包，再上传测试站。上传后的计划在原有便携组外增加 ARM64、Intel macOS 和
-Windows 原生安装，共 13 组远端安装，并下载核对全部 37 个文件的哈希。
-macOS ARM64 构建设置 deployment target 15.0 并使用 macOS 15；声明 target
-本身不证明最低系统执行通过。原有 native/JIT 能力守卫保持有效。
+[运行 42757794922](https://github.com/Aiaid/pyMalbolge/actions/runs/42757794922)
+复用 `native-wheels.yml`，从同一提交和版本构建并验收 35 个原生 wheel、一个
+便携 wheel 和一个 sdist。全部 37 个测试站公开文件哈希和 13 组远端安装/输入
+检查通过。相对下方历史 rc1 配置，新增 Linux ARM64、macOS ARM64/Intel 和
+Windows 原生安装组；便携组与源码构建组仍保留。
 
-这些是候选工作区的工作流要求，不是已完成结果。任何缺失/失败组或源码/产物
-身份不一致都会阻止“完整产物包通过”的结论。工作流仅面向 TestPyPI，正式上传
-单独处理。下方已记录的 rc1 运行使用较早的配置。
+macOS ARM64 的 deployment target、标签及 Mach-O 最低系统一致为 **15.0**；
+托管机器实际为 **15.8.2**，未测试精确 15.0。元数据一致不能替代最低系统运行
+证明。托管 Mac JIT 不可用并正确拒绝，原生写保护守卫未移除；十个 Linux ARM64
+libc/ABI wheel 实际执行 NOP JIT 机器码。本地 Mac/CM4 证据只适用于对应设备，
+不构成普遍提速声明。
+
+正式工作流 `pypi.yml` 要求最终同提交质量检查、37 文件构建和 13 组上传前
+安装包/输入检查通过，且具有正式凭据，才可上传。上传后还须验证全部公开哈希
+和 13 组远端安装/输入。最终提交及产物尚未在本文验收；最新状态见
+[正式 Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)和
+[正式项目页](https://pypi.org/project/malbolge/)。
 
 ## TestPyPI 试发布管线：已记录的 rc1 配置
 
-`.github/workflows/testpypi.yml` 可手动触发，也在
+历史 rc1 的 `.github/workflows/testpypi.yml` 可手动触发，也在
 `codex/testpypi-native-ci` 和 `codex/release-1-2-0-testpypi` 分支推送时运行。
 它仅在临时 CI 副本中将分发和模块版本同步写为唯一的
 `<base-version>.dev<run-id-and-attempt>` 开发版本，构建并
@@ -145,8 +145,7 @@ macOS ARM64 构建设置 deployment target 15.0 并使用 macOS 15；声明 targ
 记录 SHA-256 指纹并上传 TestPyPI。仓库的稳定版本号保持不变。
 
 版本脚本保留规范的 alpha/beta/rc 后缀，例如 `1.2.0rc1.dev42754363710001`。
-下列九组安装、三个产物的配置描述已经通过的 rc1 运行；下个候选扩展后的工作流
-须提供自身同提交产物和安装回执，不能直接继承这份验收结论。
+下列九组安装、三个产物的配置仅描述历史 rc1；rc2 的独立完整矩阵回执见上文。
 
 九个远程安装 job 覆盖以下配置：
 
@@ -179,7 +178,7 @@ Wheel job 强制使用二进制分发；源码 job 选择 sdist 并要求成功�
 `https://test.pypi.org/legacy/`，凭据缺失会在上传前失败；工作流没有配置
 正式 PyPI 上传。参见[历史托管试发布证据](../notes/testpypi-ci-validation.json)。
 
-## 验收与剩余边界
+## 历史 1.1.0 验收与当时的边界
 
 2026-10-10 的本地检查显示，默认模式 sdist 安装自动构建原生扩展；CPython 3.8.19、3.12.9、
 3.13.14 原生 wheel 通过干净环境中的 native/JIT 检查，纯 wheel 通过
@@ -212,7 +211,7 @@ JIT 步。剩余 macOS ARM64 组排队超过十分钟后，在提交 `b7b36ed` �
 `macos-26` 启动[定向 ARM64 重试](https://github.com/Aiaid/pyMalbolge/actions/runs/40358838205)，
 2026-10-27 复查确认，该作业未分配到 runner，GitHub 多次尝试后取消，
 并给出 ARM64 容量不足的说明；该组未运行代码测试。
-完整 35 个托管原生 wheel 的验收仍未完成，已通过的托管 wheel 为 30 个。
+当时完整 35 个托管原生 wheel 的验收未完成，已通过的托管 wheel 为 30 个。
 
 补充本地 macOS 27.0.1 ARM64 检查中，CPython 3.9–3.13 五个版本全部通过。
 各 wheel 均从固定指纹的 1.1.0 sdist 构建，在全新环境安装并通过两个 helper，
@@ -221,10 +220,10 @@ JIT 步。剩余 macOS ARM64 组排队超过十分钟后，在提交 `b7b36ed` �
 其余四份为 26.0；在 macOS 27.0.1 上执行确立该本地系统的验收结果，旧系统
 及最低系统版本的运行验收仍未验证。
 
-Apple Silicon 分发仍为待办：发布前统一 deployment target、wheel 平台标签与
-Mach-O 最低系统，并在声明的最低 OS 上运行安装后 VM/JIT 检查。保持 W^X
-与原生 JIT 写保护守卫启用。五个 ABI 的托管 ARM64 组仍等待 runner 容量；
-本地 macOS 27 检查不能替代该组验收。
+当时 Apple Silicon 分发未完成。rc2 现已补齐五个 ABI 的托管 ARM64 验收，
+并统一 target、标签与 Mach-O 最低系统为 15.0；精确最低系统运行检查仍未完成。
+先前提出的最低系统执行要求不能视为已通过，15.8.2 执行是当前实际边界。
+W^X 和原生 JIT 写保护守卫继续保留。
 
 [1.1.0 验收记录](../notes/release-1.1.0-acceptance.json)保存九个 TestPyPI 用例、
 30 个托管 wheel、五个本地 wheel 及仍待完成的托管 macOS ARM64 范围。
@@ -233,7 +232,7 @@ x86-64/ARM64 glibc/musl（20）、Windows x86-64（5）及 macOS Intel（5）。
 实际下载的 30 个公开文件哈希与大小均匹配已验收产物，连同保留的可移植 wheel
 和 sdist，1.1.0 共 32 个文件。安装后执行验收在上传前完成，正式站检查核对
 下载产物，不宣称重新完成跨平台执行。见[发布回执](../notes/pypi-1.1.0-publication.json)。
-Apple Silicon 发布、原版原生引擎及一般 JIT 发射器仍为独立 roadmap 项。
+正式 Apple Silicon 产物发布、原版原生引擎及一般 JIT 发射器与历史 1.1.0 证据分开。
 
 pip 可能缓存纯回退 wheel，之后已有编译器仍继续复用。已有 wheel 的
 安装不会调用 build hook，改变构建模式也不会重建；需要原生时应明确从

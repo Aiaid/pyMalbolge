@@ -412,7 +412,7 @@ jobs:
         run: |
           uv run --no-project --python 3.12 python scripts/verify_release_bundle.py --create \
             --bundle-dir release-bundle --expected-version "$VERSION" --expected-commit "$GITHUB_SHA" \
-            --expected-run-id "$GITHUB_RUN_ID" --expected-attempt "$GITHUB_RUN_ATTEMPT"
+            --expected-run-id "$GITHUB_RUN_ID" --expected-attempt "$GITHUB_RUN_ATTEMPT" --source-root .
           uv run --no-project --python 3.12 python - <<'PY'
           import hashlib, json, os, shutil
           from pathlib import Path

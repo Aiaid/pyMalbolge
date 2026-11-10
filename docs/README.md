@@ -62,7 +62,8 @@ Its local validation is separate from any later release or platform matrix.
 
 | Document | Status | Contents |
 |---|---|---|
-| [release-1.2.0.md](notes/release-1.2.0.md) | rc1 TestPyPI accepted; next candidate pending | Exact test-version installation, notices, archive boundaries and remaining native/release gates; no production 1.2 publication |
+| [release-1.2.0.md](notes/release-1.2.0.md) | Final 1.2.0 freeze; production acceptance pending | Frozen rc2 compiler/VM, exact test-version installation, notices and final release gates |
+| [release-1.2.0rc2-testpypi.json](notes/release-1.2.0rc2-testpypi.json) | ✅ rc2 full matrix accepted | Commit 063a3c59: 35 native wheels plus pure/sdist, 13 remote install/input groups and seven quality-CI jobs; final artifacts remain separate |
 | [release-1.2.0-testpypi.json](notes/release-1.2.0-testpypi.json) | ✅ dated rc1 acceptance | Commit a466170: three uploaded artifacts, nine remote install groups and seven quality-CI jobs; later candidate and full native matrix excluded |
 | [release-1.2.0-validation.json](notes/release-1.2.0-validation.json) | 📌 earlier local candidate | Distribution-content review, local suite and installed-package checks before the recorded rc1 upload |
 | [release-1.1.0.md](notes/release-1.1.0.md) | ✅ published 2026-10-27 | Changes since PyPI 1.0.0, 30 native wheels plus portable/source distributions and installed-package acceptance |

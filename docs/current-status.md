@@ -36,14 +36,21 @@
 
 ## Published versus experimental
 
-**1.2 is in release preparation, not published to production PyPI.** The first
-[TestPyPI candidate](https://test.pypi.org/project/malbolge/1.2.0rc1.dev42754363710001/)
-passed nine remote installation groups and seven quality-CI jobs at commit
-`a466170`. This covers portable installations on Linux, Windows and both macOS
-architectures, plus Linux CPython 3.12 native-wheel/source-build checks. It is
-not acceptance of a complete native OS/ABI matrix or of later candidate bytes.
-See the [1.2 release notes](notes/release-1.2.0.md) and
-[dated TestPyPI receipt](notes/release-1.2.0-testpypi.json).
+**Final 1.2.0 is frozen for release; production acceptance is pending.** Its
+compiler/VM implementation is unchanged from rc2 commit `063a3c59`; subsequent
+uncommitted experimental JIT changes are excluded. The accepted TestPyPI
+version is **1.2.0rc2.dev42757794922001**: 35 native wheels plus a portable wheel
+and sdist, 13 remote installation/input groups and seven quality-CI jobs passed.
+See the [rc2 receipt](notes/release-1.2.0rc2-testpypi.json) and
+[release gates](notes/release-1.2.0.md). These results do not certify final
+1.2.0 artifacts. Check [production Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
+and the [production project](https://pypi.org/project/malbolge/) for later status.
+
+macOS ARM64 rc2 wheels have deployment target, wheel tag and Mach-O floor
+**15.0**, with execution tested on **15.8.2 only**. Exact macOS 15.0 runtime
+compatibility remains untested. Hosted Mac JIT was unavailable and correctly
+rejected; Linux ARM64 executed real NOP JIT machine code. Local Mac/CM4 JIT
+checks are device-specific evidence, not a general speed claim.
 
 [PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) was published on
 2026-10-27 with **30 native wheels, one portable wheel and one sdist**. The
@@ -52,7 +59,7 @@ Windows x86-64 and macOS Intel. Python 3.8 compatibility checks are separate
 from that wheel matrix. See [release notes](notes/release-1.1.0.md) and the
 [artifact hashes and installed acceptance](notes/pypi-1.1.0-publication.json).
 
-Apple Silicon wheel publication/minimum-OS acceptance remains pending.
+Final Apple Silicon artifact publication and exact minimum-OS runtime testing remain pending.
 Local macOS ARM64 execution does not prove compatibility with every tagged
 minimum OS. The guarded ARM64 NOP JIT is **explicit and experimental**, not
 the default engine or a general LLVM backend; short real fixtures regressed

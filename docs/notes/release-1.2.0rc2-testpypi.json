@@ -1,0 +1,739 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-10",
+  "status": "testpypi_full_native_matrix_and_inputs_passed",
+  "version": "1.2.0rc2.dev42757794922001",
+  "source_version": "1.2.0rc2",
+  "source_commit": "063a3c59efaa1de4545e59bd0a26ee68dfddf860",
+  "branch": "codex/release-1-2-0-testpypi",
+  "project_url": "https://test.pypi.org/project/malbolge/1.2.0rc2.dev42757794922001/",
+  "testpypi_run": {
+    "id": 42757794922,
+    "attempt": 1,
+    "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42757794922",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129636121610,
+        "name": "Build and accept the complete candidate matrix / Wheels (ubuntu-24.04-arm)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636121915,
+        "name": "Build and accept the complete candidate matrix / Wheels (macos-15)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636121938,
+        "name": "Build and accept the complete candidate matrix / Wheels (windows-2022)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636122061,
+        "name": "Build and accept the complete candidate matrix / Wheels (macos-15-intel)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636122075,
+        "name": "Build and accept the complete candidate matrix / Wheels (ubuntu-24.04)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636122091,
+        "name": "Build and accept the complete candidate matrix / CPython 3.8 source-wheel compatibility",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637366917,
+        "name": "Build and accept the complete candidate matrix / Validate matrix and retain exact review bundle",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637558206,
+        "name": "Publish the 37 accepted distributions to TestPyPI",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883218,
+        "name": "Verify every published TestPyPI file hash",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883406,
+        "name": "Remote install (linux-py310-ir)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883419,
+        "name": "Remote install (linux-arm64-native)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883425,
+        "name": "Remote install (macos-intel-native)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883428,
+        "name": "Remote install (windows-native)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883432,
+        "name": "Remote install (macos-arm64-pure)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883433,
+        "name": "Remote install (linux-py312-native)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883439,
+        "name": "Remote install (linux-py313-pure)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883451,
+        "name": "Remote install (macos-arm64-native)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883477,
+        "name": "Remote install (linux-source-native)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883496,
+        "name": "Remote install (linux-py38-pure)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883505,
+        "name": "Remote install (windows-pure)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883549,
+        "name": "Remote install (linux-arm64-pure)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129637883573,
+        "name": "Remote install (macos-intel-pure)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "quality_run": {
+    "id": 42757795085,
+    "url": "https://github.com/Aiaid/pyMalbolge/actions/runs/42757795085",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129636121428,
+        "name": "regression (3.13)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636121704,
+        "name": "semantic-differential",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636121749,
+        "name": "ir-foundation (3.13)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636121769,
+        "name": "ir-foundation (3.10)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636121824,
+        "name": "regression (3.8)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636121845,
+        "name": "ir-foundation (3.12)",
+        "conclusion": "success"
+      },
+      {
+        "id": 129636122742,
+        "name": "regression (3.12)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "local_tests": {
+    "command": "CC=gcc MALBOLGE_PACKAGING_TESTS=1 uv run --no-sync --with hatchling --with setuptools --with wheel pytest test/ -q -n 4 -rs",
+    "passed": 2836,
+    "skipped": 141,
+    "subtests_passed": 3615,
+    "warnings": 1,
+    "seconds": 40.85,
+    "note": "Do not add overlapping hosted/local suite counts."
+  },
+  "osp": [
+    {
+      "job": "Remote install (linux-py310-ir)",
+      "id": 129637883406,
+      "status": "success",
+      "oracle_workloads": 4,
+      "compile_samples": 6
+    },
+    {
+      "job": "Remote install (linux-arm64-native)",
+      "id": 129637883419,
+      "status": "success",
+      "oracle_workloads": 6,
+      "compile_samples": 6
+    },
+    {
+      "job": "Remote install (macos-intel-native)",
+      "id": 129637883425,
+      "status": "success",
+      "oracle_workloads": 6,
+      "compile_samples": 6
+    },
+    {
+      "job": "Remote install (windows-native)",
+      "id": 129637883428,
+      "status": "success",
+      "oracle_workloads": 6,
+      "compile_samples": 6
+    },
+    {
+      "job": "Remote install (macos-arm64-pure)",
+      "id": 129637883432,
+      "status": "success",
+      "oracle_workloads": 4,
+      "compile_samples": 4
+    },
+    {
+      "job": "Remote install (linux-py312-native)",
+      "id": 129637883433,
+      "status": "success",
+      "oracle_workloads": 6,
+      "compile_samples": 9
+    },
+    {
+      "job": "Remote install (linux-py313-pure)",
+      "id": 129637883439,
+      "status": "success",
+      "oracle_workloads": 4,
+      "compile_samples": 4
+    },
+    {
+      "job": "Remote install (macos-arm64-native)",
+      "id": 129637883451,
+      "status": "success",
+      "oracle_workloads": 6,
+      "compile_samples": 6
+    },
+    {
+      "job": "Remote install (linux-source-native)",
+      "id": 129637883477,
+      "status": "success",
+      "oracle_workloads": 6,
+      "compile_samples": 6
+    },
+    {
+      "job": "Remote install (linux-py38-pure)",
+      "id": 129637883496,
+      "status": "success",
+      "oracle_workloads": 4,
+      "compile_samples": 4
+    },
+    {
+      "job": "Remote install (windows-pure)",
+      "id": 129637883505,
+      "status": "success",
+      "oracle_workloads": 4,
+      "compile_samples": 4
+    },
+    {
+      "job": "Remote install (linux-arm64-pure)",
+      "id": 129637883549,
+      "status": "success",
+      "oracle_workloads": 4,
+      "compile_samples": 4
+    },
+    {
+      "job": "Remote install (macos-intel-pure)",
+      "id": 129637883573,
+      "status": "success",
+      "oracle_workloads": 4,
+      "compile_samples": 4
+    }
+  ],
+  "native_coverage": {
+    "wheels": 35,
+    "python_abis": [
+      "cp39",
+      "cp310",
+      "cp311",
+      "cp312",
+      "cp313"
+    ],
+    "platforms": [
+      "manylinux_x86_64",
+      "manylinux_aarch64",
+      "musllinux_x86_64",
+      "musllinux_aarch64",
+      "macosx_x86_64",
+      "macosx_arm64",
+      "win_amd64"
+    ],
+    "installed_checks": "Each exact repaired native wheel passed native VM and release checks before publication.",
+    "cp38": "Separate native source-build and pure fallback compatibility passed; the non-manylinux cp38 wheel was not uploaded."
+  },
+  "jit": {
+    "linux_arm64": [
+      {
+        "identifier": "cp39-manylinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp310-manylinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp311-manylinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp312-manylinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp313-manylinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp39-musllinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp310-musllinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp311-musllinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp312-musllinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      },
+      {
+        "identifier": "cp313-musllinux_aarch64",
+        "status": "machine code executed",
+        "jit_steps": 4096,
+        "jit_blocks": 64
+      }
+    ],
+    "macos_arm64": [
+      {
+        "identifier": "cp39-macosx_arm64",
+        "host": "macOS-15.8.2-arm64-arm-64bit",
+        "available": false,
+        "thread_write_protection_supported": false,
+        "status": "unsupported; explicit engine rejected"
+      },
+      {
+        "identifier": "cp310-macosx_arm64",
+        "host": "macOS-15.8.2-arm64-arm-64bit",
+        "available": false,
+        "thread_write_protection_supported": false,
+        "status": "unsupported; explicit engine rejected"
+      },
+      {
+        "identifier": "cp311-macosx_arm64",
+        "host": "macOS-15.8.2-arm64-arm-64bit",
+        "available": false,
+        "thread_write_protection_supported": false,
+        "status": "unsupported; explicit engine rejected"
+      },
+      {
+        "identifier": "cp312-macosx_arm64",
+        "host": "macOS-15.8.2-arm64-arm-64bit",
+        "available": false,
+        "thread_write_protection_supported": false,
+        "status": "unsupported; explicit engine rejected"
+      },
+      {
+        "identifier": "cp313-macosx_arm64",
+        "host": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+        "available": false,
+        "thread_write_protection_supported": false,
+        "status": "unsupported; explicit engine rejected"
+      }
+    ]
+  },
+  "documentation": {
+    "description_sha256": "54800581e3f2c4653b3caa05175097231a517409837477d16f76360cfd49f3da",
+    "testpypi_description_matches_source": true,
+    "note": "Updated description is present on this test release. The production 1.1.0 description and default-branch docs remain tied to their existing publication/mainline."
+  },
+  "scope": {
+    "production_pypi_upload": false,
+    "production_latest": "1.1.0",
+    "master_unchanged": "0321a2620d818ba1de0d0b78bf2364a08bc6325a",
+    "limitations": [
+      "macOS ARM64 wheels target 15.0 and were executed on hosted macOS 15.8.2; no direct minimum-OS 15.0 host test was performed.",
+      "Mac ARM64 JIT was unavailable and explicitly rejected with guards retained; this is native-VM acceptance, not Mac JIT execution.",
+      "Linux ARM64 JIT machine-code execution was checked for all ten libc/ABI wheels, not a performance claim.",
+      "Production version/artifact publication and master integration remain separate from this test-only result."
+    ]
+  },
+  "published_artifacts": [
+    {
+      "bytes": 249837,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-macosx_10_9_x86_64.whl",
+      "sha256": "dbe03f2ba445501f319b40a86ba2febdfb19e55d086c4a6ddc5319cc3a01d998",
+      "url": "https://test-files.pythonhosted.org/packages/d2/d8/27ad01997179809d2d7dd2e41ba39b4a95467c29d9b25f1409d00a7ca4da/malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-macosx_10_9_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253200,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-macosx_15_0_arm64.whl",
+      "sha256": "c7a543245e9d3438b0f623af3c4cc56d67f2d8b9d3cbd631535f4f3ecd543392",
+      "url": "https://test-files.pythonhosted.org/packages/d3/f7/47060898ff62977bcbf73728426bf9166b2f04d0c5daa7967f78f142e978/malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-macosx_15_0_arm64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 294060,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "271f13e97d1cccfabb6e064c0450a3c6ef986f4be85a25a9c7702428a82cd4ae",
+      "url": "https://test-files.pythonhosted.org/packages/d5/62/5217294068b43d74b2f734ba97add803498e778e07a085dd63a951c87476/malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 288150,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "babaf5049615cb647ec999b0828e80ab6ac9d9c399c08c651040db55dd3585b1",
+      "url": "https://test-files.pythonhosted.org/packages/00/f4/0b9cca97962b1d1a7016c2fef5d81091da9a988309d895b29375f6271e21/malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 292279,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-musllinux_1_2_aarch64.whl",
+      "sha256": "0fbe3c242eb42e6fc668dd2bf453e675d62dfe45ea5e6890e90ee6c88c7edbc5",
+      "url": "https://test-files.pythonhosted.org/packages/cc/49/b44c4cfeafe3d913e1f2af4851680a5b984ccfce00682380e55992bf74e2/malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-musllinux_1_2_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 287131,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-musllinux_1_2_x86_64.whl",
+      "sha256": "997d15c860ff2becd33754e9920e5cd2f6e9abb738683241f1f843f56c234f38",
+      "url": "https://test-files.pythonhosted.org/packages/52/c4/9d3bc81267ba7cabcd87b7f0e9f600a134f1379afef31b6cefc65d61412d/malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-musllinux_1_2_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253640,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-win_amd64.whl",
+      "sha256": "95a88adbeac7ec914adf801ee41308e6f24580c2c8ecc144443fe604b3c02a50",
+      "url": "https://test-files.pythonhosted.org/packages/72/38/17014b2195e7a1b5cb32b25f4c12d47fce560718a3e730f35aa6d5601109/malbolge-1.2.0rc2.dev42757794922001-cp310-cp310-win_amd64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 249839,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-macosx_10_9_x86_64.whl",
+      "sha256": "53de2fa8c8eb0f0d7708186a198b39c7a788dfba989269f31ece07a0295ff313",
+      "url": "https://test-files.pythonhosted.org/packages/18/a1/d1661924282de84278b43a78620bf3c287e76f95060697e25e25d592b36a/malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-macosx_10_9_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253199,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-macosx_15_0_arm64.whl",
+      "sha256": "4f5ddb2f5dc1baab4a4a9e74642e0a3f99202b611fa06baad80c3f373bafbc33",
+      "url": "https://test-files.pythonhosted.org/packages/0c/58/fe26af9e219d7b85ffe2070e3e7beaf2b70cdd36d5d3f07e7f59b634cd59/malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-macosx_15_0_arm64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 294784,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "4fc1582abd7bc7accf2c1461b16024d14cb41728bfcaa575d0e18fb046b71c70",
+      "url": "https://test-files.pythonhosted.org/packages/b3/36/9136d45684bf8f6714caa2375f6fc44164a62bc94d66e20df3f5f2620195/malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 288865,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "7fb90e0c11369ccd2e87f7506d83487472c566d5a83a38a116cd4c11931ae248",
+      "url": "https://test-files.pythonhosted.org/packages/68/d4/aff9d9ac1c0eb5b656458b99577ca87b6a8aa349747ad90c990cfa4aba9d/malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 292996,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-musllinux_1_2_aarch64.whl",
+      "sha256": "a3400808c006006d3d029f56bc7eea830b53d5034d8b8f023ea134dc47997e40",
+      "url": "https://test-files.pythonhosted.org/packages/60/ca/aa7d13c482a928057df9e0292f7bc1566b57ce45ab078b72d9c24e5c64fa/malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-musllinux_1_2_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 287818,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-musllinux_1_2_x86_64.whl",
+      "sha256": "01fd275dbd949ce82e9e9dafedbae2b1e49978ce8c3bbdd359d8b1a87380343c",
+      "url": "https://test-files.pythonhosted.org/packages/08/f0/e65c19a56cc7c547d2c1c3150f555bcad9414d7fc8478dea2af00971d96b/malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-musllinux_1_2_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253641,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-win_amd64.whl",
+      "sha256": "dc1cf414a1e3dd533de91aa84c8736b393c33036634a0373b5024020215f9807",
+      "url": "https://test-files.pythonhosted.org/packages/a9/42/454d0b85a7debee941992944bb233db4b2226f3cd2fe6d035b23f726ebb7/malbolge-1.2.0rc2.dev42757794922001-cp311-cp311-win_amd64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 249955,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-macosx_10_13_x86_64.whl",
+      "sha256": "c9b62c59b767044fb41a7884cc8ff07c758e6bad5624eeb6f8f4561cee23d4ae",
+      "url": "https://test-files.pythonhosted.org/packages/b4/d4/b4ca1ed6e9670dcc564c9a5d8b3aed09515fa540fe55e58082a3d1e27ae5/malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-macosx_10_13_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253239,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-macosx_15_0_arm64.whl",
+      "sha256": "3369b1c0f52f1441f945fdb263005ed9d8abc46b2674d14058b3cbe2a2ce7230",
+      "url": "https://test-files.pythonhosted.org/packages/c8/08/aff91d6b7ae693b3b16b2cbcb07d6abfe1cc39511c6253be6c1eaa82e737/malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-macosx_15_0_arm64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 295678,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "5b8fac58ec5546dee422f15a2d05e5b08c4189ef54826374ffc4e87233299ce9",
+      "url": "https://test-files.pythonhosted.org/packages/b0/6e/dd058b5b5f20d567f589065fb11d2f8650d53373e22692eff0451b86c689/malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 289690,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "2253675ed3d2fddee1a95d8b543ea3ab35e1e773e459579a611f39339808c868",
+      "url": "https://test-files.pythonhosted.org/packages/bd/20/d20e6d55ed71023b4efd54ea4fc7803a77026139963227e241215df32387/malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 293997,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-musllinux_1_2_aarch64.whl",
+      "sha256": "61853de35c2c87028a89202013b240570a9c15326f843c0d6179af847370e778",
+      "url": "https://test-files.pythonhosted.org/packages/ad/c2/fc8e28f176edef634e3c97bc9e10fe8afae526ae9bc7e0f76b6c71256237/malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-musllinux_1_2_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 288779,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-musllinux_1_2_x86_64.whl",
+      "sha256": "512232af2b5e7d810a1ff4c81d5b276b1c39246bbbb75a7682107751f8dbef5b",
+      "url": "https://test-files.pythonhosted.org/packages/e3/30/b1050ecba637635bd12d386862a440c2fdb051d1d2e0bca5bcf4003ea602/malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-musllinux_1_2_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253693,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-win_amd64.whl",
+      "sha256": "cc7c94c53dbbe294e4974798f3e5042c49701356f8c3ab8cb8c4387f46437a06",
+      "url": "https://test-files.pythonhosted.org/packages/6a/6c/f98ce0291f5e8a27178d38655ddb438f84c9ef60ebcb9a3437988ced2aaa/malbolge-1.2.0rc2.dev42757794922001-cp312-cp312-win_amd64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 249948,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-macosx_10_13_x86_64.whl",
+      "sha256": "74d650999ef943c64d151e3265a7c162d87f9d867d47ba139ef6ae1b6b06eadc",
+      "url": "https://test-files.pythonhosted.org/packages/d8/64/4f10837796b0d3faa8a1117f3e9373009ca28ffebc502580bdb50b9cc314/malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-macosx_10_13_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253225,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-macosx_15_0_arm64.whl",
+      "sha256": "2b7dfb88932147a0f45257c8fa20d3ddcbc55e13f0ed2159f71a039cbcf0a3c3",
+      "url": "https://test-files.pythonhosted.org/packages/4b/86/9e22e434aa7c7aac7f62013f13239bc419e2b5a7d769959f71eda9b19acc/malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-macosx_15_0_arm64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 295720,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "97a7963e8301adecfb715d500e9a03c2f1d246581dcb19b650b17b3d7f91151f",
+      "url": "https://test-files.pythonhosted.org/packages/1b/51/7761608034d4dca0bd4e24346e9c8ff74ef4df047dc20eb9ae1600fde98d/malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 289708,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "b9b01bfa6ac69491090da130aea990e7c6ed1dfebc8b8cdd5513cad697862d75",
+      "url": "https://test-files.pythonhosted.org/packages/fb/d8/e53025016dc11e0ef76daa2533e5baafcaa16eb16685cbffe32ef7caadbe/malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 294003,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-musllinux_1_2_aarch64.whl",
+      "sha256": "9141dbadd996c4e1025fefb084f4a0aafc850e3a0587d94f3add57521e54d6fb",
+      "url": "https://test-files.pythonhosted.org/packages/8c/aa/e1a42316e1027ea6052acceeb51144434eccf0d073e61b07afa6c66edb34/malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-musllinux_1_2_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 288826,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-musllinux_1_2_x86_64.whl",
+      "sha256": "6a393b44a9d99bc23f92e735a947985387fe8377dcbc1140c799e49d07e88d31",
+      "url": "https://test-files.pythonhosted.org/packages/c1/59/031f7aaf25ca99ed0104a0525bdf46c211fa11971a99f926c406409723d2/malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-musllinux_1_2_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253678,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-win_amd64.whl",
+      "sha256": "3e9ea5f160bb13e9efa76da1353fb1b649e504e333671d1769912a3c64fdf962",
+      "url": "https://test-files.pythonhosted.org/packages/51/ea/96dab8e952fbf3e7506a2dadb90dda9df64aed3b1edb537141a236b9b949/malbolge-1.2.0rc2.dev42757794922001-cp313-cp313-win_amd64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 249839,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-macosx_10_9_x86_64.whl",
+      "sha256": "d22023371f25fe8904dd85798103ec6a9341cb1f7abc5db6506e9d6f8c0e422f",
+      "url": "https://test-files.pythonhosted.org/packages/01/f3/bb78d0b4c90f79f6f10a62a4ef4e4c84bc6560ffcee968408ee6098bfded/malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-macosx_10_9_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253194,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-macosx_15_0_arm64.whl",
+      "sha256": "5ce5ac23b3afcd1b73b59293cd71ead5ccf82dde8ff8dbae27e4be6d6f7fe432",
+      "url": "https://test-files.pythonhosted.org/packages/d6/83/710a95fda9904554c1eff36599e35b9ec0e58e4d21470cd4b4d65279b8f2/malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-macosx_15_0_arm64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 293944,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "f61227b62b6513706e12cce2556d0af62e8e5bbbd7d7ece58f30b80ecb4950cd",
+      "url": "https://test-files.pythonhosted.org/packages/31/3e/62aeb9185a9e820722e4e4adb1cf773c509294611882ec03fd2cb298e3ff/malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 287974,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "df56348c5f82a52f95b29538a6f4b94cdab2a4820b2000f71e970c47b1578dd6",
+      "url": "https://test-files.pythonhosted.org/packages/6b/5c/74b9b4cdd59b8e8695ecb1b37af0c10d6c3f60ce220ad2d9536529818382/malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 292130,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-musllinux_1_2_aarch64.whl",
+      "sha256": "deae6626b3b328e94be6c3cfb098495ba223d313bfae9881d2530e2e4d131911",
+      "url": "https://test-files.pythonhosted.org/packages/08/4f/6a82dc671a0b68ffe2c42c943481f14f1886e7c5ba5f307ac1b460b40a07/malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-musllinux_1_2_aarch64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 286989,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-musllinux_1_2_x86_64.whl",
+      "sha256": "451ea5132325605113a14deb4381fe419c5ec154a546d931b51c6074ead22b5e",
+      "url": "https://test-files.pythonhosted.org/packages/be/7d/b597bcf462b0a9bc08243e2fbe67c6e2fd06953d30b0edbf60c2e817aa4e/malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-musllinux_1_2_x86_64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 253640,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-win_amd64.whl",
+      "sha256": "5f294562ba72f5fc1afc9aa5646efbb85ba836fb39854c75aaf6846dc46c8aa5",
+      "url": "https://test-files.pythonhosted.org/packages/5e/09/c48a7b7e97df352704fb42ee00c38cd6cb866e74240df7b99785a9268b5e/malbolge-1.2.0rc2.dev42757794922001-cp39-cp39-win_amd64.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 239325,
+      "file": "malbolge-1.2.0rc2.dev42757794922001-py3-none-any.whl",
+      "sha256": "f0706b211b7c5c482a614acb7ad4a9a76a000eae3adf17127d3d36054ff756eb",
+      "url": "https://test-files.pythonhosted.org/packages/31/71/fc9f1fbb055d3a8aabbc63b02a8eab28d68abfd425b680bdb7ddaeed689b/malbolge-1.2.0rc2.dev42757794922001-py3-none-any.whl",
+      "download_verified": true
+    },
+    {
+      "bytes": 1204647,
+      "file": "malbolge-1.2.0rc2.dev42757794922001.tar.gz",
+      "sha256": "ec3275cae6e246c45ff3ebedaae0a624008c40669c84ec32ec02dcad9080d066",
+      "url": "https://test-files.pythonhosted.org/packages/a1/36/83fbdb3e64131bba0995950e628e933f64b9d1660210fb90857e34ec2c38/malbolge-1.2.0rc2.dev42757794922001.tar.gz",
+      "download_verified": true
+    }
+  ],
+  "public_downloads_verified": 37,
+  "macos_binary_floors": {
+    "cp310-macosx_arm64": {
+      "binary_minimum": "15.0.0",
+      "wheel_tags": [
+        "macosx_15_0_arm64"
+      ]
+    },
+    "cp310-macosx_x86_64": {
+      "binary_minimum": "10.9.0",
+      "wheel_tags": [
+        "macosx_10_9_x86_64"
+      ]
+    },
+    "cp311-macosx_arm64": {
+      "binary_minimum": "15.0.0",
+      "wheel_tags": [
+        "macosx_15_0_arm64"
+      ]
+    },
+    "cp311-macosx_x86_64": {
+      "binary_minimum": "10.9.0",
+      "wheel_tags": [
+        "macosx_10_9_x86_64"
+      ]
+    },
+    "cp312-macosx_arm64": {
+      "binary_minimum": "15.0.0",
+      "wheel_tags": [
+        "macosx_15_0_arm64"
+      ]
+    },
+    "cp312-macosx_x86_64": {
+      "binary_minimum": "10.13.0",
+      "wheel_tags": [
+        "macosx_10_13_x86_64"
+      ]
+    },
+    "cp313-macosx_arm64": {
+      "binary_minimum": "15.0.0",
+      "wheel_tags": [
+        "macosx_15_0_arm64"
+      ]
+    },
+    "cp313-macosx_x86_64": {
+      "binary_minimum": "10.13.0",
+      "wheel_tags": [
+        "macosx_10_13_x86_64"
+      ]
+    },
+    "cp39-macosx_arm64": {
+      "binary_minimum": "15.0.0",
+      "wheel_tags": [
+        "macosx_15_0_arm64"
+      ]
+    },
+    "cp39-macosx_x86_64": {
+      "binary_minimum": "10.9.0",
+      "wheel_tags": [
+        "macosx_10_9_x86_64"
+      ]
+    }
+  },
+  "notice_line_endings": {
+    "windows_wheels": 5,
+    "notices_per_wheel": 6,
+    "difference": "CRLF instead of LF only; license text matches after newline normalization."
+  }
+}

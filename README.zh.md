@@ -101,18 +101,23 @@ Editable 安装在手动构建本地扩展前使用 Python。匹配的原生 whe
 
 ### 发行状态（2026-11-10）
 
-**1.2 正在准备，正式 PyPI 仍为 1.1.0。** 提交 `a466170` 的
-[1.2 TestPyPI 候选](docs/notes/release-1.2.0.zh.md)已通过九组远端安装和七个质量
-CI 作业：便携包覆盖 Linux、Windows 和两种 macOS 架构；该轮原生验收仅覆盖
-Linux x86-64 CPython 3.12，包括源码重建。[回执](docs/notes/release-1.2.0-testpypi.json)
-不能证明后续候选或完整 1.2 原生矩阵已经通过。
+**正式 1.2.0 已进入发布冻结，正式产物验收仍待完成。** 编译器/VM 实现保持
+rc2 提交 `063a3c59` 不变，不纳入其后未提交的实验 JIT 修改。已验收的 TestPyPI
+版本为 **1.2.0rc2.dev42757794922001**：35 个原生 wheel 加便携 wheel 和 sdist、
+13 组远端安装/输入检查及七个质量 CI 作业全部通过。见
+[rc2 回执](docs/notes/release-1.2.0rc2-testpypi.json)和
+[发行门槛](docs/notes/release-1.2.0.zh.md)。这些结果不代表正式 1.2.0 产物已通过。
+后续状态以[正式发布 Actions](https://github.com/Aiaid/pyMalbolge/actions/workflows/pypi.yml)
+及[正式项目页](https://pypi.org/project/malbolge/)为准。
 
-[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 已提供 30 个原生 wheel，
-覆盖 CPython 3.9–3.13 的 Linux x86-64/AArch64（glibc 与 musl）、Windows AMD64
-及 Intel macOS，另有可移植 wheel 与源码归档。
-[正式发布回执](docs/notes/pypi-1.1.0-publication.json)记录精确公开哈希与安装包验收。
-Apple Silicon 原生 wheel 仍待最低系统版本兼容性及托管验收；该平台可继续使用
-可移植 wheel 或可选源码构建。
+macOS ARM64 rc2 wheel 的 deployment target、标签及 Mach-O 最低系统均为
+**15.0**，实际仅在 **15.8.2** 执行；精确 macOS 15.0 的运行兼容性尚未测试。
+托管 Mac JIT 不可用并按契约拒绝；Linux ARM64 实际执行 NOP JIT 机器码。
+本地 Mac/CM4 的 JIT 检查只证明对应设备上的执行，不构成普遍提速结论。
+
+[PyPI 1.1.0](https://pypi.org/project/malbolge/1.1.0/) 仍是已记录的正式发行：
+30 个原生 wheel、一个便携 wheel 和一个 sdist。其
+[发布回执](docs/notes/pypi-1.1.0-publication.json)是历史证据，不覆盖正式 1.2.0 构建。
 
 [2026-10-10 打包检查](docs/notes/native-packaging-validation.json)和
 [1.1 TestPyPI/原生验收](docs/notes/release-1.1.0-acceptance.json)保留为历史证据。
@@ -653,8 +658,9 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 - [x] Malbolge20 批量执行优先原生、Python 回退与显式带守卫 ARM64 JIT
 - [x] 原生源码 wheel hook 与 TestPyPI 精确版本远端安装验收
 - [x] 向 PyPI 发布 30 个已验收的 1.1.0 Linux、Windows AMD64 与 Intel macOS 原生 wheel
-- [ ] 完成新 1.2 候选精确产物的原生矩阵及发行门槛
-- [ ] 完成 Apple Silicon 最低系统版本兼容性与托管 wheel 验收
+- [x] 完成 rc2 TestPyPI 35 个原生 wheel 矩阵及 13 组远端安装/输入验收
+- [ ] 完成正式 1.2.0 精确产物门槛与发布
+- [ ] 在声明的精确最低系统（15.0）上测试 Apple Silicon wheel
 - [ ] 编译器 v2：有符号整数、一般运行时对象/字符串，以及通过 `IND_OPR` 支持数组
 - [ ] Malbolge Unshackled 支持(3-adic 整数、可变旋转宽度、Unicode I/O)
 
