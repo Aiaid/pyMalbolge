@@ -4,11 +4,21 @@ Shared project guidance for coding agents working in this repository.
 
 ## Project Overview
 
-pyMalbolge is a Python interpreter for the Malbolge esoteric programming language. It's a fork of https://github.com/Avantgarde95/pyMalbolge with fixes and additional features.
+pyMalbolge combines a pure-Python compiler for a restricted Python subset,
+Malbolge interpreters and CLI/TUI/browser debugging. It began as a fork of
+https://github.com/Avantgarde95/pyMalbolge. The compiler targets **Malbolge20
+only**; it is not a general Python implementation or an Original-Malbolge
+compiler. Current scope and evidence: `docs/current-status.md`.
 
 Supports multiple variants:
 - **Original Malbolge**: 10 trits, 59,049 memory cells
 - **Malbolge20**: 20 trits, ~3.48 billion memory cells (sparse memory)
+
+The static Pyodide browser debugger is implemented and deployed for Original
+Malbolge only. Malbolge20 batch execution can use the optional native VM;
+debugger execution remains Python. PyPI 1.1.0 publication is recorded in
+`docs/notes/pypi-1.1.0-publication.json`; local working-tree changes are not
+automatically part of that release.
 
 ## Commands
 
@@ -142,6 +152,7 @@ into public documentation without authorization. Check search exit codes:
 | `malbolge/malbolge20.py` | Malbolge20 interpreter (20 trits, sparse memory) |
 | `malbolge/debugger.py` | Debugger with breakpoints, watchpoints, step-back, memory write-heat, chunked run, timeline seek |
 | `malbolge/view/` | ViewModel layer: debugger state as plain JSON-serialisable data, shared by every renderer. Never imports textual. Contracts: `docs/design/tui-web-architecture.md` §3 |
+| `malbolge/compiler/source_analysis.py` | Dependency-free shared AST name/scope checks, definite assignment, literal folding and source diagnostics |
 | `malbolge/compiler/python_normalize.py` | Shared tuple/f-string normalization, keyword binding and return/error-callgraph contracts |
 | `malbolge/compiler/decimal_io.py` | Shared decimal input/output helpers, injected on demand by both Python frontends |
 | `malbolge/compiler/target_ast.py` | Explicit target AST roles and loop-condition preludes for semantic lowering; documented in `docs/design/semantic-ir.md` |

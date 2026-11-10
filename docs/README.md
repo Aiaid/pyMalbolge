@@ -14,6 +14,10 @@ For current behavior, start with [compiler policy](design/compiler-optimization.
 and [packaging](design/native-packaging.md). Dated receipts describe their recorded
 checkout and tests; they are not a current full-suite count or a fresh benchmark.
 
+The [current implementation and release boundaries](current-status.md) summarize
+source versus release status, the Original-only browser, backend differences
+and work that remains experimental or unimplemented (checked 2026-11-10).
+
 ## specs/ — language specifications
 
 | Document | Status | Contents |
@@ -38,7 +42,7 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 | [semantic-optimization-passes.md](design/semantic-optimization-passes.md) | ✅ accepted profile; decimal experimental | Named semantic arithmetic/dataflow/control/emission passes, target arithmetic gate, level 0/1 and complete comparison contracts |
 | [structured-lowering.md](design/structured-lowering.md) | ✅ O2/O3 default | Dependency-free MG→LAL→memory-image→MB handoff, optional xDSL adaptation, explicit text selection and behavioral optimization gate |
 | [hell-assembler-design.md](design/hell-assembler-design.md) | 🧊 | Design for a Python HeLL assembler (shelved fallback route; §6 covers the GPL question) |
-| [tui-web-architecture.md](design/tui-web-architecture.md) | ✅ | Debugger UI architecture: three-layer split with a JSON-only `malbolge/view/` ViewModel shared by a Textual renderer and a (pending) Pyodide web build; the three backend APIs it needs; phasing and parallel boundaries |
+| [tui-web-architecture.md](design/tui-web-architecture.md) | ✅ Web implemented; TUI redesign partial | JSON-only ViewModels and backend APIs, implemented/deployed Original-only Pyodide debugger, remaining Textual renderer migration and historical phasing |
 | [tui-redesign/README.md](design/tui-redesign/README.md) | ✅ | The imported TUI redesign canvas (four artboards: current-state reproduction, density-maximised, teaching-oriented, 80×24) plus an offline-viewable `preview.html` |
 
 ## upstream/ — upstream reference and archaeology
@@ -63,7 +67,7 @@ checkout and tests; they are not a current full-suite count or a fresh benchmark
 | [web-demo-validation.json](notes/web-demo-validation.json) | ✅ local Chromium acceptance | Portable browser-wheel build fix, freshness/vendor regression checks, Pyodide worker protocol and actual browser debugging controls; hosted evidence is recorded separately above |
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ local opt-in acceptance | JIT semantics/review/ABI/package checks, five-mode three-repeat same-image timings, emission/coverage/warmup costs and rejected first warmup |
 | [native-engine-selection-validation.json](notes/native-engine-selection-validation.json) | ✅ current | Native-first batch defaults, explicit engine selection, Python fallback and CLI compatibility checks |
-| [native-packaging-validation.json](notes/native-packaging-validation.json) | ✅ local acceptance; hosted matrix pending | Native/pure/source installation, Python ABI wheels, packaging policy, CI syntax and wheel-identifier checks |
+| [native-packaging-validation.json](notes/native-packaging-validation.json) | 📌 initial local acceptance | Native/pure/source installation, Python ABI wheels and CI configuration; later hosted acceptance and production publication are recorded in the release receipts above |
 | [testpypi-ci-validation.json](notes/testpypi-ci-validation.json) | ✅ hosted test release accepted | CPython 3.12 manylinux native build, TestPyPI upload and exact-version remote installation/native smoke |
 | [native-vm-validation.json](notes/native-vm-validation.json) | 📌 initial opt-in acceptance; default checks separate | Native VM correctness, review, ABI/package checks and five-repeat same-image Python/native/C execution measurements |
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | First LAL/pass foundation acceptance and source fingerprints; later frontend/integration changes are covered by semantic-ir-validation.json |

@@ -11,6 +11,9 @@ The compiler and Python interpreter need no C++, flex, bison or Perl tools.
 An optional C extension accelerates Malbolge20 batch execution; semantic IR
 optimization is available through the optional `ir` extra.
 
+See [current implementation and release boundaries](docs/current-status.md)
+for what is implemented, published, experimental or still planned.
+
 **Start with Hello World.** From a source checkout, follow the
 [installation instructions](#installation), then compile and run this small
 example with an explicit execution budget:
@@ -235,6 +238,12 @@ unsigned range boundaries and conservative assignment/return checks.
 The [normative specification](docs/specs/python-subset-spec.md)
 covers the accepted-AST whitelist, the documented divergences from
 CPython semantics, and the diagnostic contract.
+Its original audit covers the C frontend; Direct and semantic boundaries are
+listed separately. Semantic validation rejects unsupported syntax even in
+dead branches and is stricter about local reads before binding. Explicit IR
+does not silently fall back; auto selection may skip an inapplicable semantic
+candidate with a reported reason. Sharing AST checks does not make the two
+frontends' acceptance or generated images identical.
 
 ## How the pipeline works
 

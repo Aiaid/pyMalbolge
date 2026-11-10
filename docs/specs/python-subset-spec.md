@@ -32,6 +32,31 @@
 
 ---
 
+### 0.1 Backend boundaries
+
+The original whitelist and audit are C-frontend evidence, not a claim that
+all backends accept exactly the same source or use the same diagnostic type.
+Current scalar/control/I/O contracts also guide Direct (`py2mg`) and the
+optional semantic frontend, subject to their explicit limits:
+
+- Direct shares normalization and AST source analysis with semantic, but
+  emits MG without constructing semantic IR. The C path remains separate.
+- Semantic preflights unsupported syntax even in statically dead branches;
+  Direct can skip some such branches. Semantic also rejects reads of a local
+  before its binding even when a module global has the same name. Shared
+  analysis does not remove these frontend-specific checks.
+- Explicit `--backend=ir` defaults to semantic and never silently falls back.
+  O3/auto may skip an unavailable or inapplicable semantic candidate, reporting
+  the reason. `--ir-frontend=compat` instead wraps the Direct target path.
+- Semantic uses expression SSA plus mutable variable slots and still lowers
+  through a target AST/MG adapter. Its output need not match Direct byte for
+  byte or be faster. Full variable SSA and direct semantic→LAL are future work.
+
+See [semantic compatibility and validation](../design/semantic-ir.md#4-compatibility-limits-and-validation)
+for the diagnostic contract, and [compiler policy](../design/compiler-optimization.md)
+for candidate selection. The appendix's `02c0b82` observations remain a
+historical audit, including defects and rejections later corrected above it.
+
 ## 1. Accepted set
 
 ### 1.1 Module-level (top-level) statements
@@ -540,7 +565,8 @@ wrong; D = correctly accepted.
 
 **Total 137 cases: A=101, B=6, C=6, D=24.**
 
-Script and corpus: `/Users/anend/.claude/jobs/1d5df563/tmp/subset-spec/probe.py`
+Historical local script and corpus: `subset-spec/probe.py` (not included in
+this repository; original absolute path omitted)
 (re-runnable: `python3 probe.py --summary` for the summary, `python3 probe.py`
 for per-case detail, `python3 probe.py --export-md <path>` to re-export the
 table below). Detailed reproductions and fix proposals for the 6 class-B and 6

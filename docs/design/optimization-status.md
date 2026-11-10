@@ -2,7 +2,8 @@
 
 > **English** | [中文](optimization-status.zh.md)
 >
-> Activation documentation refreshed: 2026-10-12; measurements retain their dates.
+> Activation documentation refreshed: 2026-10-12; distribution status refreshed
+> 2026-11-10. Measurements retain their dates.
 > This inventory separates accepted code, explicit
 > experiments and documented local prototypes. The detailed dated measurements
 > live in the private companion's optimization overview; public validation
@@ -48,7 +49,7 @@ explicitly selected frozen paths; they do not measure a new auto-selection run.
 | Target-AST initialization/loop/predicate interface | Integrated and locally accepted. All three controls are enabled in semantic O1–O3 and disabled in O0; final combined acceptance is separate from old prototype receipts. |
 | Decimal-output candidate and rejected bulk-NOP experiment | Excluded from accepted defaults; the decimal candidate requires explicit pass selection. |
 | Native VM | `run20` and Malbolge20 batch CLI default to auto: prefer a loadable native extension, otherwise Python. Original/legacy/debugger/terminal streaming paths retain Python. |
-| Native packaging / JIT | Source-wheel builds attempt native; editable installs need a local build. Matching wheels need no compiler. JIT stays explicit; compiler O3 does not enable it. Full wheel-matrix acceptance remains pending. |
+| Native packaging / JIT | Source-wheel builds attempt native; editable installs need a local build. PyPI 1.1.0 publishes 30 native wheels with installed acceptance; matching wheels need no compiler. Apple Silicon publication/minimum-OS acceptance remains pending. JIT stays explicit; compiler O3 does not enable it. See [publication](../notes/pypi-1.1.0-publication.json). |
 
 Default selection and explicit direct selection:
 

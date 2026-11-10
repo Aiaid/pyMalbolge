@@ -10,6 +10,8 @@ pyMalbolge 是一个纯 Python 实现的编译器,把 Python 的一个子集编�
 不需要 C++、flex、bison 或 Perl 工具。可选 C 扩展加速 Malbolge20 批量执行，
 可选 `ir` extra 提供语义 IR 优化。
 
+当前已实现、已发行、实验中与仍属计划的能力见[实现与发行边界](docs/current-status.zh.md)。
+
 **先体验 Hello World。** 在源码副本中按[安装说明](#安装)准备环境，再编译
 并运行这个小示例，明确限制执行步数和输出量：
 
@@ -208,6 +210,10 @@ f-string conversion/格式规格或 print 之外的 f-string、嵌套/任意 tup
 
 [规范性说明文档](docs/specs/python-subset-spec.zh.md)
 覆盖了受理的 AST 白名单、与 CPython 语义之间有记录的分歧,以及诊断契约。
+原始审计针对 C 前端，Direct 与 semantic 的边界另列。semantic 即使在死分支中也
+拒绝不支持的语法，对绑定前局部读取的检查也更严格。显式 IR 不会静默回退；
+auto 选择可跳过不适用的 semantic 候选并说明原因。共享 AST 检查不意味着两个
+前端的接受范围或生成映像完全相同。
 
 ## 流水线如何工作
 

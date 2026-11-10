@@ -86,8 +86,10 @@ argument，存入相应源码槽位。
 前端使用 CPython 语法/符号表检查、共享 normalizer 及纯 AST 诊断分析；
 生成 IR 时不实例化或运行旧编译器。平坦元组、基础 print f-string 和
 关键字绑定转换为显式、有序的语义操作。
-纯 AST 分析目前通过 direct 前端的方法别名复用；迁到共享源码分析模块
-仍是独立架构整理项，与目标 lowering 和优化分开。
+纯 AST 分析现在位于无第三方依赖的 `source_analysis.py`，由 direct 与语义前端
+共同使用，负责名称/作用域检查、确定赋值、range/字面量检查和源码诊断，
+不包含代码生成状态。`Py2MgError` 保留原有公共导入路径；目标 lowering
+与优化仍然独立。
 
 ## 3. 检查与独立执行
 

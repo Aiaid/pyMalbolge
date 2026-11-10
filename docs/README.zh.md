@@ -12,6 +12,9 @@
 与[打包](design/native-packaging.zh.md)。带日期的验收记录对应其源码和测试，
 不作为当前全量测试数量或新基准结果。
 
+[当前实现与发行边界](current-status.zh.md)集中区分源码与发行状态、仅支持 Original
+的浏览器、后端差异，以及仍属实验或尚未实现的方向（2026-11-10 核对）。
+
 ## specs/ — 语言规格
 
 | 文档 | 状态 | 内容 |
@@ -36,7 +39,7 @@
 | [semantic-optimization-passes.zh.md](design/semantic-optimization-passes.zh.md) | ✅ profile 已验收，十进制实验 | 具名语义算术/数据流/控制/发射 pass、目标算术开关、等级 0/1 与完整比较契约 |
 | [structured-lowering.zh.md](design/structured-lowering.zh.md) | ✅ O2/O3 默认 | 无额外依赖的 MG→LAL→内存映像→MB 传递、可选 xDSL 适配、显式 text 选择及行为优化验收 |
 | [hell-assembler-design.zh.md](design/hell-assembler-design.zh.md) | 🧊 | Python 版 HeLL 汇编器设计(已搁置的备选路线;§6 讨论 GPL 问题) |
-| [tui-web-architecture.zh.md](design/tui-web-architecture.zh.md) | ✅ | 调试器 UI 架构:三层切分,`malbolge/view/` ViewModel 仅输出 JSON,由 Textual 渲染层与(待定的)Pyodide web 版共用;所需的三个后端 API;分阶段与并行边界 |
+| [tui-web-architecture.zh.md](design/tui-web-architecture.zh.md) | ✅ Web 已实现；TUI 重设计部分完成 | JSON-only ViewModel 与后端 API、已实现并部署的 Original-only Pyodide 调试器、剩余 Textual 渲染迁移与历史分期 |
 | [tui-redesign/README.zh.md](design/tui-redesign/README.zh.md) | ✅ | 导入的 TUI 重设计画布(四块画板:现状复刻、信息密度最大化、教学向、80×24),附可离线打开的 `preview.html` |
 
 ## upstream/ — 上游参考与考古
@@ -61,7 +64,7 @@
 | [web-demo-validation.json](notes/web-demo-validation.json) | ✅ 本地 Chromium 验收 | 浏览器纯 Python wheel 构建修复、新鲜度/vendor 回归、Pyodide worker 协议与真实浏览器调试操作；托管证据另见上行 |
 | [native-jit-validation.json](notes/native-jit-validation.json) | ✅ 本地显式验收 | JIT 语义/审查/ABI/打包、同映像五模式三轮计时、发射/覆盖率/预热成本及首次预热被拒记录 |
 | [native-engine-selection-validation.json](notes/native-engine-selection-validation.json) | ✅ 现行 | 批处理默认优先原生 VM、显式引擎选择、Python 回退及 CLI 兼容检查 |
-| [native-packaging-validation.json](notes/native-packaging-validation.json) | ✅ 本地验收；托管矩阵待跑 | 原生/纯包/源码安装、Python ABI wheel、打包策略、CI 语法及 wheel 身份检查 |
+| [native-packaging-validation.json](notes/native-packaging-validation.json) | 📌 首轮本地验收 | 原生/纯包/源码安装、Python ABI wheel 和 CI 配置；后续托管验收与生产发布见上方发行回执 |
 | [testpypi-ci-validation.json](notes/testpypi-ci-validation.json) | ✅ 托管试发布通过 | CPython 3.12 manylinux 原生构建、TestPyPI 上传及精确版本远程安装/原生 smoke |
 | [native-vm-validation.json](notes/native-vm-validation.json) | 📌 初次显式验收；默认行为另验 | 原生 VM 正确性、审查、ABI/打包检查和五轮同映像 Python/原生/C 执行测量 |
 | [compiler-ir-validation.json](notes/compiler-ir-validation.json) | 📌 | 首次 LAL/pass 基础验收及源码指纹；后续前端/集成变更由 semantic-ir-validation.json 覆盖 |

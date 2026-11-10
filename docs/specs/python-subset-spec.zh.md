@@ -24,6 +24,28 @@
 
 ---
 
+### 0.1 后端边界
+
+原始白名单与审计是 C 前端的证据，不意味着所有后端接受完全相同的源码，或使用
+相同诊断类型。当前标量/控制/I/O 契约也指导 Direct（`py2mg`）与可选语义前端，
+但需遵守各自明确的边界：
+
+- Direct 与 semantic 共享 normalization 和 AST 源码分析，但不构建语义 IR，
+  而是直接发射 MG。C 路径仍独立。
+- semantic 会预检静态死分支中的不支持语法，Direct 可能跳过其中一些分支。
+  即使模块全局变量同名，semantic 也拒绝绑定前的局部变量读取。
+  共享分析不消除这些前端专有检查。
+- 显式 `--backend=ir` 默认走 semantic，不会静默回退。O3/auto 可跳过不可用或
+  不适用的 semantic 候选，并报告原因；`--ir-frontend=compat` 则包装 Direct
+  目标路径。
+- semantic 使用表达式 SSA 加可变变量槽位，仍经目标 AST/MG 适配器 lowering。
+  产物不保证与 Direct 逐字节相同或运行更快；完整变量 SSA 和直接 semantic→LAL
+  仍属后续工作。
+
+诊断契约见[语义兼容性与验证](../design/semantic-ir.zh.md)，候选选择见
+[编译策略](../design/compiler-optimization.zh.md)。附录的 `02c0b82` 记录仍是
+历史审计，其中包含已被正文后续修订纠正的缺陷与拒绝情况。
+
 ## 1. 接受集合
 
 ### 1.1 模块(Module)顶层语句
@@ -436,7 +458,7 @@ VM 执行。下方历史附录保持原样；本规格不宣称完整 Python、�
 
 **总计 137 个用例:A=101,B=6,C=6,D=24。**
 
-脚本与语料:`/Users/anend/.claude/jobs/1d5df563/tmp/subset-spec/probe.py`
+历史本地脚本与语料：`subset-spec/probe.py`（不随本仓库提供；省略原绝对路径）
 (可重跑:`python3 probe.py --summary` 看汇总,`python3 probe.py` 看逐用例
 明细,`python3 probe.py --export-md <path>` 重新导出下表)。6 条 B 类 + 6 条
 C 类缺陷的详细复现与修复建议见同目录 `defects.md`(已在 §2/§3 交叉引用)。

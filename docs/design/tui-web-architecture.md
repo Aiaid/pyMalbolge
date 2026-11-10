@@ -2,22 +2,26 @@
 
 > **English** | [中文](tui-web-architecture.zh.md)
 >
-> Written 2026-08-28, revised 2026-09-01. Decides the structure for rebuilding
+> Written 2026-08-28; implementation status updated 2026-11-10. Decides the structure for rebuilding
 > the debugger UI against the imported design canvases while keeping a browser
 > build reachable from the same core. Roadmap entry:
 > `docs/research/roadmap.md` P4 "Debugger UI rebuild".
 >
-> Status as of 2026-09-01: `malbolge/view/` and `malbolge/tui/` are **built and
-> tested**; §4's three backend APIs exist; both design canvases are imported
-> (`tui-redesign/`, `web-ui-canvas/`). What remains is the rendering work —
-> §5.1's TUI panels still predate the ViewModel layer and consume the debugger
-> directly, and `web/` (§5.2) is specified but not yet written.
+> Current status: `malbolge/view/`, the `malbolge/tui/` split and §4's backend
+> APIs are implemented. The **Original-only Pyodide web debugger is implemented
+> and deployed**, including launch/debug screens, worker/bridge and portable
+> wheel staging. See [web instructions](../../web/README.md),
+> [local acceptance](../notes/web-demo-validation.json) and
+> [hosted deployment](../notes/web-demo-deployment.json). The TUI panels still
+> consume the debugger directly; their full ViewModel/rendering migration is
+> pending. Historical motivation, probe timings and phase order below are not
+> claims that Web is unbuilt or that the present package has no native extension.
 
 ---
 
 ## 1. The problem this solves
 
-`malbolge/debug_tui.py` is 787 lines in a single file. Every panel holds the
+Before the split, `malbolge/debug_tui.py` was 787 lines in a single file. Every panel held the
 `MalbolgeDebugger` directly, calls `get_state()` for itself (7 calls per
 refresh, 11 once the redesign lands), and three of them reach past the public
 API into `debugger._mem` and `debugger._input_pos`. Every panel renders by
@@ -347,15 +351,17 @@ belongs with the IR work in `mb-dialect-plan.md`, not here.
 
 ### 5.2 Web — `web/`
 
-Form: **Pyodide, fully static**, no server. The package is pure Python with no
-C extensions, so it loads into Pyodide as-is and hosts from GitHub Pages.
+Form: **Pyodide, fully static**, no server. The browser build explicitly selects
+a portable `py3-none-any` wheel with `MALBOLGE_NATIVE_BUILD=disabled`; the
+optional host-native VM is not loaded into Pyodide. It hosts from GitHub Pages.
 Design canvas: `docs/design/web-ui-canvas/Malbolge Web.dc.html` (seven screens;
 v1 builds `1a` main debugger and `1d` launch).
 
 #### Measured before designing this
 
-A Node-hosted Pyodide probe ran the real wheel, so the numbers below are
-observed rather than assumed:
+A Node-hosted Pyodide probe ran the then-current wheel during the original
+design phase. These retained numbers are historical observations, not a fresh
+benchmark of the current release:
 
 | | |
 |---|---|
@@ -441,8 +447,10 @@ rather than a later rewrite.
 
 ## 6. Phasing and parallel boundaries
 
-Ordering constraint: `debug_tui.py` has **zero test coverage** today
-(`test_debugger.py` covers the backend only). Splitting a 787-line file across
+Historical ordering constraint: before the split, `debug_tui.py` had **zero
+direct test coverage** (`test_debugger.py` covered the backend only). Phases
+0a/0b and the backend/ViewModel part of phase 1 are now implemented, with
+`test/test_debug_tui.py` pilot tests. Splitting a 787-line file across
 several agents without a regression net, and then changing behaviour in the
 same pass, is how silent breakage gets in.
 
@@ -452,7 +460,7 @@ same pass, is how silent breakage gets in.
 | 0b | `test/test_debug_tui.py` — Textual `App.run_test()` pilot smoke tests pinning current keybinding behaviour | parallel with 0a (new file, and 0a preserves import paths) |
 | 1 | Backend §4 · `view/` ViewModels §3 · disasm panel · new panels (breakpoints / timeline / command) · teaching Screen | yes — disjoint files |
 | 2 | Memory heat map (needs §4.1) · layout, theme, 1c tabs | serial after 1 |
-| 3 | Web build | blocked on its design canvas |
+| 3 | Web build | implemented; see the separate local and deployment receipts above |
 
 `view/` is the best parallelisation target in the whole project: pure data,
 plain pytest, no terminal, and a contract fixed in §3 before anyone starts.
@@ -465,6 +473,8 @@ plain pytest, no terminal, and a contract fixed in §3 before anyone starts.
    the snapshot builder. Currently: six.
 2. **Checkpointed timeline** (§4.3) — needs a Malbolge20 `SparseMemory`
    snapshot cost measurement before it can even be scoped.
-3. **Web visual language** — blocked on a design canvas.
+3. **Web visual language** — v1 launch/debugger screens implemented from the
+   imported canvas; additional screens remain out of scope.
 4. **`textual-web` as a byproduct.** Nearly free once the TUI is rebuilt, and
-   a reasonable stopgap while the web canvas does not exist. Not scheduled.
+   an optional experiment rather than a prerequisite for the implemented web
+   debugger. Not scheduled.

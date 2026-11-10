@@ -2,8 +2,9 @@
 
 > [English](native-vm.md) | **中文**
 >
-> 状态：本地扩展原型，Malbolge20 批处理默认优先使用可用的原生 VM，
-> 不可用时回退 Python。JIT 仍需显式启用。
+> 2026-11-10 更新状态：原生扩展已实现并随 PyPI 1.1.0 分发，Malbolge20
+> 批处理默认优先使用可用的原生 VM，不可用时回退 Python。JIT 仍需显式启用。
+> 发行已有 30 个原生 wheel；Apple Silicon 发布/最低系统版本验收仍待完成。
 > 本文描述执行层；编译器 lowering 与目标映像生成独立。
 
 下方首次验收是带日期的纯原生快照，记录时 Python 仍为默认引擎。
@@ -23,10 +24,14 @@ uv run --with setuptools --with wheel python scripts/build_native_vm.py
 ```
 
 二进制针对 `uv` 选中的 Python 构建；切换解释器 ABI 后需要重新构建。
-构建适配器使用 macOS、Linux、Windows 标准编译器发现；当前本地验收为
-macOS ARM64。源码安装可以自动构建新原生 wheel。工作副本二进制仍由 Git
+构建适配器使用 macOS、Linux、Windows 标准编译器发现；下方首次本地验收为
+macOS ARM64，后续托管平台和安装包验收见
+[1.1.0 发行回执](../notes/release-1.1.0-acceptance.json)。
+源码安装可以自动构建新原生 wheel。工作副本二进制仍由 Git
 忽略且不进入源码包；原生 wheel 只纳入全新暂存构建的扩展。构建模式、
-安装产物检查及待运行的托管 CI 矩阵见[原生打包](native-packaging.zh.md)。
+安装产物检查与剩余 Apple Silicon 工作见[原生打包](native-packaging.zh.md)；
+[发布回执](../notes/pypi-1.1.0-publication.json)标明实际发布的 30 个原生 wheel。
+这些检查不等于重新运行下方历史吞吐测量。
 
 ```python
 from malbolge import run20

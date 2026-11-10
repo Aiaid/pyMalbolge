@@ -99,9 +99,11 @@ The frontend uses CPython's syntax/symbol-table check, the shared normalizer
 and AST-only diagnostic analyses. It does not instantiate or run the old
 compiler to generate its IR. Flat tuples, basic print f-strings and keyword
 binding become explicit, ordered semantic operations.
-The AST-only analyses are currently method aliases from the direct frontend;
-extracting them into a shared source-analysis module remains an architectural
-cleanup, separately from target lowering and optimization.
+The AST-only analyses live in the dependency-free `source_analysis.py` module,
+shared with the direct frontend. It owns name/scope checks, definite assignment,
+range/literal checks and source diagnostics, without code-generation state.
+`Py2MgError` remains available through its existing public imports. Target
+lowering and optimization stay separate.
 
 ## 3. Inspection and independent execution
 

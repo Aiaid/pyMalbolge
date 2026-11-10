@@ -2,8 +2,10 @@
 
 > **English** | [中文](native-vm.zh.md)
 >
-> Status: local extension prototype, preferred by default for Malbolge20 batch
-> execution when available; Python is the fallback. JIT remains explicit opt-in.
+> Status refreshed 2026-11-10: native extension implemented and distributed in
+> PyPI 1.1.0, preferred by default for Malbolge20 batch execution when available;
+> Python is the fallback. JIT remains explicit opt-in. The release has 30 native
+> wheels; Apple Silicon publication/minimum-OS acceptance remains pending.
 > This document describes the execution layer; compiler lowering and target
 > image generation are independent.
 
@@ -28,11 +30,16 @@ uv run --with setuptools --with wheel python scripts/build_native_vm.py
 
 The binary is built for the Python selected by `uv`; build it again when changing
 the interpreter ABI. The build adapter uses standard compiler discovery for
-macOS, Linux and Windows; local acceptance is currently macOS ARM64. Source
+macOS, Linux and Windows. The first local acceptance below was macOS ARM64;
+later hosted platform and installed-package acceptance is recorded in the
+[1.1.0 release receipt](../notes/release-1.1.0-acceptance.json). Source
 installation can build a fresh native wheel automatically. Checkout binaries
 remain ignored by Git and excluded from source archives; only freshly built
 staged extensions enter native wheels. See [native packaging](native-packaging.md)
-for modes, installed-artifact checks and the pending hosted CI matrix.
+for modes, installed-artifact checks and the remaining Apple Silicon work;
+the [publication receipt](../notes/pypi-1.1.0-publication.json) identifies the
+30 native wheels actually published. Those checks do not rerun the historical
+throughput measurements below.
 
 ```python
 from malbolge import run20

@@ -2,20 +2,23 @@
 
 > [English](tui-web-architecture.md) | **中文**
 >
-> 写于 2026-08-28,2026-09-01 修订。为针对已导入的设计画布重建调试器 UI 敲定结构,
+> 写于 2026-08-28，2026-11-10 更新实现状态。为针对已导入的设计画布重建调试器 UI 敲定结构,
 > 同时让浏览器构建可以从同一个核心接入。Roadmap 条目:
 > `docs/research/roadmap.zh.md` P4「Debugger UI rebuild」。
 >
-> 2026-09-01 时的状态:`malbolge/view/` 和 `malbolge/tui/` 已**构建并测试完毕**;§4 的
-> 三个后端 API 已存在;两份设计画布都已导入(`tui-redesign/`、`web-ui-canvas/`)。剩下的是
-> 渲染层的工作——§5.1 里的 TUI 面板仍然是 ViewModel 层出现之前的产物,还在直接消费
-> debugger;而 `web/`(§5.2)已经写好规格,但尚未动工。
+> 当前状态：`malbolge/view/`、`malbolge/tui/` 拆分和 §4 后端 API 均已实现。
+> **仅支持 Original 的 Pyodide Web 调试器已实现并部署**，包括首屏/调试屏、
+> worker/bridge 与便携 wheel staging。见 [Web 使用说明](../../web/README.md)、
+> [本地验收](../notes/web-demo-validation.json)及
+> [托管部署](../notes/web-demo-deployment.json)。TUI 面板仍直接消费 debugger，
+> 完整 ViewModel/渲染迁移待完成。下文历史动机、探针计时与阶段顺序不表示
+> Web 尚未实现，也不表示当前包没有可选原生扩展。
 
 ---
 
 ## 1. 这份文档要解决什么问题
 
-`malbolge/debug_tui.py` 是塞在单个文件里的 787 行。每个面板都直接持有
+拆分之前，`malbolge/debug_tui.py` 是塞在单个文件里的 787 行。每个面板都直接持有
 `MalbolgeDebugger`,自己调 `get_state()`(每次刷新 7 次调用,重设计落地后会变成 11 次),
 其中三个还越过公开 API 直接伸手去碰 `debugger._mem` 和 `debugger._input_pos`。每个面板都靠
 手工拼装 Rich markup 字符串来渲染,这就逼出了手动 `[` 转义——已经有一个 `escape_markup`
@@ -318,13 +321,15 @@ malbolge/tui/
 
 ### 5.2 Web——`web/`
 
-形态:**Pyodide,完全静态**,不需要服务端。这个包是纯 Python,不含 C 扩展,所以能原样
-加载进 Pyodide,并直接托管在 GitHub Pages 上。设计画布:
+形态：**Pyodide，完全静态**，不需要服务端。浏览器构建显式设置
+`MALBOLGE_NATIVE_BUILD=disabled`，选择便携 `py3-none-any` wheel，
+不会把可选宿主原生 VM 加载到 Pyodide。直接托管在 GitHub Pages 上。设计画布:
 `docs/design/web-ui-canvas/Malbolge Web.dc.html`(共七屏;v1 构建 `1a` 主调试和 `1d` 首屏)。
 
 #### 设计之前先测了
 
-用 Node 托管的 Pyodide 探针跑了真实的 wheel,所以下面这些数字是实测,不是估算:
+原始设计阶段用 Node 托管的 Pyodide 探针跑了当时的真实 wheel。下列保留数字是
+历史实测，不是当前发行版的新基准：
 
 | | |
 |---|---|
@@ -403,7 +408,9 @@ worker → 主线程:
 
 ## 6. 阶段划分与可并行的边界
 
-排序上的约束:`debug_tui.py` 目前**零测试覆盖**(`test_debugger.py` 只覆盖后端)。在没有
+历史排序约束：拆分前 `debug_tui.py` **没有直接测试覆盖**（`test_debugger.py` 只覆盖后端）。
+目前 0a/0b 及阶段 1 的后端/ViewModel 部分已实现，已有 `test/test_debug_tui.py`
+pilot 测试。在没有
 回归网的情况下把一个 787 行的文件拆给好几个 agent,再在同一趟里顺手改行为,正是悄无声息引入
 破坏的典型方式。
 
@@ -413,7 +420,7 @@ worker → 主线程:
 | 0b | `test/test_debug_tui.py`——用 Textual 的 `App.run_test()` pilot 写冒烟测试,钉住现有的按键行为 | 与 0a 并行(新文件,且 0a 保留了 import 路径) |
 | 1 | 后端 §4 · `view/` 的 ViewModel §3 · 反汇编面板 · 新面板(breakpoints / timeline / command) · 教学 Screen | 可以——都是互不相干的文件 |
 | 2 | 内存热力图(依赖 §4.1) · 布局、主题、1c 的 tab | 在 1 之后串行 |
-| 3 | Web 构建 | 卡在它的设计画布上 |
+| 3 | Web 构建 | 已实现；见上方分别记录的本地验收与托管部署 |
 
 `view/` 是整个项目里并行度最好的一块:纯数据,普通 pytest,不需要终端,而且契约在 §3 里
 已经在任何人动手之前就定死了。
@@ -425,6 +432,6 @@ worker → 主线程:
    在快照构建器里重复更少。目前:六个。
 2. **带 checkpoint 的时间线**(§4.3)——在能被排进日程之前,需要先测出 Malbolge20
    `SparseMemory` 做快照的成本。
-3. **Web 视觉语言**——卡在一个设计画布上。
-4. **把 `textual-web` 当副产品捎带出来。** 一旦 TUI 重建完成,这几乎是免费的,在网页画布
-   还不存在的这段时间里也是个说得过去的权宜方案。目前未排期。
+3. **Web 视觉语言**——v1 首屏/调试屏已根据导入画布实现，其余屏幕不在当前范围内。
+4. **把 `textual-web` 当副产品捎带出来。** 是 TUI 重建后的可选实验，
+   不是当前已实现 Web 调试器的前提。目前未排期。

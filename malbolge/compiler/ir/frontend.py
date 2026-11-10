@@ -1,7 +1,7 @@
 """Python subset to the high-level, executable semantic dialect.
 
 This frontend never invokes the direct compiler or constructs target code.  It
-reuses its *AST-only* definite-assignment/name checks, and the shared syntax
+uses shared AST-only definite-assignment/name checks and the shared syntax
 normalizer, so source diagnostics remain consistent with the established subset.
 Arithmetic and control flow are retained as semantic operations; no optimization
 or target representation is selected here.
@@ -18,7 +18,7 @@ require_ir_support()
 from xdsl.dialects.builtin import FileLineColLoc, IntAttr, ModuleOp, StringAttr
 from xdsl.ir import Block, Operation, SSAValue
 
-from ..py2mg import MOD, RESERVED_FUNCS, _BUILTINS, _DirectCompiler, Py2MgError
+from ..source_analysis import MOD, RESERVED_FUNCS, _BUILTINS, SourceAnalysis, Py2MgError
 from ..python_normalize import _exits, bind_call_arguments, normalize_tree
 from .semantic import (
     WORD, BinaryOp, BoolOp, BreakOp, CallOp, CompareOp, ConstOp, ContinueOp,
@@ -32,30 +32,8 @@ class SemanticFrontendError(Py2MgError):
     """Unsupported Python input, with its original source location."""
 
 
-class _Analysis:
-    """An intentionally small adapter containing no code-generation state.
-
-    These methods inspect Python ASTs only.  In particular, this is neither a
-    subclass nor an instance of the target compiler: its initializer, compile,
-    expression lowering and target emitters are never called.
-    """
-
-    _compiling_helper = False
-    _check_name = _DirectCompiler._check_name
-    _collect_assigned = staticmethod(_DirectCompiler._collect_assigned)
-    _global_decls_in = staticmethod(_DirectCompiler._global_decls_in)
-    _check_definite_assignment = _DirectCompiler._check_definite_assignment
-    _da_stmts = _DirectCompiler._da_stmts
-    _da_stmt = _DirectCompiler._da_stmt
-    _da_terminates = _DirectCompiler._da_terminates
-    _da_reads = _DirectCompiler._da_reads
-    _da_name = _DirectCompiler._da_name
-    _static_bool = _DirectCompiler._static_bool
-    _range_args = _DirectCompiler._range_args
-    _signed_literal = staticmethod(_DirectCompiler._signed_literal)
-    _literal_range_nonempty = staticmethod(_DirectCompiler._literal_range_nonempty)
-    _fold = _DirectCompiler._fold
-    _fold_ord = _DirectCompiler._fold_ord
+class _Analysis(SourceAnalysis):
+    """Semantic diagnostics and source state for the shared AST checks."""
 
     def __init__(self, source: str):
         self.source = source
