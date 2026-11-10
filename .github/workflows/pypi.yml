@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
 
 # Deliberate production publication. Never uploads rc/dev versions, unaccepted
-# artifacts, or bytes rebuilt by the publishing job. Credentials reach only
-# the official upload action, after same-commit quality and installed inputs.
+# artifacts, or bytes rebuilt by the publishing job. Short-lived OIDC identity
+# is limited to the publishing job and its named pypi environment.
+# Environment-level branch protection is configured separately by repo admins.
 permissions:
   contents: read
   actions: read
@@ -166,6 +167,14 @@ jobs:
   publish:
     name: Publish the 37 accepted distributions to production PyPI
     needs: [quality, build, verify-bundle-inputs]
+    if: github.repository == 'Aiaid/pyMalbolge' && (github.ref == 'refs/heads/codex/release-1-2-0-final' || github.ref == 'refs/heads/master')
+    environment:
+      name: pypi
+      url: https://pypi.org/project/malbolge/1.2.0/
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -190,20 +199,28 @@ jobs:
             --expected-commit "$GITHUB_SHA" --expected-run-id "$GITHUB_RUN_ID" \
             --expected-attempt "$GITHUB_RUN_ATTEMPT" --source-root .
           uvx --python 3.12 twine==7.0.0 check --strict release-bundle/dist/*
-      - name: Require the configured production PyPI credential
+      - name: Refuse duplicate or partially existing production releases
         env:
-          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          EXPECTED_VERSION: ${{ needs.build.outputs.version }}
         run: |
-          if [ -z "$PYPI_API_TOKEN" ]; then
-            echo '::error::PYPI_API_TOKEN is not configured; no production upload was attempted'
-            exit 1
-          fi
+          uv run --no-project --python 3.12 python - <<'PYCODE'
+          import os, urllib.error, urllib.request
+          url = 'https://pypi.org/pypi/malbolge/' + os.environ['EXPECTED_VERSION'] + '/json'
+          try:
+              with urllib.request.urlopen(url, timeout=30) as response:
+                  response.read(1)
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+          else:
+              raise SystemExit('Version already exists on PyPI; reconcile its exact files before any retry')
+          print('Version is absent from production PyPI; proceeding with accepted artifacts only')
+          PYCODE
       - uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          repository-url: https://upload.pypi.org/legacy/
           packages-dir: release-bundle/dist/
-          attestations: false
+          attestations: true
           verbose: false
 
   verify-pypi:
