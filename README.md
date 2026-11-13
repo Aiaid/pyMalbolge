@@ -202,6 +202,18 @@ collisions. Writes use atomic replacement, and the CLI streams the final `.mb`
 rather than retaining it as a full intermediate string. File/encoding failures
 produce concise diagnostics.
 
+### Handwritten MG
+
+Handwritten MG has a separate pure-Python entry point (no external toolchain):
+
+```bash
+uv run python -m malbolge compile-mg program.mg -o program.mb
+uv run python -m malbolge compile-mg program.mg --emit-mc program.mc --stats
+```
+
+With no output option it writes MC to stdout. See the [MG CLI contract](docs/specs/mg-spec.md)
+for code styles, target pipelines, output safety and error codes.
+
 ### Python API
 
 ```python
