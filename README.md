@@ -202,6 +202,18 @@ collisions. Writes use atomic replacement, and the CLI streams the final `.mb`
 rather than retaining it as a full intermediate string. File/encoding failures
 produce concise diagnostics.
 
+### Handwritten MG
+
+Handwritten MG has a separate pure-Python entry point (no external toolchain):
+
+```bash
+uv run python -m malbolge compile-mg program.mg -o program.mb
+uv run python -m malbolge compile-mg program.mg --emit-mc program.mc --stats
+```
+
+With no output option it writes MC to stdout. See the [MG CLI contract](docs/specs/mg-spec.md)
+for code styles, target pipelines, output safety and error codes.
+
 ### Python API
 
 ```python
@@ -801,3 +813,9 @@ or single-host results do not establish a complete release-platform matrix.
 MIT. The HeLL fixtures under `test/fixtures/hell/` come from the GPL-3 LMAO
 distribution and carry their own notice; they are used for conformance testing
 only and are not part of the shipped package.
+
+## Reliability and MG candidate
+
+This candidate includes reliability fixes and `compile-mg`; the new JIT profiling,
+MLIR exporter and overwritten-store pass remain on separate research branches.
+[User guide](docs/user-guide.md) · [Roadmap](docs/roadmap.md).

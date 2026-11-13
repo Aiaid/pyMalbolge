@@ -179,6 +179,18 @@ O3 CLI 默认在源码目录的 `.cache/malbolge` 缓存阶段，每个缓存产
 写入使用原子替换，CLI 将最终 `.mb` 流式写出，避免保留完整中间字符串；文件/编码
 失败给出简明诊断。
 
+### 手写 MG
+
+手写 MG 可使用独立的纯 Python 命令，无需外部工具链：
+
+```bash
+uv run python -m malbolge compile-mg program.mg -o program.mb
+uv run python -m malbolge compile-mg program.mg --emit-mc program.mc --stats
+```
+
+不指定输出选项时将 MC 写到标准输出。代码风格、目标流水线、输出保护和退出码见
+[MG CLI 说明](docs/specs/mg-spec.md)。
+
 ### Python API
 
 ```python
@@ -703,3 +715,9 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 
 MIT。`test/fixtures/hell/` 下的 HeLL 夹具来自 GPL-3 的 LMAO 发行版,带有各自的
 许可声明;它们仅用于一致性测试,不属于打包发布的内容。
+
+## 可靠性与 MG 候选分支
+
+本候选分支包含可靠性修复和 `compile-mg`；新 JIT profiling、MLIR 导出器及
+覆盖写入消除 pass 保留在独立研究分支。
+[用户指南](docs/user-guide.zh.md) · [路线图](docs/roadmap.zh.md)。

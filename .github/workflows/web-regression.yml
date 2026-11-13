@@ -1,0 +1,56 @@
+name: Cross-platform web regressions
+
+on:
+  push:
+    paths:
+      - 'web/**'
+      - 'test/test_web_*.py'
+      - 'pyproject.toml'
+      - '.github/workflows/web-regression.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'test/test_web_*.py'
+      - 'pyproject.toml'
+      - '.github/workflows/web-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: Web regressions (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install test dependencies
+        run: |
+          uv sync --extra dev
+          npm ci --prefix web --ignore-scripts --no-audit --no-fund
+      # These subprocess/DOM checks do not establish real-browser acceptance.
+      # Report symlink privilege skips explicitly instead of hiding them.
+      - name: Verify build and staging contracts
+        run: uv run --no-sync pytest test/test_web_build.py test/test_web_stage.py -q -rs
+      - name: Verify bilingual UI and state preservation
+        run: npm test --prefix web

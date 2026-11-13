@@ -137,7 +137,7 @@ def source_fingerprint(root=ROOT):
     paths.extend(root / name for name in (
         "scripts/benchmark_pipeline.py", "scripts/benchmark_suite.py",
         "scripts/benchmark_semantic_passes.py", "pyproject.toml", "uv.lock"))
-    return {str(path.relative_to(root)): digest(path.read_bytes())
+    return {path.relative_to(root).as_posix(): digest(path.read_bytes())
             for path in sorted(set(paths)) if path.is_file()}
 
 

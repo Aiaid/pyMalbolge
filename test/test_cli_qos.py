@@ -39,15 +39,22 @@ class CompilerOutputSafety(unittest.TestCase):
 
     def test_source_aliases_and_duplicate_outputs_rejected(self):
         self.error([str(self.source), '--emit-c', str(self.source)], 'overwrite')
-        link = self.root / 'source-link.py'
-        link.symlink_to(self.source)
-        self.error([str(self.source), '--emit-c', str(link)], 'overwrite')
         hard = self.root / 'source-hard.py'
         os.link(self.source, hard)
         self.error([str(self.source), '--emit-c', str(hard)], 'overwrite')
         output = str(self.root / 'same.txt')
         self.error([str(self.source), '--emit-c', output, '--emit-mg', output], 'distinct')
         self.error([str(self.source), '--emit-c', '-', '--emit-mg', '-'], 'distinct')
+
+    def test_source_symlink_alias_rejected(self):
+        link = self.root / 'source-link.py'
+        try:
+            link.symlink_to(self.source)
+        except OSError as error:
+            if getattr(error, 'winerror', None) == 1314:
+                self.skipTest('Windows symlink privilege unavailable')
+            raise
+        self.error([str(self.source), '--emit-c', str(link)], 'overwrite')
 
     def test_bad_destination_preflight_and_encoding_diagnostics(self):
         self.error([str(self.source), '--emit-c', str(self.root/'missing'/'out.c')],
@@ -167,12 +174,37 @@ class RuntimeCli(unittest.TestCase):
             for variant in ('malbolge', 'malbolge20'):
                 with self.subTest(variant=variant):
                     proc = subprocess.run(
-                        [sys.executable, '-m', 'malbolge', '--variant', variant, str(path)],
+                        [sys.executable, '-X', 'utf8=0', '-m', 'malbolge',
+                         '--variant', variant, str(path)],
                         capture_output=True, timeout=10)
                     self.assertEqual(proc.returncode, 1)
                     self.assertEqual(proc.stdout, b'')
                     self.assertIn(b'cannot read', proc.stderr)
                     self.assertNotIn(b'Traceback', proc.stderr)
+
+    def test_terminal_source_encoding_is_independent_of_locale(self):
+        from malbolge.__main__ import main
+
+        def locale_open(file, mode='r', *args, **kwargs):
+            kwargs.setdefault('encoding', 'cp1252')
+            return io.open(file, mode, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'invalid.mal'
+            source.write_bytes(b'\xff')
+            for variant in ('malbolge', 'malbolge20'):
+                with self.subTest(variant=variant):
+                    stdout, stderr = io.StringIO(), io.StringIO()
+                    with patch('builtins.open', locale_open), \
+                            patch.object(sys.stdin, 'isatty', return_value=True), \
+                            patch.object(sys, 'argv', list(sys.argv)), \
+                            contextlib.redirect_stdout(stdout), \
+                            contextlib.redirect_stderr(stderr):
+                        with self.assertRaises(SystemExit) as caught:
+                            main(['--variant', variant, str(source)])
+                    self.assertEqual(caught.exception.code, 1)
+                    self.assertEqual(stdout.getvalue(), '')
+                    self.assertIn('cannot read', stderr.getvalue())
 
 
 if __name__ == '__main__':

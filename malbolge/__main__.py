@@ -74,6 +74,10 @@ def _bounded_run(args, parser, *, legacy_source=False):
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] == 'compile-mg':
+        from .compiler.mg_cli import main as compile_mg_main
+        compile_mg_main(argv[1:])
+        return
     # `compile` is a self-contained subcommand with its own option grammar;
     # dispatch it before the interpreter's positional argument parsing.
     if argv and argv[0] == 'compile':
@@ -92,6 +96,7 @@ Examples:
   python -m malbolge debug --tui examples/hello.mal
   python -m malbolge compile prog.py --emit-c prog.c
   python -m malbolge compile prog.py -o prog.mb
+  python -m malbolge compile-mg prog.mg -o prog.mb
 '''
     )
 
@@ -99,7 +104,7 @@ Examples:
         'command',
         nargs='?',
         default='run',
-        help='Command: run (default), debug, compile'
+        help='Command: run (default), debug, compile, compile-mg'
     )
 
     parser.add_argument(

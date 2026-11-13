@@ -114,12 +114,12 @@ ref/LMAO/lmao program.hell -o program.mal
 uv run python -m malbolge program.mal
 ```
 
-**适用范围说明**:`python3 -m malbolge compile` 只接受 `.py` 源文件作为
-输入。若场景是"手写的 `.mg` → `.mb`"(即已手写好 `.mg` 中间代码,不是从
-`.py` 编译而来),`scripts/mg2mb.sh`(包装外部 ref/ 工具链)目前仍是唯一
-的命令行(CLI)路径。想用纯 Python 完成这一场景,需在代码里直接调用
-`translate_mg_to_mc()`(`malbolge/compiler/mg2mc.py`)与
-`assemble_mc_to_mb()`(`malbolge/compiler/mc2mb.py`),而不经过 CLI。
+**适用范围说明**：`uv run python -m malbolge compile` 接受 Python 源码。
+手写 MG 可使用 `uv run python -m malbolge compile-mg prog.mg -o prog.mb`，
+这个纯 Python CLI 不需要外部参考工具链。省略 `-o` 时向标准输出写入 MC，
+也可用 `--emit-mc prog.mc` 在生成 MB 时同时保存 MC。
+`scripts/mg2mb.sh` 仍保留用于冻结的外部参考实现对照。选项及输出保护约定见
+[MG 规范](../specs/mg-spec.md)。
 
 ## 4. 旧版确定性与错误处理
 

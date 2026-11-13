@@ -83,10 +83,14 @@ def _preflight(args):
     outputs = [value for value in (args.emit_c, args.emit_mg, args.emit_mc,
                                   args.emit_ir, args.emit_semantic_ir, args.output)
                if value is not None]
+    _preflight_outputs(args.source, outputs, "Python")
+
+
+def _preflight_outputs(source, outputs, source_kind):
     for i, output in enumerate(outputs):
         if output != "-":
-            if _same_path(args.source, output):
-                _die("output must not overwrite the Python source: {}".format(output))
+            if _same_path(source, output):
+                _die("output must not overwrite the {} source: {}".format(source_kind, output))
             target = Path(output)
             if not target.parent.is_dir():
                 _die("output directory does not exist: {}".format(target.parent))

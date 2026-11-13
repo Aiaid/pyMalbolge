@@ -530,7 +530,9 @@ def test_sdist_rebuild_and_installed_wheel_contract(tmp_path):
              "--out-dir", str(sdist_dir),
              str(source)], cwd=tmp_path, env=env)
     sdist = next(sdist_dir.glob("*.tar.gz"))
-    extracted = tmp_path / "extracted"
+    # Exercise nested sdist paths that previously overflowed MSVC's import
+    # library path when setuptools mirrored the absolute source path.
+    extracted = tmp_path / ("extracted-" + "nested-" * 6)
     extracted.mkdir()
     with tarfile.open(sdist) as archive:
         members = archive.getmembers()

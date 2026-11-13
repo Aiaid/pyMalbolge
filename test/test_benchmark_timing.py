@@ -17,6 +17,11 @@ SPEC.loader.exec_module(BENCH)
 
 def test_mac_hardware_metadata_uses_bounded_readonly_queries(monkeypatch):
     monkeypatch.setattr(BENCH.sys, "platform", "darwin")
+    # Keep the simulated host independent of platform.uname's process cache.
+    # On a fresh Windows process, changing sys.platform cannot supply Mac data.
+    monkeypatch.setattr(BENCH.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(BENCH.platform, "release", lambda: "25.0.0")
+    monkeypatch.setattr(BENCH.platform, "machine", lambda: "arm64")
     queries = []
     values = {"machdep.cpu.brand_string": "Example CPU", "hw.logicalcpu": "12",
               "hw.physicalcpu": "8", "hw.memsize": "34359738368"}
@@ -33,13 +38,15 @@ def test_mac_hardware_metadata_uses_bounded_readonly_queries(monkeypatch):
     assert result["physical_cores"] == 8
     assert result["ram_bytes"] == 34359738368
     assert all(argv[:2] == ["/usr/sbin/sysctl", "-n"] for argv in queries)
-    assert result["python"] and result["platform"] and result["machine"]
+    assert result["python"]
+    assert result["platform"] == "Darwin 25.0.0 arm64"
+    assert result["machine"] == "arm64"
     json.dumps(result)
 
 
 def test_mac_context_records_load_and_first_power_line(monkeypatch):
     monkeypatch.setattr(BENCH.sys, "platform", "darwin")
-    monkeypatch.setattr(BENCH.os, "getloadavg", lambda: (1.0, 2.0, 3.0))
+    monkeypatch.setattr(BENCH.os, "getloadavg", lambda: (1.0, 2.0, 3.0), raising=False)
 
     def read(argv):
         assert argv[:2] == ["/usr/bin/pmset", "-g"]

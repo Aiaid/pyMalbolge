@@ -20,8 +20,31 @@
 `.mg` is the file extension for "制御付き疑似命令列" (pseudo-instruction sequences with control,
 hereafter "pseudo-instruction sequences"). It is the input language of the
 `ref/nagoya-ternary/parser` tool, and compiles to "Low-Level Assembly" (LAL, `.mc`), which the
-`ref/nagoya-lowass` toolchain then transforms into a runnable Malbolge20 program (`.mb`). For the
-full pipeline see `scripts/mg2mb.sh`.
+`ref/nagoya-lowass` toolchain then transforms into a runnable Malbolge20 program (`.mb`).
+Use the pure-Python CLI without reference tools, a C compiler, Perl or xDSL:
+
+```bash
+uv run python -m malbolge compile-mg program.mg -o program.mb
+uv run python -m malbolge compile-mg program.mg --emit-mc program.mc
+uv run python -m malbolge compile-mg program.mg --emit-mc program.mc -o program.mb --stats
+uv run python -m malbolge --variant=malbolge20 program.mb
+```
+
+Input is UTF-8. With no output option, `compile-mg` emits MC to stdout;
+`--emit-mc -` or `-o -` explicitly selects stdout for that artifact. Only one
+artifact may use stdout. File outputs are replaced atomically and may not
+alias the source or each other. Compilation/I/O errors exit 1, invalid command
+arguments exit 2, and interruption exits 130. Diagnostics and optional JSON
+metrics go to stderr. A streamed stdout artifact cannot be rolled back after
+a failure; file replacement is atomic per artifact, not across both outputs.
+
+Defaults are `--op-style=cluster --jmp-style=main --target-pipeline=structured`.
+`--op-style=inline` and `--jmp-style=direct` select the existing MG code styles;
+`--target-pipeline=text` uses the textual MC handoff. Neither path runs Python
+frontend optimization or creates a compilation cache. Structured MC export
+uses canonical formatting, which can differ from the legacy text translator.
+Output targets Malbolge20, not Original Malbolge. `scripts/mg2mb.sh` remains the separate
+reference-tool workflow, with its existing flags and output defaults unchanged.
 
 ---
 

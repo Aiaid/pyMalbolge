@@ -96,3 +96,9 @@
 固定 Python 基准程序与 CSV/JSON 执行器见
 [`benchmarks/README.zh.md`](../benchmarks/README.zh.md);
 测试夹具出处见 `test/fixtures/hell/README.md` 与 `test/fixtures/nagoya/README.md`。
+
+## 可靠性与 MG 候选分支
+
+本候选分支包含可靠性修复和 `compile-mg`；新 JIT profiling、MLIR 导出器及
+覆盖写入消除 pass 保留在独立研究分支。
+[用户指南](user-guide.zh.md) · [路线图](roadmap.zh.md)。

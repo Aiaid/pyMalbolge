@@ -1,0 +1,68 @@
+{
+  "date": "2026-11-13",
+  "base": "bc043b589403136ac5abd9c154c671a6f321dc1d",
+  "tested_source_commit": "19fbe44d6876e65914e5b2a19c245ea4530e7323",
+  "scope": "Reliability/documentation and handwritten MG CLI candidate only",
+  "provenance": {
+    "mg_cli": "07c0b15 cherry-picked as 0744835",
+    "reliability": "Selected reliability files and MG boundaries from 2e66bea; portability fixes from 847f8f0; native CI from c0256a1 with experimental tests removed",
+    "documentation": "Release status corrections retained; bilingual guides/roadmap rewritten for candidate scope; full integration receipts excluded",
+    "excluded": [
+      "a239918 JIT profiling",
+      "267d704 MLIR exporter",
+      "86dce59 overwritten-store pass"
+    ]
+  },
+  "host": "Windows AMD64",
+  "python": "CPython 3.12.10",
+  "validation": {
+    "native_full_suite": "2824 passed, 188 skipped, 1 warning, 3589 subtests passed in 101.89s (0:01:41)",
+    "junit": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "188",
+      "tests": "6601",
+      "time": "101.768",
+      "timestamp": "2026-11-13T15:51:38.022137+08:00",
+      "hostname": "Anend-EM"
+    },
+    "junit_sha256": "7dd084c135d067f0477191e957e3d6a326efa7a42d70db041fb9c63b86083951",
+    "dom_tests_passed": 8,
+    "source_audit": {
+      "candidate_import_verified": true,
+      "experiment_implementation_absent": [
+        "scripts/profile_jit_nops.py",
+        "scripts/experiments/semantic_arith_mlir.py",
+        "malbolge/compiler/ir/store_passes.py",
+        "test/test_store_passes.py",
+        "test/test_profile_jit_nops.py",
+        "test/test_experimental_mlir_arith.py"
+      ],
+      "workflow_test_paths_exist": true,
+      "guide_links_valid": true,
+      "bilingual_code_blocks_equal": true,
+      "mg_example_output_hex": "4869"
+    },
+    "serial_attempt": "Stopped incomplete; not counted as a passing run",
+    "gated_sdist_wheel_contract": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "1",
+      "time": "20.179",
+      "timestamp": "2026-11-13T15:52:39.436165+08:00",
+      "hostname": "Anend-EM"
+    },
+    "native_build": "Built locally with MSVC for CPython 3.12 Windows AMD64"
+  },
+  "limits": [
+    "Remote CI not run",
+    "Real browser not tested",
+    "No new wheel publication or other-platform acceptance",
+    "Existing native/JIT baseline retained; new JIT profiling excluded"
+  ],
+  "remote_master_observed": "bc043b589403136ac5abd9c154c671a6f321dc1d",
+  "pushed": false
+}

@@ -102,3 +102,9 @@ fixed Python benchmark programs and the CSV/JSON runner:
 [`benchmarks/README.md`](../benchmarks/README.md);
 test fixture provenance: `test/fixtures/hell/README.md` and
 `test/fixtures/nagoya/README.md`.
+
+## Reliability and MG candidate
+
+This candidate includes reliability fixes and `compile-mg`; the new JIT profiling,
+MLIR exporter and overwritten-store pass remain on separate research branches.
+[User guide](user-guide.md) · [Roadmap](roadmap.md).

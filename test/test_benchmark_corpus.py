@@ -69,8 +69,13 @@ def test_manifest_contract_and_source_inventory():
 @pytest.mark.parametrize("program", PROGRAMS, ids=lambda program: program["id"])
 def test_cpython_oracles(program):
     for workload in program["workloads"]:
+        # The oracle contract is LF bytes on every host. Configure the producer;
+        # do not normalize captured output and hide unintended carriage returns.
         result = subprocess.run(
-            [sys.executable, str(MANIFEST.parent / program["path"])],
+            [sys.executable, "-c",
+             "import runpy, sys; sys.stdout.reconfigure(newline='\\n'); "
+             "sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name='__main__')",
+             str(MANIFEST.parent / program["path"])],
             input=workload["stdin"].encode("ascii"),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
         )

@@ -212,7 +212,7 @@ def _interactive_main(filename):
     """Keep streaming terminal input/output on the Python interpreter."""
 
     try:
-        with open(filename, 'r') as f:
+        with open(filename, 'r', encoding='utf-8') as f:
             source = f.read()
     except (OSError, UnicodeError) as error:
         sys.stderr.write(f'error: cannot read {filename}: {error}\n')

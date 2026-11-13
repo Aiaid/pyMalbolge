@@ -246,3 +246,14 @@ def test_recursive_fingerprint_includes_ir_and_runner(tmp_path):
     assert set(hashes) == {"malbolge/compiler/ir/example.py", "scripts/benchmark_semantic_passes.py"}
     (tmp_path / "malbolge/compiler/ir/example.py").write_text("second")
     assert hashes != bench.source_fingerprint(tmp_path)
+
+
+def test_worker_and_driver_share_portable_fingerprint_keys(tmp_path, monkeypatch):
+    from scripts import benchmark_pipeline
+    source = tmp_path / "malbolge/compiler/ir/example.py"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"example source\n")
+    monkeypatch.setattr(benchmark_pipeline, "ROOT", tmp_path)
+    worker = benchmark_pipeline.fingerprint()
+    driver = bench.source_fingerprint(tmp_path)
+    assert worker == driver == {"malbolge/compiler/ir/example.py": bench.digest(source.read_bytes())}
