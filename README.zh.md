@@ -715,3 +715,9 @@ uv run --no-sync python scripts/verify_mb_reference.py fetch
 
 MIT。`test/fixtures/hell/` 下的 HeLL 夹具来自 GPL-3 的 LMAO 发行版,带有各自的
 许可声明;它们仅用于一致性测试,不属于打包发布的内容。
+
+## 可靠性与 MG 候选分支
+
+本候选分支包含可靠性修复和 `compile-mg`；新 JIT profiling、MLIR 导出器及
+覆盖写入消除 pass 保留在独立研究分支。
+[用户指南](docs/user-guide.zh.md) · [路线图](docs/roadmap.zh.md)。

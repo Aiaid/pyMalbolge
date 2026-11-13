@@ -86,7 +86,7 @@ def digest(data):
 def fingerprint():
     paths = sorted((ROOT / "malbolge").glob("*.py"))
     paths += sorted((ROOT / "malbolge/compiler").rglob("*.py"))
-    return {str(p.relative_to(ROOT)): digest(p.read_bytes()) for p in paths}
+    return {p.relative_to(ROOT).as_posix(): digest(p.read_bytes()) for p in paths}
 
 
 def peak_rss():

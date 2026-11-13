@@ -16,9 +16,11 @@ Supports multiple variants:
 
 The static Pyodide browser debugger is implemented and deployed for Original
 Malbolge only. Malbolge20 batch execution can use the optional native VM;
-debugger execution remains Python. PyPI 1.1.0 publication is recorded in
-`docs/notes/pypi-1.1.0-publication.json`; local working-tree changes are not
-automatically part of that release.
+debugger execution remains Python. PyPI 1.2.0 publication is recorded in
+`docs/notes/pypi-1.2.0-publication.json`; local working-tree changes are not
+automatically part of that release. The receipt records 35 native wheels,
+including macOS ARM64; exact macOS 15.0 runtime acceptance remains untested.
+Native wheel availability does not establish JIT availability or speed.
 
 ## Commands
 

@@ -13,7 +13,8 @@
   候选，再只生成一次 bootstrap。O2/O3 默认使用结构化 LAL/内存映像传递。
 - **架构：**语义 IR 已有表达式 SSA、可变源码槽位、经校验的具名 pass 和独立执行
   oracle。目标路径仍是语义 IR → 目标 AST → MG → LAL → 内存映像 → MB。
-  共享 AST 分析已集成到源码中；1.1.0 发行回执不覆盖这次提取。
+  共享 AST 分析已集成到源码中，并包含在 1.2.0 发布源码内；旧版 1.1.0
+  发布回执不覆盖这次提取。
 - **语言：**无符号 20-trit 整数、标量/控制/函数语法、递归，以及规格限定的十进制
   I/O、平坦 tuple 赋值、关键字调用和基本 print f-string，并非完整 Python。
   semantic 在部分死代码和局部绑定场景下比 Direct 更严格。见
@@ -75,3 +76,9 @@ Malbolge Unshackled 都不是当前产品能力。可选 xDSL dialect 和小范�
 
 带日期的 benchmark 保留原始源码/映像/引擎身份、超时和平台边界，不改标为当前
 工作树的测量。IR 大小、wheel 可用性或旧 Python-only 计时都不能推出当前速度。
+
+## 可靠性与 MG 候选分支
+
+本候选分支包含可靠性修复和 `compile-mg`；新 JIT profiling、MLIR 导出器及
+覆盖写入消除 pass 保留在独立研究分支。
+[用户指南](user-guide.zh.md) · [路线图](roadmap.zh.md)。

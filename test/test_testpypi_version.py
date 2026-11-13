@@ -130,12 +130,15 @@ class TestTestPyPIVersion(unittest.TestCase):
                   '[project.urls]\r\nversion = "1.1.0"\r\n')
         self.project.write_bytes(source.encode("utf-8"))
         self.project.chmod(0o640)
+        # Windows maps chmod to its supported mode bits; preserve what the
+        # filesystem actually accepted, while retaining exact CRLF assertions.
+        original_mode = stat.S_IMODE(self.project.stat().st_mode)
         code, _, stderr = self.invoke("--run-id", "4", "--attempt", "1")
         self.assertEqual((code, stderr), (0, ""))
         self.assertEqual(self.project.read_bytes(), source.replace(
             "  version = '1.1.0'", "  version = '1.1.0.dev4001'"
         ).encode("utf-8"))
-        self.assertEqual(stat.S_IMODE(self.project.stat().st_mode), 0o640)
+        self.assertEqual(stat.S_IMODE(self.project.stat().st_mode), original_mode)
 
     def test_retrying_the_same_stamp_is_idempotent(self):
         for _ in range(2):
@@ -150,12 +153,13 @@ class TestTestPyPIVersion(unittest.TestCase):
                   "__version__ = '1.1.0'  # stable\r\n")
         self.module.write_bytes(source.encode("utf-8"))
         self.module.chmod(0o640)
+        original_mode = stat.S_IMODE(self.module.stat().st_mode)
         code, _, stderr = self.invoke("--run-id", "4", "--attempt", "1")
         self.assertEqual((code, stderr), (0, ""))
         self.assertEqual(self.module.read_bytes(), source.replace(
             "__version__ = '1.1.0'", "__version__ = '1.1.0.dev4001'"
         ).encode("utf-8"))
-        self.assertEqual(stat.S_IMODE(self.module.stat().st_mode), 0o640)
+        self.assertEqual(stat.S_IMODE(self.module.stat().st_mode), original_mode)
 
     def test_invalid_or_mismatched_module_fails_without_any_writes(self):
         output = self.root / "github-output"

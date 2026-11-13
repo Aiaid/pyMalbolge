@@ -128,14 +128,13 @@ ref/LMAO/lmao program.hell -o program.mal
 uv run python -m malbolge program.mal
 ```
 
-**Scope note**: `python3 -m malbolge compile` only accepts `.py` source as
-input. For the hand-written-`.mg`-to-`.mb` scenario — you already have
-hand-authored `.mg` intermediate code, not something compiled from `.py` —
-`scripts/mg2mb.sh` (wrapping the external ref/ toolchain) is still the only
-CLI path today. To do that scenario in pure Python, call
-`translate_mg_to_mc()` (`malbolge/compiler/mg2mc.py`) and
-`assemble_mc_to_mb()` (`malbolge/compiler/mc2mb.py`) directly instead of
-going through the CLI.
+**Scope note**: `uv run python -m malbolge compile` accepts Python source.
+For handwritten MG, use `uv run python -m malbolge compile-mg prog.mg -o prog.mb`.
+This pure-Python CLI needs no external reference toolchain. Omit `-o` to emit
+MC on stdout, or use `--emit-mc prog.mc` alongside the MB output. The
+`scripts/mg2mb.sh` wrapper remains available for frozen external-reference
+comparisons. See the [MG specification](../specs/mg-spec.md) for options and
+the output-safety contract.
 
 ## 4. Legacy determinism and error handling
 

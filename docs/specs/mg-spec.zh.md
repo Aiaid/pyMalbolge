@@ -20,6 +20,20 @@
 
 ---
 
+## 当前纯 Python CLI
+
+```sh
+uv run python -m malbolge compile-mg program.mg --emit-mc program.mc -o program.mb --stats
+```
+
+输入为 UTF-8，不需要外部参考工具、C 编译器、Perl 或 xDSL。省略输出选项时向
+stdout 输出 MC；`--emit-mc -`/`-o -` 显式选择 stdout，最多一个产物使用 stdout。
+文件输出逐个原子替换，不能与源文件或彼此别名；两个输出不是整体事务，stdout
+不能回滚。编译/I/O 错误退出 1，参数错误退出 2，中断退出 130；诊断与指标走 stderr。
+默认 `--op-style cluster --jmp-style main --target-pipeline structured`，对应可选值
+为 `inline`、`direct`、`text`。不应用 Python 前端优化或缓存，目标为 Malbolge20。
+可直接运行的夹具示例见[用户指南](../user-guide.zh.md)。外部 `scripts/mg2mb.sh` 保留。
+
 ## 一、词法(来自 `scanner.ll`)
 
 ### 1.1 标识符与关键字

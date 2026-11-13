@@ -14,6 +14,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-portability:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.25'
+          python-version: '3.12'
+      - run: uv sync --extra dev --extra ir
+      - name: Provision hash-pinned reference source and license
+        run: uv run --no-sync python scripts/verify_mb_reference.py fetch
+      # POSIX wait4 and native/JIT execution remain separate acceptance scopes.
+      - name: Check Windows bytes, paths, permissions and platform guards
+        run: >-
+          uv run --no-sync pytest test/test_benchmark_corpus.py
+          test/test_benchmark_fixed_vm.py test/test_benchmark_timing.py
+          test/test_cli_qos.py test/test_examples_manifest.py
+          test/test_mb_reference_gate.py test/test_native_packaging.py
+          test/test_semantic_benchmark.py test/test_testpypi_version.py -q -rs
+      - name: Build the Windows native VM
+        run: uv run --no-sync --with setuptools --with wheel python scripts/build_native_vm.py
+      - name: Require native availability and expected JIT rejection
+        run: >-
+          uv run --no-sync python -c
+          "from malbolge import native; assert native.native_available(); assert not native.jit_available()"
+      - name: Verify native VM parity and unavailable-JIT contracts
+        run: >-
+          uv run --no-sync pytest test/test_native_vm.py test/test_native_jit.py -q -rs
+      - name: Verify source distribution and installed native/pure wheels
+        env:
+          MALBOLGE_PACKAGING_TESTS: '1'
+        run: >-
+          uv run --no-sync --with hatchling --with setuptools --with wheel python -m pytest
+          test/test_native_packaging.py::test_sdist_rebuild_and_installed_wheel_contract -q -rs
+
   regression:
     runs-on: ubuntu-latest
     timeout-minutes: 25

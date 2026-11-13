@@ -2,6 +2,7 @@
 
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -11,8 +12,16 @@ import pytest
 from scripts import benchmark_fixed_vm as fixed
 
 
+def test_missing_wait4_is_rejected_before_binary_access(tmp_path, monkeypatch):
+    monkeypatch.delattr(fixed.os, "wait4", raising=False)
+    with pytest.raises(fixed.FixedVMError, match="POSIX wait4 is required"):
+        fixed.FixedVMRunner(tmp_path / "missing-binary", {})
+
+
 @pytest.fixture
 def setup_runner(tmp_path, monkeypatch):
+    if os.name != "posix" or not hasattr(os, "wait4"):
+        pytest.skip("fixed-VM timing requires POSIX wait4 and process groups")
     # The native shell executes tiny synthetic fixture images; production pins
     # remain fixed and tests never invoke the real VM or compile an artifact.
     binary = Path("/bin/sh").resolve()

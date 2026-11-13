@@ -39,15 +39,22 @@ class CompilerOutputSafety(unittest.TestCase):
 
     def test_source_aliases_and_duplicate_outputs_rejected(self):
         self.error([str(self.source), '--emit-c', str(self.source)], 'overwrite')
-        link = self.root / 'source-link.py'
-        link.symlink_to(self.source)
-        self.error([str(self.source), '--emit-c', str(link)], 'overwrite')
         hard = self.root / 'source-hard.py'
         os.link(self.source, hard)
         self.error([str(self.source), '--emit-c', str(hard)], 'overwrite')
         output = str(self.root / 'same.txt')
         self.error([str(self.source), '--emit-c', output, '--emit-mg', output], 'distinct')
         self.error([str(self.source), '--emit-c', '-', '--emit-mg', '-'], 'distinct')
+
+    def test_source_symlink_alias_rejected(self):
+        link = self.root / 'source-link.py'
+        try:
+            link.symlink_to(self.source)
+        except OSError as error:
+            if getattr(error, 'winerror', None) == 1314:
+                self.skipTest('Windows symlink privilege unavailable')
+            raise
+        self.error([str(self.source), '--emit-c', str(link)], 'overwrite')
 
     def test_bad_destination_preflight_and_encoding_diagnostics(self):
         self.error([str(self.source), '--emit-c', str(self.root/'missing'/'out.c')],

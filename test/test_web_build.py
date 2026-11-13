@@ -17,8 +17,6 @@ STALE = "malbolge-0.0.0-py3-none-any.whl"
 
 @pytest.fixture
 def browser_build(tmp_path):
-    if os.name == "nt":
-        pytest.skip("fake uv executable uses a POSIX shebang and executable permissions")
     node = shutil.which("node")
     if node is None:
         pytest.skip("browser build regression tests require Node.js")
@@ -49,12 +47,13 @@ def browser_build(tmp_path):
     (root / "dist").mkdir()
     binary_dir = tmp_path / "bin"
     binary_dir.mkdir()
-    fake_uv = binary_dir / "uv"
-    fake_uv.write_text("#!/usr/bin/env node\n" + r'''
+    fake_uv = binary_dir / "fake-uv.cjs"
+    fake_uv.write_text(r'''
 const fs = require("node:fs");
 fs.writeFileSync("uv-call.json", JSON.stringify({
   args: process.argv.slice(2), mode: process.env.MALBOLGE_NATIVE_BUILD,
 }));
+if (process.env.FAKE_UV_RESULT === "failed") process.exit(7);
 if (process.env.FAKE_UV_RESULT !== "unchanged") {
   const portable = process.env.FAKE_UV_RESULT !== "native"
     && process.env.MALBOLGE_NATIVE_BUILD === "disabled";
@@ -63,13 +62,31 @@ if (process.env.FAKE_UV_RESULT !== "unchanged") {
   fs.writeFileSync("dist/" + name, "fresh fixture wheel");
 }
 ''', encoding="utf8")
-    fake_uv.chmod(0o755)
+    # Mock only the packaging subprocess, not build.mjs itself. Loading this
+    # before the ES module works on Windows without executable shebangs, shell
+    # wrappers or symlink privileges. Other subprocesses (e.g. git) stay real.
+    preload = binary_dir / "mock-uv.cjs"
+    preload.write_text(r'''
+const childProcess = require("node:child_process");
+const { syncBuiltinESMExports } = require("node:module");
+const { join } = require("node:path");
+const original = childProcess.spawnSync;
+childProcess.spawnSync = function (command, args, options) {
+  if (command === "uv") {
+    if (process.env.FAKE_UV_RESULT === "missing") {
+      return { error: { code: "ENOENT" }, status: null };
+    }
+    return original(process.execPath, [join(__dirname, "fake-uv.cjs"), ...args], options);
+  }
+  return original(command, args, options);
+};
+syncBuiltinESMExports();
+''', encoding="utf8")
 
     def invoke(*args, result="portable"):
-        env = dict(os.environ, PATH=str(binary_dir) + os.pathsep + os.environ.get("PATH", ""),
-                   MALBOLGE_NATIVE_BUILD="required", FAKE_UV_RESULT=result)
-        return subprocess.run([node, str(root / "web/build.mjs"), *args], cwd=str(root),
-                              env=env, capture_output=True, text=True, timeout=20)
+        env = dict(os.environ, MALBOLGE_NATIVE_BUILD="required", FAKE_UV_RESULT=result)
+        return subprocess.run([node, "--require", str(preload), str(root / "web/build.mjs"), *args], cwd=str(root),
+                              env=env, capture_output=True, text=True, encoding="utf-8", timeout=20)
 
     return root, old, invoke
 
@@ -155,3 +172,20 @@ def test_reuses_existing_portable_without_invoking_uv(browser_build, args, offse
     assert (root / "web/vendor" / STALE).read_text() == "stale fixture wheel"
     if args:
         assert "--no-build was given" in completed.stdout
+
+
+@pytest.mark.parametrize("result,diagnostic", [
+    ("failed", "uv build failed (exit 7)"),
+    ("missing", "`uv` not found on PATH"),
+])
+def test_build_failure_preserves_previous_vendor(browser_build, result, diagnostic):
+    root, _, invoke = browser_build
+    vendor = root / "web/vendor"
+    vendor.mkdir()
+    sentinel = vendor / "build.json"
+    sentinel.write_text("previous build metadata", encoding="utf8")
+    completed = invoke("--clean", result=result)
+    assert completed.returncode != 0
+    assert diagnostic in completed.stderr
+    assert sentinel.read_text() == "previous build metadata"
+    assert sorted(path.name for path in vendor.iterdir()) == ["build.json"]

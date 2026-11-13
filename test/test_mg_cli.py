@@ -147,3 +147,27 @@ assert not any(name == 'xdsl' or name.startswith('xdsl.') for name in sys.module
 """
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=30)
     assert result.returncode == 0, result.stderr
+
+
+def test_hardlinked_outputs_are_rejected_before_writing(tmp_path):
+    output, alias = tmp_path / "old.mb", tmp_path / "old.mc"
+    output.write_bytes(b"preserve both aliases")
+    os.link(output, alias)
+    result = run_cli(FIXTURE, "-o", output, "--emit-mc", alias)
+    assert result.returncode == 1
+    assert b"distinct" in result.stderr
+    assert output.read_bytes() == alias.read_bytes() == b"preserve both aliases"
+
+
+def test_text_pipeline_late_failure_preserves_output(tmp_path):
+    target = tmp_path / "old.mb"
+    target.write_bytes(b"keep")
+    def chunks(*args):
+        yield b"partial"
+        raise Mc2MbError("text assembly failed")
+    with patch.object(mg_cli, "iter_mc_to_mb", chunks):
+        with pytest.raises(SystemExit) as caught:
+            mg_cli.main([str(FIXTURE), "--target-pipeline", "text", "-o", str(target)])
+    assert caught.value.code == 1
+    assert target.read_bytes() == b"keep"
+    assert list(tmp_path.iterdir()) == [target]

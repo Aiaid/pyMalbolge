@@ -2,7 +2,7 @@
 
 > [English](optimization-status.md) | **中文**
 >
-> 开启方式说明更新于 2026-10-12，分发状态更新于 2026-11-10；测量保留原日期。
+> 开启方式说明更新于 2026-10-12，分发状态于 2026-11-13 对照 1.2.0 回执核对；测量保留原日期。
 > 区分已验收代码、显式实验和已记录的本地原型。
 > 带日期的完整测量保存在私有配套仓库的优化总览；公开验收记录见下方。
 
@@ -42,7 +42,7 @@
 | 目标 AST 初始化/循环/谓词接口 | 已集成并通过本地验收；semantic O1–O3 开启三个开关，O0 关闭。最终组合验收独立于旧原型记录。 |
 | 十进制输出候选及被拒绝的批量 NOP 实验 | 排除已验收默认策略；十进制候选需手动选择 pass。 |
 | 原生 VM | `run20` 与 Malbolge20 批量 CLI 默认 auto：优先可加载原生扩展，否则 Python。原版/旧 API/调试器/终端流式路径继续 Python。 |
-| 原生打包 / JIT | 源码 wheel 尝试构建原生；editable 安装需本地手动构建。PyPI 1.1.0 已发布 30 个通过安装验收的原生 wheel，匹配 wheel 无需编译器。Apple Silicon 发布/最低系统版本验收仍待完成。JIT 仍显式选择，O3 不开启它。见[发布回执](../notes/pypi-1.1.0-publication.json)。 |
+| 原生打包 / JIT | 源码 wheel 尝试构建原生；editable 安装需本地手动构建。1.2.0 回执记录已发布 35 个原生 wheel，包括 macOS ARM64；匹配 wheel 无需编译器。ARM64 Mac 在 15.8.2 上验收，精确 15.0 运行验收仍未完成。JIT 仍显式选择，O3 不开启它。见[发布回执](../notes/pypi-1.2.0-publication.json)。 |
 
 默认选择与显式 direct 选择：
 
@@ -79,10 +79,12 @@ uv run --no-sync python -m malbolge compile program.py --backend=ir \
 
 - [原生引擎选择](../notes/native-engine-selection-validation.json)：当前
   auto/native/Python 行为与兼容契约。
-- [原生打包](native-packaging.zh.md)：[1.1.0 发布](../notes/pypi-1.1.0-publication.json)
-  包含 30 个已验收原生 wheel。[1.2 rc1 TestPyPI 回执](../notes/release-1.2.0-testpypi.json)
-  单列九组远端安装，原生检查仅限 Linux x86-64 CPython 3.12；下个候选的完整矩阵
-  尚未验收。
+- [原生打包](native-packaging.zh.md)：[1.2.0 发布回执](../notes/pypi-1.2.0-publication.json)
+  记录 35 个原生 wheel、一个便携 wheel 和一个 sdist，全部 37 个公开产物哈希
+  已核验，上传后 13 组安装/输入检查通过。托管 macOS ARM64 JIT 不可用且已
+  显式拒绝；Linux ARM64 NOP JIT 执行为单独证据。这些带日期的发布检查不覆盖
+  后续工作区改动，也不证明普遍加速。旧版 1.1.0 和 TestPyPI 回执保留为限定版本
+  的历史证据。
 - [Python QoS 验收](../notes/python-qos-validation.json)：语言/运行时契约、
   紧凑存储、实际目标执行、缓存与打包。
 - [语义 pass 验收](../notes/semantic-pass-validation.json)：已验收源变换及

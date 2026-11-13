@@ -39,7 +39,7 @@ def test_mac_hardware_metadata_uses_bounded_readonly_queries(monkeypatch):
 
 def test_mac_context_records_load_and_first_power_line(monkeypatch):
     monkeypatch.setattr(BENCH.sys, "platform", "darwin")
-    monkeypatch.setattr(BENCH.os, "getloadavg", lambda: (1.0, 2.0, 3.0))
+    monkeypatch.setattr(BENCH.os, "getloadavg", lambda: (1.0, 2.0, 3.0), raising=False)
 
     def read(argv):
         assert argv[:2] == ["/usr/bin/pmset", "-g"]

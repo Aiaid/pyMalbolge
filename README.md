@@ -813,3 +813,9 @@ or single-host results do not establish a complete release-platform matrix.
 MIT. The HeLL fixtures under `test/fixtures/hell/` come from the GPL-3 LMAO
 distribution and carry their own notice; they are used for conformance testing
 only and are not part of the shipped package.
+
+## Reliability and MG candidate
+
+This candidate includes reliability fixes and `compile-mg`; the new JIT profiling,
+MLIR exporter and overwritten-store pass remain on separate research branches.
+[User guide](docs/user-guide.md) · [Roadmap](docs/roadmap.md).

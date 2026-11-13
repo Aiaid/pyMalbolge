@@ -16,8 +16,8 @@
 - **Architecture:** semantic IR has SSA expression values, mutable source
   slots, verified named passes and an independent execution oracle. Its target
   path remains semantic IR → target AST → MG → LAL → memory image → MB.
-  Shared AST analysis is integrated in the source checkout; that extraction is
-  not covered by the 1.1.0 publication receipt.
+  Shared AST analysis is integrated in the source checkout and included in the
+  1.2.0 release source; the older 1.1.0 publication receipt does not cover it.
 - **Language:** unsigned 20-trit integers, scalar/control/function forms,
   recursion and the documented decimal I/O, flat tuple assignment, keyword
   calls and basic print f-strings. This is not full Python. Semantic source
@@ -89,3 +89,9 @@ Dated benchmark artifacts retain their original source/image/engine identities,
 timeouts and platform limits. Do not relabel them as measurements of this
 checkout or infer current speed from IR size, wheel availability or old
 Python-only timings.
+
+## Reliability and MG candidate
+
+This candidate includes reliability fixes and `compile-mg`; the new JIT profiling,
+MLIR exporter and overwritten-store pass remain on separate research branches.
+[User guide](user-guide.md) · [Roadmap](roadmap.md).

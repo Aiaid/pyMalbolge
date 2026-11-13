@@ -17,6 +17,39 @@ RUNTIME = {
 }
 
 
+def _symlink_or_skip(path, target, *, target_is_directory=False):
+    """Skip only when Windows denies the fixture's symlink privilege."""
+    try:
+        path.symlink_to(target, target_is_directory=target_is_directory)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege unavailable; symlink rejection not exercised")
+        raise
+
+
+def test_symlink_fixture_skips_missing_windows_privilege(monkeypatch, tmp_path):
+    error = OSError("A required privilege is not held by the client")
+    error.winerror = 1314
+
+    def denied(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(Path, "symlink_to", denied)
+    with pytest.raises(pytest.skip.Exception, match="symlink privilege unavailable"):
+        _symlink_or_skip(tmp_path / "link", tmp_path / "target")
+
+
+def test_symlink_fixture_does_not_hide_other_errors(monkeypatch, tmp_path):
+    error = PermissionError("unrelated access failure")
+
+    def denied(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(Path, "symlink_to", denied)
+    with pytest.raises(PermissionError, match="unrelated access failure"):
+        _symlink_or_skip(tmp_path / "link", tmp_path / "target")
+
+
 @pytest.fixture
 def browser_stage(tmp_path):
     node = shutil.which("node")
@@ -43,7 +76,7 @@ def browser_stage(tmp_path):
 
     def invoke(*args):
         return subprocess.run([node, str(web / "stage.mjs"), *map(str, args)],
-                              cwd=str(elsewhere), capture_output=True, text=True, timeout=20)
+                              cwd=str(elsewhere), capture_output=True, text=True, encoding="utf-8", timeout=20)
 
     return root, web, elsewhere, invoke
 
@@ -125,10 +158,10 @@ def test_rejects_symlink_input_files_and_directories(browser_stage, name):
     path = web / name
     if path.is_dir():
         shutil.move(str(path), str(target))
-        path.symlink_to(target, target_is_directory=True)
+        _symlink_or_skip(path, target, target_is_directory=True)
     else:
         path.rename(target)
-        path.symlink_to(target)
+        _symlink_or_skip(path, target)
     completed = invoke()
     assert completed.returncode != 0
     assert "symlink input" in completed.stderr
@@ -146,7 +179,7 @@ def test_refuses_output_symlink_without_writing_through_it(browser_stage):
     root, _, elsewhere, invoke = browser_stage
     target = elsewhere / "external"
     target.mkdir()
-    (root / "_site").symlink_to(target, target_is_directory=True)
+    _symlink_or_skip(root / "_site", target, target_is_directory=True)
     completed = invoke()
     assert completed.returncode != 0
     assert list(target.iterdir()) == []
