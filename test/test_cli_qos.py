@@ -174,12 +174,37 @@ class RuntimeCli(unittest.TestCase):
             for variant in ('malbolge', 'malbolge20'):
                 with self.subTest(variant=variant):
                     proc = subprocess.run(
-                        [sys.executable, '-m', 'malbolge', '--variant', variant, str(path)],
+                        [sys.executable, '-X', 'utf8=0', '-m', 'malbolge',
+                         '--variant', variant, str(path)],
                         capture_output=True, timeout=10)
                     self.assertEqual(proc.returncode, 1)
                     self.assertEqual(proc.stdout, b'')
                     self.assertIn(b'cannot read', proc.stderr)
                     self.assertNotIn(b'Traceback', proc.stderr)
+
+    def test_terminal_source_encoding_is_independent_of_locale(self):
+        from malbolge.__main__ import main
+
+        def locale_open(file, mode='r', *args, **kwargs):
+            kwargs.setdefault('encoding', 'cp1252')
+            return io.open(file, mode, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'invalid.mal'
+            source.write_bytes(b'\xff')
+            for variant in ('malbolge', 'malbolge20'):
+                with self.subTest(variant=variant):
+                    stdout, stderr = io.StringIO(), io.StringIO()
+                    with patch('builtins.open', locale_open), \
+                            patch.object(sys.stdin, 'isatty', return_value=True), \
+                            patch.object(sys, 'argv', list(sys.argv)), \
+                            contextlib.redirect_stdout(stdout), \
+                            contextlib.redirect_stderr(stderr):
+                        with self.assertRaises(SystemExit) as caught:
+                            main(['--variant', variant, str(source)])
+                    self.assertEqual(caught.exception.code, 1)
+                    self.assertEqual(stdout.getvalue(), '')
+                    self.assertIn('cannot read', stderr.getvalue())
 
 
 if __name__ == '__main__':

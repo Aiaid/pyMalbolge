@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-13",
+  "pull_request": "https://github.com/Aiaid/pyMalbolge/pull/1",
+  "initial_head": "c7307a97dee3290328f6506819b762cb6cef03d4",
+  "initial_windows_job": "https://github.com/Aiaid/pyMalbolge/actions/runs/43389248791/job/131764949311",
+  "initial_windows_result": "3 failed, 199 passed, 52 skipped, 72 subtests passed",
+  "findings": [
+    "Legacy terminal source readers relied on the Windows locale rather than explicit UTF-8; both now use UTF-8, matching the existing redirected batch path.",
+    "The mocked macOS metadata test depended on platform.uname cache state on Windows; its host metadata is now explicitly mocked."
+  ],
+  "local_regressions": {
+    "modules": ["test/test_benchmark_timing.py", "test/test_cli_qos.py"],
+    "passed": 21,
+    "skipped": 1,
+    "subtests_passed": 6,
+    "skip_reason": "Windows symlink privilege unavailable",
+    "coverage": "UTF-8 mode disabled in subprocess; simulated cp1252 default encoding and terminal stdin for both legacy entry points"
+  },
+  "remote_revalidation": "Pending a new CI run; initial candidate full-suite results remain scoped to their recorded source commit."
+}
