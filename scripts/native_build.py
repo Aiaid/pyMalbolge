@@ -212,10 +212,18 @@ def _compile_extension(root, temporary):
             setattr(self.compiler, executor_name, record_spawn)
             super().build_extensions()
 
+    # Setuptools mirrors source paths under build_temp. Absolute paths from
+    # extracted sdists can exceed MSVC's linker path limit. Stage the two
+    # fingerprinted inputs in the private worker directory and compile using
+    # short relative paths, without changing the source checkout.
+    staged_source = temporary / "src"
+    staged_source.mkdir()
+    for name in ("_native_vm.c", "_native_jit.h"):
+        (staged_source / name).write_bytes((root / "malbolge" / name).read_bytes())
     extension = Extension(
         "malbolge._native_vm",
-        sources=[str(root / "malbolge" / "_native_vm.c")],
-        depends=[str(root / "malbolge" / "_native_jit.h")],
+        sources=[str(Path("src") / "_native_vm.c")],
+        depends=[str(Path("src") / "_native_jit.h")],
     )
     distribution = Distribution({"name": "malbolge-native-build", "ext_modules": [extension]})
     command = NativeBuildExt(distribution)
